@@ -11,6 +11,8 @@ BASE = ROOT / "out" / "base_unificada.xlsx"
 BLING_VENDAS = ROOT / "bling_api" / "vendas_2026_cache.jsonl"
 BLING_VENDAS_FALLBACK = ROOT / "bling_api" / "vendas_2025_cache.jsonl"
 BLING_VENDEDORES = ROOT / "bling_api" / "vendedores_map.csv"
+BLING_NFE_2026 = ROOT / "bling_api" / "nfe_2026_cache.jsonl"
+BLING_NFE_2025 = ROOT / "bling_api" / "nfe_2025_cache.jsonl"
 
 
 def _norm(col: str) -> str:
@@ -55,6 +57,7 @@ def _standardize_metas(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+@st.cache_data(show_spinner=False)
 def load_bling_realizado() -> pd.DataFrame:
     cache = BLING_VENDAS if BLING_VENDAS.exists() else BLING_VENDAS_FALLBACK
     if not cache.exists():
@@ -84,6 +87,42 @@ def load_bling_realizado() -> pd.DataFrame:
         if "vendedor_id" in vmap.columns and "vendedor" in vmap.columns:
             df = df.merge(vmap[["vendedor_id", "vendedor"]], on="vendedor_id", how="left")
     return df
+
+
+@st.cache_data(show_spinner=False)
+def load_bling_nfe(year: int) -> pd.DataFrame:
+    if year == 2026 and BLING_NFE_2026.exists():
+        cache = BLING_NFE_2026
+    elif year == 2025 and BLING_NFE_2025.exists():
+        cache = BLING_NFE_2025
+    elif BLING_NFE_2026.exists():
+        cache = BLING_NFE_2026
+    elif BLING_NFE_2025.exists():
+        cache = BLING_NFE_2025
+    else:
+        return pd.DataFrame()
+    rows = []
+    import json
+    with cache.open("r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            obj = json.loads(line)
+            rows.append(obj)
+    if not rows:
+        return pd.DataFrame()
+    df = pd.DataFrame(rows)
+    # expected fields: dataEmissao, valorNota
+    if "dataEmissao" in df.columns:
+        df["data"] = pd.to_datetime(df["dataEmissao"], errors="coerce")
+    elif "dataOperacao" in df.columns:
+        df["data"] = pd.to_datetime(df["dataOperacao"], errors="coerce")
+    if "valorNota" in df.columns:
+        df["valor"] = pd.to_numeric(df["valorNota"], errors="coerce")
+    elif "valor" in df.columns:
+        df["valor"] = pd.to_numeric(df["valor"], errors="coerce")
+    return df[["data", "valor"]].dropna()
 
 
 @st.cache_data(show_spinner=False)

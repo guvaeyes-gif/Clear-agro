@@ -11,7 +11,7 @@ if str(ROOT) not in sys.path:
 
 BASE = ROOT / "out" / "base_unificada.xlsx"
 
-from src.data import load_sheets, load_bling_realizado
+from src.data import load_sheets, load_bling_realizado, load_bling_nfe
 from src.metrics import compute_kpis, vendedor_performance_period, meta_realizado_mensal, sparkline_last_months, period_label
 from src.viz import fmt_brl_abbrev, fmt_brl, fmt_pct, bar_meta_realizado, bar_meta_realizado_single, sparkline
 from src.metas_db import init_db, list_metas, create_meta, update_meta, pause_metas, summary_targets, transfer_assets, transfer_metas_futuras, seed_demo
@@ -105,6 +105,7 @@ page = st.sidebar.selectbox(
         "Performance & Ritmo",
         "Insights & Alertas",
         "Metas Comerciais",
+        "Auditoria",
     ],
 )
 
@@ -297,6 +298,45 @@ if page == "Insights & Alertas":
 
     for title, val in alerts:
         st.metric(title, val)
+
+# Page F - Auditoria
+if page == "Auditoria":
+    st.subheader("Auditoria: Planilha vs Bling (NFe)")
+    st.write("Comparativo mensal entre realizado da planilha e faturamento NFe do Bling.")
+
+    # Planilha (realizado)
+    real = sheets.get("realizado", pd.DataFrame()).copy()
+    if "data" in real.columns:
+        real["data"] = pd.to_datetime(real["data"], errors="coerce")
+    if "receita" in real.columns:
+        real["receita"] = pd.to_numeric(real["receita"], errors="coerce")
+    real = real.dropna(subset=["data"])
+    real = real[real["data"].dt.year == year]
+    real_m = real.groupby(real["data"].dt.to_period("M"))["receita"].sum().reset_index()
+    real_m["data"] = real_m["data"].dt.to_timestamp()
+
+    # Bling NFe
+    nfe = load_bling_nfe(year)
+    if nfe.empty:
+        st.warning("Cache NFe não encontrado para o ano selecionado. Gere nfe_2026_cache.jsonl.")
+        st.stop()
+    nfe = nfe.copy()
+    nfe = nfe[nfe["data"].dt.year == year]
+    nfe_m = nfe.groupby(nfe["data"].dt.to_period("M"))["valor"].sum().reset_index()
+    nfe_m["data"] = nfe_m["data"].dt.to_timestamp()
+
+    # Merge
+    df = pd.merge(real_m, nfe_m, on="data", how="outer").fillna(0)
+    df["delta"] = df["receita"] - df["valor"]
+    df["delta_pct"] = df.apply(lambda r: (r["delta"] / r["valor"] * 100) if r["valor"] else 0, axis=1)
+    df = df.sort_values("data")
+    df["mes"] = df["data"].dt.strftime("%b/%Y").str.upper()
+
+    st.bar_chart(df.set_index("mes")[["receita", "valor"]])
+    st.dataframe(
+        df[["mes", "receita", "valor", "delta", "delta_pct"]],
+        height=420,
+    )
 
     st.divider()
     st.caption("Telegram (opcional): configure TELEGRAM_BOT_TOKEN e TELEGRAM_CHAT_ID para enviar alertas.")
