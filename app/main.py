@@ -13,7 +13,7 @@ BASE = ROOT / "out" / "base_unificada.xlsx"
 
 from src.data import load_sheets, load_bling_realizado, load_bling_nfe
 from src.metrics import compute_kpis, vendedor_performance_period, meta_realizado_mensal, sparkline_last_months, period_label
-from src.viz import fmt_brl_abbrev, fmt_brl, fmt_pct, bar_meta_realizado, bar_meta_realizado_single, sparkline
+from src.viz import fmt_brl_abbrev, fmt_pct, bar_meta_realizado, bar_meta_realizado_single, sparkline
 from src.metas_db import init_db, list_metas, create_meta, update_meta, pause_metas, summary_targets, transfer_assets, transfer_metas_futuras, seed_demo
 from src.telegram import build_alerts_message, send_telegram_message, telegram_enabled
 
@@ -148,12 +148,9 @@ if page == "Executive Cockpit":
             dfm = dfm_all.copy()
             if month_map[month_label] is not None and not ytd:
                 dfm = dfm[dfm["mes"] == month_map[month_label]]
-            elif ytd:
-                cur_m = pd.Timestamp.today().month
-                dfm = dfm[dfm["mes"] <= cur_m]
-            meta_display = float(pd.to_numeric(dfm["meta_valor"], errors="coerce").fillna(0).sum())
-            # if still zero, use full-year sum
-            if meta_display == 0:
+                meta_display = float(pd.to_numeric(dfm["meta_valor"], errors="coerce").fillna(0).sum())
+            else:
+                # quando "TODOS", usar meta anual completa
                 meta_display = float(pd.to_numeric(dfm_all["meta_valor"], errors="coerce").fillna(0).sum())
 
     gap_display = meta_display - kpis.realizado

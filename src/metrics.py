@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional
 
 import pandas as pd
 
@@ -20,11 +20,13 @@ class KPIs:
 
 def _period_mask(df: pd.DataFrame, year: int, month: Optional[int], ytd: bool) -> pd.Series:
     if "data" not in df.columns:
-        return pd.Series([True] * len(df))
+        return pd.Series(True, index=df.index)
     dfy = df["data"].dt.year == year
-    if ytd or month is None:
+    if ytd:
         today = pd.Timestamp.today()
         return dfy & (df["data"].dt.month <= today.month)
+    if month is None:
+        return dfy
     return dfy & (df["data"].dt.month == month)
 
 
