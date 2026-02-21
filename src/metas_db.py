@@ -209,17 +209,21 @@ def summary_targets(filters: Dict[str, Any]) -> Dict[str, Any]:
         return {"kpis": {}, "series": pd.DataFrame(), "uf": pd.DataFrame(), "vendedor": pd.DataFrame()}
     df["realizado_valor"] = pd.to_numeric(df["realizado_valor"], errors="coerce").fillna(0)
     df["meta_valor"] = pd.to_numeric(df["meta_valor"], errors="coerce").fillna(0)
+    # apply quarter filter before KPI if needed
+    if "quarter" not in df.columns or df["quarter"].isna().all():
+        df["quarter"] = df["mes"].apply(lambda m: ((int(m) - 1) // 3 + 1) if pd.notna(m) else None)
+    if is_quarter and quarter_filter:
+        df_kpi = df[df["quarter"] == int(quarter_filter)]
+    else:
+        df_kpi = df
     kpis = {
-        "meta": float(df["meta_valor"].sum()),
-        "realizado": float(df["realizado_valor"].sum()),
+        "meta": float(df_kpi["meta_valor"].sum()),
+        "realizado": float(df_kpi["realizado_valor"].sum()),
     }
     kpis["atingimento_pct"] = (kpis["realizado"] / kpis["meta"] * 100) if kpis["meta"] else 0.0
     kpis["delta"] = kpis["realizado"] - kpis["meta"]
 
     # series
-    if "quarter" not in df.columns or df["quarter"].isna().all():
-        df["quarter"] = df["mes"].apply(lambda m: ((int(m) - 1) // 3 + 1) if pd.notna(m) else None)
-
     if is_quarter:
         if quarter_filter:
             df = df[df["quarter"] == int(quarter_filter)]
