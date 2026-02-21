@@ -79,6 +79,10 @@ for key in ["metas", "realizado"]:
     df = sheets.get(key, pd.DataFrame())
     if not df.empty and "data" in df.columns:
         years.update(df["data"].dt.year.dropna().astype(int).unique().tolist())
+# include years from metas.db (Metas Comerciais)
+db_years = list_metas()
+if not db_years.empty and "ano" in db_years.columns:
+    years.update(db_years["ano"].dropna().astype(int).unique().tolist())
 years = sorted(years) if years else [DEFAULT_YEAR]
 
 year = st.sidebar.selectbox("Ano", options=years, index=years.index(DEFAULT_YEAR) if DEFAULT_YEAR in years else 0)
@@ -139,14 +143,18 @@ if page == "Executive Cockpit":
         mf = {"ano": year, "periodo_tipo": "MONTH"}
         if sel_vendor != "TODOS":
             mf["vendedor_id"] = sel_vendor
-        dfm = list_metas(mf)
-        if not dfm.empty:
+        dfm_all = list_metas(mf)
+        if not dfm_all.empty:
+            dfm = dfm_all.copy()
             if month_map[month_label] is not None and not ytd:
                 dfm = dfm[dfm["mes"] == month_map[month_label]]
             elif ytd:
                 cur_m = pd.Timestamp.today().month
                 dfm = dfm[dfm["mes"] <= cur_m]
             meta_display = float(pd.to_numeric(dfm["meta_valor"], errors="coerce").fillna(0).sum())
+            # if still zero, use full-year sum
+            if meta_display == 0:
+                meta_display = float(pd.to_numeric(dfm_all["meta_valor"], errors="coerce").fillna(0).sum())
 
     gap_display = meta_display - kpis.realizado
     ating_display = (kpis.realizado / meta_display * 100) if meta_display else 0.0
