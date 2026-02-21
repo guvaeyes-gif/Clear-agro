@@ -199,8 +199,11 @@ def pause_metas(meta_ids: Iterable[int], status: str, actor_id: str = "system") 
 def summary_targets(filters: Dict[str, Any]) -> Dict[str, Any]:
     # if quarter requested, derive from MONTH data
     filters = filters.copy()
-    if filters.get("periodo_tipo") == "QUARTER":
+    is_quarter = filters.get("periodo_tipo") == "QUARTER"
+    quarter_filter = filters.get("quarter")
+    if is_quarter:
         filters["periodo_tipo"] = "MONTH"
+        filters.pop("quarter", None)
     df = list_metas(filters)
     if df.empty:
         return {"kpis": {}, "series": pd.DataFrame(), "uf": pd.DataFrame(), "vendedor": pd.DataFrame()}
@@ -214,14 +217,15 @@ def summary_targets(filters: Dict[str, Any]) -> Dict[str, Any]:
     kpis["delta"] = kpis["realizado"] - kpis["meta"]
 
     # series
-    period_col = "mes"
     if "quarter" not in df.columns or df["quarter"].isna().all():
         df["quarter"] = df["mes"].apply(lambda m: ((int(m) - 1) // 3 + 1) if pd.notna(m) else None)
-    series = df.groupby(["ano", period_col])[["meta_valor", "realizado_valor"]].sum().reset_index()
 
-    # if periodo_tipo filter == QUARTER, aggregate by quarter
-    if filters.get("periodo_tipo") == "QUARTER":
+    if is_quarter:
+        if quarter_filter:
+            df = df[df["quarter"] == int(quarter_filter)]
         series = df.groupby(["ano", "quarter"])[["meta_valor", "realizado_valor"]].sum().reset_index()
+    else:
+        series = df.groupby(["ano", "mes"])[["meta_valor", "realizado_valor"]].sum().reset_index()
 
     # breakdowns
     by_uf = df.groupby("estado")[["meta_valor", "realizado_valor"]].sum().reset_index()
