@@ -42,6 +42,8 @@ def fmt_pct(x: float) -> str:
 
 def bar_meta_realizado(df: pd.DataFrame) -> alt.Chart:
     tmp = df.copy()
+    tmp = tmp.sort_values("data")
+    tmp["mes_num"] = tmp["data"].dt.month
     tmp["mes"] = tmp["data"].dt.strftime("%b").str.title()
     tmp["meta_fmt"] = tmp["meta"].apply(moeda_curta)
     tmp["receita_fmt"] = tmp["receita"].apply(moeda_curta)
@@ -49,7 +51,7 @@ def bar_meta_realizado(df: pd.DataFrame) -> alt.Chart:
     chart = alt.Chart(tmp).transform_fold(
         ["meta", "receita"], as_=["tipo", "valor"]
     ).mark_bar(size=20).encode(
-        x=alt.X("mes:N", title="Mes"),
+        x=alt.X("mes:N", title="Mes", sort=alt.SortField(field="mes_num", order="ascending")),
         y=alt.Y("valor:Q", title="Valor", axis=alt.Axis(format="~s")),
         color=alt.Color("tipo:N", title="", legend=alt.Legend(orient="top")),
         tooltip=[
