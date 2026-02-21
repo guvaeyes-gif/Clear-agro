@@ -306,9 +306,11 @@ if page == "Metas Comerciais":
         st.write("Resumo executivo das metas por UF, vendedor e periodo.")
         colf1, colf2, colf3, colf4, colf5 = st.columns(5)
         periodo_tipo = colf1.selectbox("Periodo", ["MONTH", "QUARTER"], key="metas_periodo_tipo")
-        uf = colf2.text_input("UF (opcional)", key="metas_uf")
-        # dynamic vendedor list
+        # dynamic UF list
         all_metas = list_metas({"ano": year})
+        uf_opts = [""] + sorted(all_metas["estado"].dropna().unique().tolist()) if not all_metas.empty else [""]
+        uf = colf2.selectbox("UF (opcional)", options=uf_opts, key="metas_uf")
+        # dynamic vendedor list
         vend_opts = [""] + sorted(all_metas["vendedor_id"].dropna().unique().tolist()) if not all_metas.empty else [""]
         vend = colf3.selectbox("Vendedor ID (opcional)", options=vend_opts, key="metas_vendedor")
         status = colf4.multiselect("Status", ["ATIVO","PAUSADO","DESLIGADO","TRANSFERIDO"], key="metas_status")
@@ -343,12 +345,10 @@ if page == "Metas Comerciais":
 
         if not res["series"].empty:
             ser = res["series"].rename(columns={"meta_valor":"meta","realizado_valor":"receita"}).copy()
-            if "mes" in ser.columns:
-                ser["periodo"] = ser["mes"]
-            elif "quarter" in ser.columns:
+            if periodo_tipo == "QUARTER":
                 ser["periodo"] = ser["quarter"]
             else:
-                ser["periodo"] = ser.index.astype(str)
+                ser["periodo"] = ser["mes"]
             line = alt.Chart(ser).transform_fold(
                 ["meta","receita"], as_=["tipo","valor"]
             ).mark_line(point=True).encode(
