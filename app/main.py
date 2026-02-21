@@ -307,15 +307,28 @@ if page == "Metas Comerciais":
         colf1, colf2, colf3, colf4, colf5 = st.columns(5)
         periodo_tipo = colf1.selectbox("Periodo", ["MONTH", "QUARTER"])
         uf = colf2.text_input("UF (opcional)")
-        vend = colf3.text_input("Vendedor ID (opcional)")
+        # dynamic vendedor list
+        all_metas = list_metas({"ano": year})
+        vend_opts = [""] + sorted(all_metas["vendedor_id"].dropna().unique().tolist()) if not all_metas.empty else [""]
+        vend = colf3.selectbox("Vendedor ID (opcional)", options=vend_opts)
         status = colf4.multiselect("Status", ["ATIVO","PAUSADO","DESLIGADO","TRANSFERIDO"])
         if colf5.button("Criar dados demo"):
             seed_demo()
             st.success("Dados demo criados.")
 
+        # periodo filter
+        if periodo_tipo == "MONTH":
+            mes = st.selectbox("Mes", [""] + list(range(1, 13)))
+            quarter = None
+        else:
+            quarter = st.selectbox("Quarter", [""] + [1, 2, 3, 4])
+            mes = None
+
         filtros = {
             "ano": year,
             "periodo_tipo": periodo_tipo,
+            "mes": mes or None,
+            "quarter": quarter or None,
             "estado": uf or None,
             "vendedor_id": vend or None,
             "status": status or None,
