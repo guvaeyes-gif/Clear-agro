@@ -29,36 +29,6 @@ DEFAULT_YEAR = 2026
 
 st.set_page_config(page_title=APP_TITLE, layout="wide")
 
-if PUBLIC_REVIEW:
-    _st_warning = st.warning
-    _st_info = st.info
-    _sidebar_info = st.sidebar.info
-
-    def _hide_bling_cache_msgs(msg, *_args, **_kwargs):
-        text = str(msg).lower()
-        if "bling" in text and "cache" in text:
-            return
-        return None
-
-    def _warning_filtered(msg, *args, **kwargs):
-        if _hide_bling_cache_msgs(msg, *args, **kwargs) is None and ("bling" in str(msg).lower() and "cache" in str(msg).lower()):
-            return
-        return _st_warning(msg, *args, **kwargs)
-
-    def _info_filtered(msg, *args, **kwargs):
-        if _hide_bling_cache_msgs(msg, *args, **kwargs) is None and ("bling" in str(msg).lower() and "cache" in str(msg).lower()):
-            return
-        return _st_info(msg, *args, **kwargs)
-
-    def _sidebar_info_filtered(msg, *args, **kwargs):
-        if _hide_bling_cache_msgs(msg, *args, **kwargs) is None and ("bling" in str(msg).lower() and "cache" in str(msg).lower()):
-            return
-        return _sidebar_info(msg, *args, **kwargs)
-
-    st.warning = _warning_filtered
-    st.info = _info_filtered
-    st.sidebar.info = _sidebar_info_filtered
-
 st.markdown(
     """
     <style>
