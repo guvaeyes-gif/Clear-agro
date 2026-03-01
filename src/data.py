@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 import os
 from typing import Dict
+import unicodedata
 
 import pandas as pd
 import streamlit as st
@@ -31,6 +32,14 @@ def _normalize_columns(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
     df.columns = [_norm(c) for c in df.columns]
     return df
+
+
+def _normalize_text(value: object) -> str:
+    txt = str(value or "").strip().upper()
+    if not txt:
+        return ""
+    txt = "".join(ch for ch in unicodedata.normalize("NFKD", txt) if not unicodedata.combining(ch))
+    return " ".join(txt.split())
 
 
 def _standardize_opps(df: pd.DataFrame) -> pd.DataFrame:
@@ -87,13 +96,89 @@ def load_bling_realizado() -> pd.DataFrame:
         df["data"] = pd.to_datetime(df["data"], errors="coerce")
     if "receita" in df.columns:
         df["receita"] = pd.to_numeric(df["receita"], errors="coerce")
+    if "contato.nome" in df.columns and "cliente" not in df.columns:
+        df["cliente"] = df["contato.nome"].astype(str)
+    if "vendedor" not in df.columns:
+        for c in ["vendedor.nome", "vendedorResponsavel.nome", "responsavel.nome", "representante.nome"]:
+            if c in df.columns:
+                df["vendedor"] = df[c]
+                break
+    if "vendedor_id" not in df.columns:
+        for c in ["vendedor.id", "vendedorResponsavel.id", "responsavel.id", "representante.id"]:
+            if c in df.columns:
+                df["vendedor_id"] = df[c]
+                break
     df["origem"] = "bling"
 
     if BLING_VENDEDORES.exists() and "vendedor_id" in df.columns:
-        vmap = pd.read_csv(BLING_VENDEDORES)
-        vmap.columns = [_norm(c) for c in vmap.columns]
-        if "vendedor_id" in vmap.columns and "vendedor" in vmap.columns:
-            df = df.merge(vmap[["vendedor_id", "vendedor"]], on="vendedor_id", how="left")
+        try:
+            vmap = pd.read_csv(BLING_VENDEDORES, encoding="utf-8-sig")
+            vmap.columns = [_norm(c) for c in vmap.columns]
+            # Accept common header variants from manual CSV exports.
+            if "vendedor_id" not in vmap.columns:
+                for alt in ["id", "vendedorid", "vendedor_id_bling"]:
+                    if alt in vmap.columns:
+                        vmap = vmap.rename(columns={alt: "vendedor_id"})
+                        break
+            if "vendedor" not in vmap.columns:
+                for alt in ["nome", "name", "vendedor_nome"]:
+                    if alt in vmap.columns:
+                        vmap = vmap.rename(columns={alt: "vendedor"})
+                        break
+
+            if "vendedor_id" in vmap.columns and "vendedor" in vmap.columns:
+                df["vendedor_id"] = df["vendedor_id"].astype(str)
+                vmap["vendedor_id"] = vmap["vendedor_id"].astype(str)
+                vmap["vendedor"] = vmap["vendedor"].astype(str)
+                vmap = vmap[["vendedor_id", "vendedor"]].drop_duplicates(subset=["vendedor_id"])
+                df = df.merge(
+                    vmap.rename(columns={"vendedor": "vendedor_map"}),
+                    on="vendedor_id",
+                    how="left",
+                )
+                if "vendedor" not in df.columns:
+                    df["vendedor"] = df["vendedor_map"]
+                else:
+                    missing = df["vendedor"].isna() | (df["vendedor"].astype(str).str.strip() == "")
+                    df.loc[missing, "vendedor"] = df.loc[missing, "vendedor_map"]
+                df = df.drop(columns=["vendedor_map"], errors="ignore")
+        except Exception:
+            # Keep app running even if mapping file is malformed.
+            pass
+    if "vendedor" not in df.columns:
+        df["vendedor"] = pd.NA
+
+    # Fallback: derive seller by matching client name with local "realizado" history.
+    # Keeps monthly granularity and fills only missing sellers.
+    missing_vendor = df["vendedor"].isna() | (df["vendedor"].astype(str).str.strip() == "")
+    if missing_vendor.any() and BASE.exists():
+        try:
+            local_real = pd.read_excel(BASE, sheet_name="realizado")
+            local_real = _normalize_columns(local_real)
+            if {"cliente", "vendedor"}.issubset(local_real.columns):
+                map_df = local_real[["cliente", "vendedor"]].dropna().copy()
+                map_df["cliente_key"] = map_df["cliente"].map(_normalize_text)
+                map_df = map_df[map_df["cliente_key"] != ""]
+                if not map_df.empty:
+                    pref = (
+                        map_df.groupby(["cliente_key", "vendedor"])
+                        .size()
+                        .reset_index(name="cnt")
+                        .sort_values(["cliente_key", "cnt"], ascending=[True, False])
+                        .drop_duplicates("cliente_key")
+                        .set_index("cliente_key")["vendedor"]
+                    )
+                    df["cliente_key"] = df.get("cliente", pd.Series("", index=df.index)).map(_normalize_text)
+                    mapped = df["cliente_key"].map(pref)
+                    df.loc[missing_vendor, "vendedor"] = mapped.loc[missing_vendor]
+                    df = df.drop(columns=["cliente_key"], errors="ignore")
+        except Exception:
+            pass
+
+    df["vendedor"] = df["vendedor"].fillna("SEM_VENDEDOR")
+    keep_cols = [c for c in ["data", "receita", "cliente", "vendedor", "origem"] if c in df.columns]
+    df = df[keep_cols].copy()
+    df = df.dropna(subset=["data", "receita"])
     return df
 
 
