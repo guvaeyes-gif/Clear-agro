@@ -22,11 +22,42 @@ from src.telegram import build_alerts_message, send_telegram_message, telegram_e
 
 PROFILE = os.getenv("CRM_PROFILE", "director").strip().lower()
 PUBLIC_REVIEW = os.getenv("CRM_PUBLIC_REVIEW", "").strip().lower() in {"1", "true", "yes", "on"}
+APP_BUILD = os.getenv("APP_BUILD", "2026-03-01.1")
 APP_TITLE = "Clear Agro CRM"
 ACL_PATH = ROOT / "data" / "access_control.json"
 DEFAULT_YEAR = 2026
 
 st.set_page_config(page_title=APP_TITLE, layout="wide")
+
+if PUBLIC_REVIEW:
+    _st_warning = st.warning
+    _st_info = st.info
+    _sidebar_info = st.sidebar.info
+
+    def _hide_bling_cache_msgs(msg, *_args, **_kwargs):
+        text = str(msg).lower()
+        if "bling" in text and "cache" in text:
+            return
+        return None
+
+    def _warning_filtered(msg, *args, **kwargs):
+        if _hide_bling_cache_msgs(msg, *args, **kwargs) is None and ("bling" in str(msg).lower() and "cache" in str(msg).lower()):
+            return
+        return _st_warning(msg, *args, **kwargs)
+
+    def _info_filtered(msg, *args, **kwargs):
+        if _hide_bling_cache_msgs(msg, *args, **kwargs) is None and ("bling" in str(msg).lower() and "cache" in str(msg).lower()):
+            return
+        return _st_info(msg, *args, **kwargs)
+
+    def _sidebar_info_filtered(msg, *args, **kwargs):
+        if _hide_bling_cache_msgs(msg, *args, **kwargs) is None and ("bling" in str(msg).lower() and "cache" in str(msg).lower()):
+            return
+        return _sidebar_info(msg, *args, **kwargs)
+
+    st.warning = _warning_filtered
+    st.info = _info_filtered
+    st.sidebar.info = _sidebar_info_filtered
 
 st.markdown(
     """
@@ -212,6 +243,7 @@ else:
 st.title(title)
 if PUBLIC_REVIEW:
     st.info("Modo revisao publica ativo: acesso sem login e somente visualizacao.")
+    st.caption(f"Build: {APP_BUILD}")
 period = period_label(year, selected_month, effective_ytd)
 st.caption(f"Periodo: {period}")
 
