@@ -176,14 +176,11 @@ effective_ytd = ytd and selected_month is None
 if ytd and selected_month is not None:
     st.sidebar.caption("YTD desativado porque um mes especifico foi selecionado.")
 
-use_bling = st.sidebar.checkbox("Usar realizado do Bling", value=False)
+use_bling = st.sidebar.checkbox("Usar realizado do Bling", value=PUBLIC_REVIEW)
 if use_bling:
     br = load_bling_realizado()
     if not br.empty:
         sheets["realizado"] = br
-    else:
-        if not PUBLIC_REVIEW:
-            st.sidebar.info("Bling: cache nao encontrado. Usando realizado local.")
 
 vendors = ["TODOS"]
 if "metas" in sheets and not sheets["metas"].empty and "vendedor" in sheets["metas"].columns:

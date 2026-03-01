@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+.streamlit/
+*.log
+.env
+data/google/token.json
+data/google/client_secret.json
+
+# Bling secrets
+bling_api/bling_tokens.json
+bling_api/*.jsonl
+!bling_api/vendas_2026_cache.jsonl
+
+# Outputs
+out/ui_acceptance.md
