@@ -564,12 +564,14 @@ if page == "Auditoria":
     # Bling NFe
     nfe = load_bling_nfe(year)
     if nfe.empty:
-        st.warning("Cache NFe não encontrado para o ano selecionado. Gere nfe_2026_cache.jsonl.")
-        st.stop()
-    nfe = nfe.copy()
-    nfe = nfe[nfe["data"].dt.year == year]
-    nfe_m = nfe.groupby(nfe["data"].dt.to_period("M"))["valor"].sum().reset_index()
-    nfe_m["data"] = nfe_m["data"].dt.to_timestamp()
+        st.warning("Cache NFe do Bling nao encontrado. Exibindo valores do Bling como zero para revisao.")
+        nfe_m = real_m[["data"]].copy() if not real_m.empty else pd.DataFrame(columns=["data"])
+        nfe_m["valor"] = 0.0
+    else:
+        nfe = nfe.copy()
+        nfe = nfe[nfe["data"].dt.year == year]
+        nfe_m = nfe.groupby(nfe["data"].dt.to_period("M"))["valor"].sum().reset_index()
+        nfe_m["data"] = nfe_m["data"].dt.to_timestamp()
 
     # Merge
     df = pd.merge(real_m, nfe_m, on="data", how="outer").fillna(0)
