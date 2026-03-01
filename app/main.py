@@ -573,7 +573,8 @@ if page == "Auditoria":
     # Bling NFe
     nfe = load_bling_nfe(year)
     if nfe.empty:
-        st.warning("Cache NFe do Bling nao encontrado. Exibindo valores do Bling como zero para revisao.")
+        if not PUBLIC_REVIEW:
+            st.warning("Cache NFe do Bling nao encontrado. Exibindo valores do Bling como zero para revisao.")
         nfe_m = real_m[["data"]].copy() if not real_m.empty else pd.DataFrame(columns=["data"])
         nfe_m["valor"] = 0.0
     else:
