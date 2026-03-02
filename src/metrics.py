@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Dict, Optional
 
 import pandas as pd
+import unicodedata
 
 
 @dataclass
@@ -81,10 +82,17 @@ def compute_kpis(sheets: Dict[str, pd.DataFrame], year: int, month: Optional[int
 
 
 def vendedor_performance_period(sheets: Dict[str, pd.DataFrame], year: int, month: Optional[int], ytd: bool) -> pd.DataFrame:
+    def _vendor_key(value: object) -> str:
+        txt = str(value or "").strip().upper()
+        if not txt:
+            return ""
+        txt = "".join(ch for ch in unicodedata.normalize("NFKD", txt) if not unicodedata.combining(ch))
+        return " ".join(txt.split())
+
     metas = sheets.get("metas", pd.DataFrame())
     real = sheets.get("realizado", pd.DataFrame())
 
-    metas_sum = pd.DataFrame(columns=["vendedor", "meta"])
+    metas_sum = pd.DataFrame(columns=["vendedor_key", "vendedor", "meta"])
     if not metas.empty and "vendedor" in metas.columns:
         metas = metas.copy()
         if "data" in metas.columns:
@@ -93,9 +101,15 @@ def vendedor_performance_period(sheets: Dict[str, pd.DataFrame], year: int, mont
         if "meta" not in metas.columns:
             metas["meta"] = 0.0
         metas["meta"] = pd.to_numeric(metas["meta"], errors="coerce").fillna(0)
-        metas_sum = metas.groupby("vendedor", dropna=False)["meta"].sum().reset_index()
+        metas["vendedor_key"] = metas["vendedor"].map(_vendor_key)
+        metas = metas[metas["vendedor_key"] != ""]
+        metas_sum = (
+            metas.groupby("vendedor_key", dropna=False)
+            .agg(meta=("meta", "sum"), vendedor=("vendedor", "first"))
+            .reset_index()
+        )
 
-    real_sum = pd.DataFrame(columns=["vendedor", "receita"])
+    real_sum = pd.DataFrame(columns=["vendedor_key", "vendedor", "receita"])
     if not real.empty and "vendedor" in real.columns:
         real = real.copy()
         if "data" in real.columns:
@@ -104,18 +118,33 @@ def vendedor_performance_period(sheets: Dict[str, pd.DataFrame], year: int, mont
         if "receita" not in real.columns:
             real["receita"] = 0.0
         real["receita"] = pd.to_numeric(real["receita"], errors="coerce").fillna(0)
-        real_sum = real.groupby("vendedor", dropna=False)["receita"].sum().reset_index()
+        real["vendedor_key"] = real["vendedor"].map(_vendor_key)
+        real = real[real["vendedor_key"] != ""]
+        real_sum = (
+            real.groupby("vendedor_key", dropna=False)
+            .agg(receita=("receita", "sum"), vendedor=("vendedor", "first"))
+            .reset_index()
+        )
 
     if metas_sum.empty and real_sum.empty:
         return pd.DataFrame()
 
-    df = metas_sum.merge(real_sum, on="vendedor", how="outer")
+    df = metas_sum.merge(real_sum, on="vendedor_key", how="outer", suffixes=("_meta", "_real"))
+    if "vendedor_real" in df.columns and "vendedor_meta" in df.columns:
+        df["vendedor"] = df["vendedor_real"].fillna(df["vendedor_meta"])
+    elif "vendedor_meta" in df.columns:
+        df["vendedor"] = df["vendedor_meta"]
+    elif "vendedor_real" in df.columns:
+        df["vendedor"] = df["vendedor_real"]
+    else:
+        df["vendedor"] = "SEM_VENDEDOR"
+
     df["meta"] = pd.to_numeric(df.get("meta", 0), errors="coerce").fillna(0)
     df["receita"] = pd.to_numeric(df.get("receita", 0), errors="coerce").fillna(0)
     df["vendedor"] = df["vendedor"].astype(str).fillna("").replace({"": "SEM_VENDEDOR"})
     df["atingimento_pct"] = df.apply(lambda r: (r["receita"] / r["meta"] * 100) if r["meta"] else 0.0, axis=1)
     df["gap"] = df["meta"] - df["receita"]
-    return df
+    return df[["vendedor", "meta", "receita", "atingimento_pct", "gap"]]
 
 
 def meta_realizado_mensal(sheets: Dict[str, pd.DataFrame], year: int) -> pd.DataFrame:
