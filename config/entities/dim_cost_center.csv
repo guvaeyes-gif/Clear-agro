@@ -1,0 +1,8 @@
+﻿cost_center_id,cost_center_name,area,country,active
+CC_COM_01,Comercial Brasil,Comercial,BR,true
+CC_PRD_01,Producao Brasil,Producao,BR,true
+CC_PD_01,Pesquisa e Desenvolvimento,P&D,BR,true
+CC_MKT_01,Marketing e Trade,Marketing/Trade,BR,true
+CC_LOG_01,Logistica Brasil,Logistica,BR,true
+CC_ADM_01,Financeiro e Administrativo,Financeiro/Adm,BR,true
+CC_COM_PY_01,Comercial Paraguai,Comercial,PY,true

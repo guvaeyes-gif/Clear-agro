@@ -1,0 +1,29 @@
+﻿version: 1
+currency_default: BRL
+rules:
+  - id: bank_fee
+    source: banks
+    match:
+      description_contains: ["tarifa", "fee", "anuidade"]
+    map_to:
+      account_code: "1.3.02"
+      cost_center_id: "CC_ADM_01"
+      country: "BR"
+
+  - id: freight_out
+    source: bling
+    match:
+      description_contains: ["frete"]
+    map_to:
+      account_code: "1.2.01"
+      cost_center_id: "CC_LOG_01"
+      country: "BR"
+
+  - id: commission_sales
+    source: banks
+    match:
+      description_contains: ["comissao", "corretagem"]
+    map_to:
+      account_code: "1.3.01"
+      cost_center_id: "CC_COM_01"
+      country: "BR"

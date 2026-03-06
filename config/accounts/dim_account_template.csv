@@ -1,0 +1,7 @@
+﻿account_code,account_name,account_level,account_nature,dre_line,country,active
+1.1.01,Receita Bruta,1,revenue,RECEITA_BRUTA,BR,true
+1.1.02,Deducoes,1,contra_revenue,DEDUCOES,BR,true
+1.2.01,COGS,1,expense,CPV,BR,true
+1.3.01,Opex Comercial,2,expense,OPEX_COMERCIAL,BR,true
+1.3.02,Opex Administrativo,2,expense,OPEX_ADM,BR,true
+1.4.01,EBITDA Ajustes,2,expense,AJUSTES_EBITDA,BR,true
