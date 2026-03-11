@@ -1,36 +1,58 @@
-__pycache__/
+# OS / Editor
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+*.swp
+*.tmp
+
+# Python
+**/__pycache__/
 *.pyc
-.streamlit/
-*.log
+*.pyo
+.pytest_cache/
+.mypy_cache/
+
+# Node
+**/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Env / secrets
 .env
-data/google/token.json
-data/google/client_secret.json
+.env.*
+!.env.example
+!config/env/.env.template
+**/token*.txt
+**/*secret*.txt
+**/*credencial*.txt
+00_governanca/politicas_de_acesso/legacy_credenciais/*
+security/audit/*
 
-# Bling secrets
-bling_api/bling_tokens.json
-bling_api/bling_tokens_cr.json
-bling_api/*.jsonl
-!bling_api/vendas_2026_cache.jsonl
-!bling_api/vendas_2026_cache_cr.jsonl
-!bling_api/nfe_2026_cache_cr.jsonl
-bling_api/bling_sync_report*.json
-bling_api/_write_test.tmp
+# Logs / runtime artifacts
+*.log
+*.log.*
+logs/integration/*
+logs/agents/*
+logs/audit/*
+!logs/integration/README.md
+!logs/agents/README.md
+!logs/audit/README.md
+13_logs_monitoramento/logs_integracoes/*
+11_agentes_automacoes/12_integracoes_agent/pipeline/out/logs/*
+11_agentes_automacoes/12_integracoes_agent/pipeline/out/status/*
+11_agentes_automacoes/12_integracoes_agent/pipeline/out/staging/*
+11_agentes_automacoes/11_dev_codex_agent/repos/**/out/*
 
-# Outputs
-out/*
-out/ui_acceptance.md
-
-# Generated and local datasets
-data/raw/
-data/staging/
-data/marts/
-data/exports/
-data/quality/
-data/planilhas_individuais/
-
-# Local labs and heavy automation workspace
-playwright-e2e/
-aios-lab/
-
-# Temporary local scripts
-scripts/tmp_*.py
+# Binaries / caches / temp
+*.sqlite
+*.db
+*.bak
+*.old
+*.cache
+supabase/.temp/
+archive/*
+!archive/README.md
+!security/audit/README.md

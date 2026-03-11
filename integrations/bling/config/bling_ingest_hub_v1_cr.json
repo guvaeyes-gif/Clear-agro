@@ -1,0 +1,21 @@
+{
+  "output_dir": "C:\\Users\\cesar.zarovski\\Documents\\Clear_OS\\logs\\integration\\staging",
+  "status_dir": "C:\\Users\\cesar.zarovski\\Documents\\Clear_OS\\logs\\integration\\status",
+  "input_sources": [
+    {
+      "name": "bling_contas_pagar_cr",
+      "path": "C:\\Users\\cesar.zarovski\\Documents\\Clear_OS\\11_agentes_automacoes\\11_dev_codex_agent\\repos\\CRM_Clear_Agro\\bling_api\\contas_pagar_cache_cr.jsonl",
+      "type": "jsonl"
+    },
+    {
+      "name": "bling_contas_receber_cr",
+      "path": "C:\\Users\\cesar.zarovski\\Documents\\Clear_OS\\11_agentes_automacoes\\11_dev_codex_agent\\repos\\CRM_Clear_Agro\\bling_api\\contas_receber_cache_cr.jsonl",
+      "type": "jsonl"
+    },
+    {
+      "name": "bling_contatos_cr",
+      "path": "C:\\Users\\cesar.zarovski\\Documents\\Clear_OS\\11_agentes_automacoes\\11_dev_codex_agent\\repos\\CRM_Clear_Agro\\bling_api\\contatos_cache_cr.jsonl",
+      "type": "jsonl"
+    }
+  ]
+}
