@@ -15,11 +15,10 @@ Transicao sem downtime: arquivos criticos permanecem no caminho legacy, com espe
 - `11_agentes_automacoes/12_integracoes_agent/pipeline/08_register_bling_supabase_daily_task.ps1` -> `integrations/bling/runners/register_bling_supabase_daily_task.ps1`
 
 ## Compatibilidade
-- Scheduler atual continua apontando para scripts legacy.
-- Estrutura nova esta pronta para assumir como canonica em fase 2.
+- Scheduler diario (`CZ` e `CR`) ja migrado para wrappers em `automation/jobs` apontando para `integrations/bling/runners`.
+- Estrutura legacy permanece ativa apenas como fallback durante estabilizacao.
 
 ## Proxima fase recomendada
 1. Congelar alteracoes no legado.
-2. Alterar scheduler para apontar para `integrations/bling/runners`.
-3. Apos duas semanas estaveis, arquivar scripts legacy.
-
+2. Monitorar duas semanas de execucao diaria sem regressao.
+3. Apos estabilidade, arquivar scripts legacy de pipeline.
