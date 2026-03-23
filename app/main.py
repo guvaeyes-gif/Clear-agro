@@ -14,7 +14,17 @@ if str(ROOT) not in sys.path:
 
 BASE = ROOT / "out" / "base_unificada.xlsx"
 
-from src.data import load_sheets, load_bling_realizado, load_bling_nfe, load_bling_contas, load_bling_estoque
+from src.data import (
+    load_sheets,
+    load_bling_realizado,
+    load_bling_nfe,
+    load_bling_contas,
+    load_bling_estoque,
+    load_sales_targets_view,
+    load_sales_pipeline_view,
+    load_crm_priority_queue,
+    get_crm_view_error,
+)
 from src.metrics import compute_kpis, vendedor_performance_period, meta_realizado_mensal, sparkline_last_months, period_label
 from src.viz import fmt_brl_abbrev, fmt_pct, bar_meta_realizado, bar_meta_realizado_single, sparkline
 from src.metas_db import init_db, list_metas, create_meta, update_meta, pause_metas, summary_targets, transfer_assets, transfer_metas_futuras, seed_demo
@@ -120,13 +130,213 @@ def apply_acl(df: pd.DataFrame, vendor_col: str = "vendedor") -> pd.DataFrame:
     return df
 
 
+def apply_acl_codes(df: pd.DataFrame, vendor_col: str = "sales_rep_code") -> pd.DataFrame:
+    if PROFILE != "gestor" or df.empty:
+        return df
+    acl = load_acl().get("gestor", {})
+    allow = {_vendor_key(v) for v in _clean_list(acl.get("allow_vendedores", []))}
+    block = {_vendor_key(v) for v in _clean_list(acl.get("block_vendedores", []))}
+    block_canais = {str(c).strip().upper() for c in _clean_list(acl.get("block_canais", []))}
+    block_clientes = {str(c).strip().upper() for c in _clean_list(acl.get("block_clientes", []))}
+
+    out = df.copy()
+    if vendor_col in out.columns:
+        vendor_keys = out[vendor_col].map(_vendor_key)
+        if allow:
+            out = out[vendor_keys.isin(allow)]
+        elif block:
+            out = out[~vendor_keys.isin(block)]
+
+    for channel_col in ["canal", "channel"]:
+        if channel_col in out.columns and block_canais:
+            out = out[~out[channel_col].astype(str).str.upper().isin(block_canais)]
+
+    for customer_col in ["cliente", "customer_name"]:
+        if customer_col in out.columns and block_clientes:
+            out = out[~out[customer_col].astype(str).str.upper().isin(block_clientes)]
+
+    return out
+
+
+def filter_vendor_scope(df: pd.DataFrame, selected_vendor: str, columns: list[str]) -> pd.DataFrame:
+    if df.empty or selected_vendor == "TODOS":
+        return df
+    selected_key = _vendor_key(selected_vendor)
+    mask = pd.Series(False, index=df.index)
+    for column in columns:
+        if column in df.columns:
+            mask = mask | df[column].map(_vendor_key).eq(selected_key)
+    return df[mask]
+
+
+def filter_targets_view(
+    view_df: pd.DataFrame,
+    target_year: int,
+    period_type: str,
+    month_num: int | None = None,
+    quarter_num: int | None = None,
+    state: str | None = None,
+    sales_rep_code: str | None = None,
+    statuses: list[str] | None = None,
+) -> pd.DataFrame:
+    if view_df.empty:
+        return view_df
+    df = view_df.copy()
+    if "target_year" in df.columns:
+        df = df[pd.to_numeric(df["target_year"], errors="coerce").eq(int(target_year))]
+    if "period_type" in df.columns:
+        df = df[df["period_type"].astype(str).str.upper() == str(period_type).upper()]
+    if month_num is not None and "month_num" in df.columns:
+        df = df[pd.to_numeric(df["month_num"], errors="coerce").eq(int(month_num))]
+    if quarter_num is not None and "quarter_num" in df.columns:
+        df = df[pd.to_numeric(df["quarter_num"], errors="coerce").eq(int(quarter_num))]
+    if state and "state" in df.columns:
+        df = df[df["state"].astype(str).str.upper() == str(state).upper()]
+    if sales_rep_code and "sales_rep_code" in df.columns:
+        df = df[df["sales_rep_code"].map(_vendor_key) == _vendor_key(sales_rep_code)]
+    if statuses and "status" in df.columns:
+        df = df[df["status"].astype(str).str.upper().isin([str(item).upper() for item in statuses])]
+    return df
+
+
+def numeric_column(df: pd.DataFrame, column: str) -> pd.Series:
+    if column not in df.columns:
+        return pd.Series(0.0, index=df.index, dtype=float)
+    return pd.to_numeric(df[column], errors="coerce").fillna(0)
+
+
+def sort_by_available(df: pd.DataFrame, specs: list[tuple[str, bool]]) -> pd.DataFrame:
+    columns = [column for column, _ in specs if column in df.columns]
+    if not columns:
+        return df
+    ascending = [direction for column, direction in specs if column in df.columns]
+    return df.sort_values(columns, ascending=ascending)
+
+
+def filter_pipeline_period(
+    df: pd.DataFrame,
+    target_year: int,
+    month_num: int | None,
+    ytd: bool,
+    quarter_num: int | None = None,
+) -> pd.DataFrame:
+    if df.empty or "expected_close_month" not in df.columns:
+        return df
+    out = df.copy()
+    out["expected_close_month"] = pd.to_datetime(out["expected_close_month"], errors="coerce")
+    out = out[out["expected_close_month"].dt.year.fillna(target_year).astype(int) == int(target_year)]
+    if quarter_num is not None:
+        q_start = (quarter_num - 1) * 3 + 1
+        q_end = q_start + 2
+        return out[out["expected_close_month"].dt.month.between(q_start, q_end)]
+    if month_num is not None and not ytd:
+        return out[out["expected_close_month"].dt.month == month_num]
+    if ytd:
+        return out[out["expected_close_month"].dt.month <= pd.Timestamp.today().month]
+    return out
+
+
+def filter_queue_period(
+    df: pd.DataFrame,
+    target_year: int,
+    month_num: int | None,
+    ytd: bool,
+    quarter_num: int | None = None,
+) -> pd.DataFrame:
+    if df.empty or "due_at" not in df.columns:
+        return df
+    out = df.copy()
+    out["due_at"] = pd.to_datetime(out["due_at"], errors="coerce")
+    out = out[(out["due_at"].isna()) | (out["due_at"].dt.year.fillna(target_year).astype(int) == int(target_year))]
+    if quarter_num is not None:
+        q_start = (quarter_num - 1) * 3 + 1
+        q_end = q_start + 2
+        return out[out["due_at"].isna() | out["due_at"].dt.month.between(q_start, q_end)]
+    if month_num is not None and not ytd:
+        return out[out["due_at"].isna() | (out["due_at"].dt.month == month_num)]
+    if ytd:
+        return out[out["due_at"].isna() | (out["due_at"].dt.month <= pd.Timestamp.today().month)]
+    return out
+
+
+def warn_crm_backend(view_name: str, label: str) -> None:
+    error = get_crm_view_error(view_name)
+    if error:
+        st.warning(f"Falha ao ler {label} no CRM/Supabase: {error}")
+
+
+def build_targets_summary(view_df: pd.DataFrame, period_type: str) -> dict:
+    empty_series = pd.DataFrame(columns=["meta_valor", "realizado_valor"])
+    if view_df.empty:
+        return {
+            "kpis": {"meta": 0.0, "realizado": 0.0, "atingimento_pct": 0.0, "delta": 0.0},
+            "series": empty_series,
+            "uf": pd.DataFrame(columns=["state", "meta_valor", "realizado_valor"]),
+            "vendedor": pd.DataFrame(columns=["sales_rep_code", "sales_rep_name", "meta_valor", "realizado_valor"]),
+        }
+
+    df = view_df.copy()
+    meta_total = float(numeric_column(df, "target_value").sum())
+    realizado_total = float(numeric_column(df, "actual_value").sum())
+    period_col = "quarter_num" if str(period_type).upper() == "QUARTER" else "month_num"
+
+    series = pd.DataFrame()
+    if period_col in df.columns and {"target_value", "actual_value"}.issubset(df.columns):
+        series = (
+            df.groupby(period_col, dropna=False)[["target_value", "actual_value"]]
+            .sum()
+            .reset_index()
+            .rename(columns={period_col: "periodo", "target_value": "meta_valor", "actual_value": "realizado_valor"})
+            .sort_values("periodo")
+        )
+        if str(period_type).upper() == "QUARTER":
+            series = series.rename(columns={"periodo": "quarter"})
+        else:
+            series = series.rename(columns={"periodo": "mes"})
+
+    uf = pd.DataFrame()
+    if "state" in df.columns and {"target_value", "actual_value"}.issubset(df.columns):
+        uf = (
+            df.groupby("state", dropna=False)[["target_value", "actual_value"]]
+            .sum()
+            .reset_index()
+            .rename(columns={"state": "estado", "target_value": "meta_valor", "actual_value": "realizado_valor"})
+            .sort_values("estado")
+        )
+
+    vendedor = pd.DataFrame()
+    vendor_cols = [c for c in ["sales_rep_code", "sales_rep_name"] if c in df.columns]
+    if vendor_cols and {"target_value", "actual_value"}.issubset(df.columns):
+        vendedor = (
+            df.groupby(vendor_cols, dropna=False)[["target_value", "actual_value"]]
+            .sum()
+            .reset_index()
+            .rename(columns={"target_value": "meta_valor", "actual_value": "realizado_valor"})
+            .sort_values(vendor_cols)
+        )
+
+    atingimento = (realizado_total / meta_total * 100) if meta_total else 0.0
+    return {
+        "kpis": {
+            "meta": meta_total,
+            "realizado": realizado_total,
+            "atingimento_pct": atingimento,
+            "delta": realizado_total - meta_total,
+        },
+        "series": series,
+        "uf": uf,
+        "vendedor": vendedor,
+    }
+
+
 init_db()
 
 if st.sidebar.button("Recarregar base"):
-    try:
-        load_sheets.clear()
-    except Exception:
-        pass
+    for loader in [load_sheets, load_sales_targets_view, load_sales_pipeline_view, load_crm_priority_queue]:
+        try:
+            loader.clear()
+        except Exception:
+            pass
 sheets = load_sheets()
 if not sheets:
     st.warning("Base principal nao encontrada. Carregando modo revisao com dados vazios.")
@@ -252,7 +462,10 @@ page_options = [
     "Auditoria",
 ]
 if PUBLIC_REVIEW:
-    page_options = [p for p in page_options if p != "Metas Comerciais"]
+    page_options = [
+        "Pipeline Manager",
+        "Insights & Alertas",
+    ]
 
 page = st.sidebar.selectbox("Pagina", options=page_options)
 
@@ -263,7 +476,7 @@ else:
     title = APP_TITLE
 st.title(title)
 if PUBLIC_REVIEW:
-    st.info("Modo revisao publica ativo: acesso sem login e somente visualizacao.")
+    st.info("Modo revisao publica ativo: acesso sem login, somente visualizacao e paginas CRM.")
     st.caption(f"Build: {APP_BUILD}")
 period = period_label(year, selected_month, effective_ytd, selected_quarter)
 st.caption(f"Periodo: {period}")
@@ -285,7 +498,19 @@ if sel_vendor != "TODOS":
 # Page A - Executive Cockpit
 if page == "Executive Cockpit":
     st.subheader("Executive Cockpit")
-    kpis = compute_kpis(sheets, year, selected_month, effective_ytd, selected_quarter)
+    crm_pipeline_view = apply_acl_codes(load_sales_pipeline_view(), vendor_col="sales_rep_code")
+    crm_pipeline_view = filter_vendor_scope(crm_pipeline_view, sel_vendor, ["sales_rep_code", "sales_rep_name"])
+    crm_pipeline_view = filter_pipeline_period(crm_pipeline_view, year, selected_month, effective_ytd, selected_quarter)
+    kpis = compute_kpis(
+        sheets,
+        year,
+        selected_month,
+        effective_ytd,
+        selected_quarter,
+        pipeline_view=crm_pipeline_view,
+    )
+    if crm_pipeline_view.empty:
+        warn_crm_backend("vw_sales_pipeline_summary", "pipeline comercial")
 
     # fallback meta from metas.db when base_unificada meta is missing
     meta_display = kpis.meta
@@ -378,13 +603,16 @@ if page == "Executive Cockpit":
     if selected_month is not None and not effective_ytd and selected_quarter is None:
         today = pd.Timestamp.today()
         if today.year == year and today.month == selected_month:
-            esperado = (today.day / today.days_in_month) * kpis.meta
-            if kpis.meta > 0 and kpis.realizado < esperado * 0.8:
+            esperado = (today.day / today.days_in_month) * meta_display
+            if meta_display > 0 and kpis.realizado < esperado * 0.8:
                 bullets.append("Mes em risco: realizado abaixo do esperado")
 
     # Disciplina
     opps = sheets.get("oportunidades", pd.DataFrame())
-    if "data_proximo_passo" in opps.columns:
+    if not crm_pipeline_view.empty and "opportunities_without_next_step" in crm_pipeline_view.columns:
+        sem_passo = int(numeric_column(crm_pipeline_view, "opportunities_without_next_step").sum())
+        bullets.append(f"Disciplina: {sem_passo} oportunidades sem proximo passo")
+    elif "data_proximo_passo" in opps.columns:
         sem_passo = opps[opps["data_proximo_passo"].isna()]
         bullets.append(f"Disciplina: {len(sem_passo)} oportunidades sem proximo passo")
     else:
@@ -398,53 +626,149 @@ if page == "Executive Cockpit":
 # Page B - Pipeline Manager
 if page == "Pipeline Manager":
     st.subheader("Pipeline Manager")
-    opps = sheets.get("oportunidades", pd.DataFrame())
-    if opps.empty:
-        st.info("Pendencia: aba oportunidades vazia")
-    else:
-        df = opps.copy()
-        if "volume_potencial" in df.columns:
-            df["valor"] = df["volume_potencial"]
-        if "probabilidade" in df.columns:
-            df["prob"] = pd.to_numeric(df["probabilidade"], errors="coerce")
-        if "data_proximo_passo" in df.columns:
-            df["proximo_passo"] = df["data_proximo_passo"]
-        df["oportunidade"] = df.get("oportunidade", df.get("cliente", ""))
+    pipeline_view = apply_acl_codes(load_sales_pipeline_view(), vendor_col="sales_rep_code")
+    pipeline_view = filter_vendor_scope(pipeline_view, sel_vendor, ["sales_rep_code", "sales_rep_name"])
+    pipeline_view = filter_pipeline_period(pipeline_view, year, selected_month, effective_ytd, selected_quarter)
 
-        if "canal" in df.columns:
-            canal = st.sidebar.multiselect("Canal", sorted(df["canal"].dropna().unique().tolist()))
-            if canal:
-                df = df[df["canal"].isin(canal)]
-        if "etapa" in df.columns:
-            etapa = st.sidebar.multiselect("Etapa", sorted(df["etapa"].dropna().unique().tolist()))
-            if etapa:
-                df = df[df["etapa"].isin(etapa)]
+    if not pipeline_view.empty:
+        df = pipeline_view.copy()
+        if "customer_state" in df.columns:
+            estados = sorted([v for v in df["customer_state"].dropna().astype(str).unique().tolist() if v])
+            estados_sel = st.sidebar.multiselect("UF pipeline", estados, key="pipe_estado")
+            if estados_sel:
+                df = df[df["customer_state"].isin(estados_sel)]
+        if "stage" in df.columns:
+            etapas = sorted([v for v in df["stage"].dropna().astype(str).unique().tolist() if v])
+            etapas_sel = st.sidebar.multiselect("Etapa pipeline", etapas, key="pipe_etapa")
+            if etapas_sel:
+                df = df[df["stage"].isin(etapas_sel)]
 
-        df["alerta"] = ""
-        if "proximo_passo" in df.columns:
-            df.loc[df["proximo_passo"].isna(), "alerta"] = "Sem proximo passo"
-        if "valor" in df.columns and "prob" in df.columns:
-            df["score"] = df["valor"] * (df["prob"].fillna(0) / 100)
-        elif "valor" in df.columns:
-            df["score"] = df["valor"]
-        else:
-            df["score"] = None
+        total_opps = int(numeric_column(df, "opportunities_count").sum())
+        pipeline_total = float(numeric_column(df, "pipeline_value").sum())
+        weighted_total = float(numeric_column(df, "weighted_pipeline_value").sum())
+        sem_passo = int(numeric_column(df, "opportunities_without_next_step").sum())
+        overdue = int(numeric_column(df, "opportunities_with_overdue_step").sum())
 
-        cols = ["cliente", "oportunidade", "etapa", "valor", "prob", "proximo_passo", "alerta", "score", "vendedor"]
-        view = df[[c for c in cols if c in df.columns]].copy()
-        st.dataframe(
-            view,
-            height=420,
-        )
+        c1, c2, c3, c4, c5 = st.columns(5)
+        c1.metric("Oportunidades", total_opps)
+        c2.metric("Pipeline", fmt_brl_abbrev(pipeline_total))
+        c3.metric("Pipeline ponderado", fmt_brl_abbrev(weighted_total))
+        c4.metric("Sem proximo passo", sem_passo)
+        c5.metric("Passos vencidos", overdue)
+
+        if "stage" in df.columns and not df.empty:
+            stage_df = (
+                df.groupby("stage", dropna=False)[["pipeline_value", "weighted_pipeline_value"]]
+                .sum()
+                .reset_index()
+                .fillna(0)
+            )
+            stage_long = stage_df.melt(id_vars=["stage"], var_name="tipo", value_name="valor")
+            chart = (
+                alt.Chart(stage_long)
+                .mark_bar()
+                .encode(
+                    x=alt.X("stage:N", title="Etapa"),
+                    y=alt.Y("valor:Q", title="Valor"),
+                    color=alt.Color("tipo:N", title="Serie"),
+                    xOffset="tipo:N",
+                    tooltip=["stage", "tipo", "valor"],
+                )
+            )
+            st.altair_chart(chart, width="stretch")
+
+        view_cols = [
+            "sales_rep_name",
+            "sales_rep_code",
+            "customer_state",
+            "stage",
+            "expected_close_month",
+            "opportunities_count",
+            "pipeline_value",
+            "weighted_pipeline_value",
+            "avg_probability",
+            "opportunities_without_next_step",
+            "opportunities_with_overdue_step",
+            "last_opportunity_update",
+        ]
+        view = df[[c for c in view_cols if c in df.columns]].copy()
+        if "expected_close_month" in view.columns:
+            view = sort_by_available(view, [("expected_close_month", True), ("weighted_pipeline_value", False)])
+        st.dataframe(view, height=420, width="stretch")
 
         out = BytesIO()
-        view.to_excel(out, index=False, sheet_name="prioridades")
-        st.download_button("Exportar Prioridades da Semana", data=out.getvalue(), file_name="prioridades_semana.xlsx")
+        view.to_excel(out, index=False, sheet_name="pipeline")
+        st.download_button("Exportar Pipeline", data=out.getvalue(), file_name="pipeline_manager.xlsx")
+
+        queue_df = apply_acl_codes(load_crm_priority_queue(), vendor_col="sales_rep_code")
+        queue_df = filter_vendor_scope(queue_df, sel_vendor, ["sales_rep_code", "sales_rep_name"])
+        queue_df = filter_queue_period(queue_df, year, selected_month, effective_ytd, selected_quarter)
+        if not queue_df.empty:
+            queue_df = sort_by_available(queue_df, [("priority_score", False), ("due_at", True)])
+            st.caption("Fila prioritaria de agentes e atividades")
+            st.dataframe(
+                queue_df[[c for c in ["queue_source", "severity", "title", "customer_name", "sales_rep_name", "due_at", "priority_score"] if c in queue_df.columns]].head(20),
+                height=260,
+                width="stretch",
+            )
+        else:
+            warn_crm_backend("vw_crm_agent_priority_queue", "fila prioritaria do CRM")
+    else:
+        warn_crm_backend("vw_sales_pipeline_summary", "pipeline comercial")
+        opps = sheets.get("oportunidades", pd.DataFrame())
+        if opps.empty:
+            st.info("Pendencia: aba oportunidades vazia")
+        else:
+            df = opps.copy()
+            if "volume_potencial" in df.columns:
+                df["valor"] = df["volume_potencial"]
+            if "probabilidade" in df.columns:
+                df["prob"] = pd.to_numeric(df["probabilidade"], errors="coerce")
+            if "data_proximo_passo" in df.columns:
+                df["proximo_passo"] = df["data_proximo_passo"]
+            df["oportunidade"] = df.get("oportunidade", df.get("cliente", ""))
+
+            if "canal" in df.columns:
+                canal = st.sidebar.multiselect("Canal", sorted(df["canal"].dropna().unique().tolist()))
+                if canal:
+                    df = df[df["canal"].isin(canal)]
+            if "etapa" in df.columns:
+                etapa = st.sidebar.multiselect("Etapa", sorted(df["etapa"].dropna().unique().tolist()))
+                if etapa:
+                    df = df[df["etapa"].isin(etapa)]
+
+            df["alerta"] = ""
+            if "proximo_passo" in df.columns:
+                df.loc[df["proximo_passo"].isna(), "alerta"] = "Sem proximo passo"
+            if "valor" in df.columns and "prob" in df.columns:
+                df["score"] = df["valor"] * (df["prob"].fillna(0) / 100)
+            elif "valor" in df.columns:
+                df["score"] = df["valor"]
+            else:
+                df["score"] = None
+
+            cols = ["cliente", "oportunidade", "etapa", "valor", "prob", "proximo_passo", "alerta", "score", "vendedor"]
+            view = df[[c for c in cols if c in df.columns]].copy()
+            st.dataframe(view, height=420)
+
+            out = BytesIO()
+            view.to_excel(out, index=False, sheet_name="prioridades")
+            st.download_button("Exportar Prioridades da Semana", data=out.getvalue(), file_name="prioridades_semana.xlsx")
 
 # Page C - Performance & Ritmo
 if page == "Performance & Ritmo":
     st.subheader("Performance & Ritmo")
-    perf_kpis = compute_kpis(sheets, year, selected_month, effective_ytd, selected_quarter)
+    perf_pipeline_view = apply_acl_codes(load_sales_pipeline_view(), vendor_col="sales_rep_code")
+    perf_pipeline_view = filter_vendor_scope(perf_pipeline_view, sel_vendor, ["sales_rep_code", "sales_rep_name"])
+    perf_pipeline_view = filter_pipeline_period(perf_pipeline_view, year, selected_month, effective_ytd, selected_quarter)
+    perf_kpis = compute_kpis(
+        sheets,
+        year,
+        selected_month,
+        effective_ytd,
+        selected_quarter,
+        pipeline_view=perf_pipeline_view,
+    )
     quarter_suffix = f"Q{selected_quarter}" if selected_quarter is not None else period
     q1, q2, q3 = st.columns(3)
     q1.metric(f"Meta ({quarter_suffix})", fmt_brl_abbrev(perf_kpis.meta))
@@ -484,17 +808,60 @@ if page == "Performance & Ritmo":
 # Page D - Insights & Alertas
 if page == "Insights & Alertas":
     st.subheader("Insights & Alertas")
-    opps = sheets.get("oportunidades", pd.DataFrame())
-    alerts = []
+    queue_df = apply_acl_codes(load_crm_priority_queue(), vendor_col="sales_rep_code")
+    queue_df = filter_vendor_scope(queue_df, sel_vendor, ["sales_rep_code", "sales_rep_name"])
+    queue_df = filter_queue_period(queue_df, year, selected_month, effective_ytd, selected_quarter)
 
-    if "data_proximo_passo" in opps.columns:
-        sem_passo = opps[opps["data_proximo_passo"].isna()]
-        alerts.append(("Sem proximo passo", len(sem_passo)))
+    if not queue_df.empty:
+        df = queue_df.copy()
+        total_queue = len(df)
+        open_findings = int((df.get("queue_source", pd.Series([], dtype=str)) == "finding").sum())
+        open_activities = int((df.get("queue_source", pd.Series([], dtype=str)) == "activity").sum())
+        critical_count = int(df.get("severity", pd.Series([], dtype=str)).astype(str).str.lower().eq("critical").sum())
+
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("Fila aberta", total_queue)
+        c2.metric("Findings", open_findings)
+        c3.metric("Atividades", open_activities)
+        c4.metric("Criticos", critical_count)
+
+        if "severity" in df.columns:
+            sev_df = df["severity"].astype(str).str.upper().value_counts().rename_axis("severity").reset_index(name="quantidade")
+            sev_chart = alt.Chart(sev_df).mark_bar().encode(
+                x=alt.X("severity:N", title="Severidade"),
+                y=alt.Y("quantidade:Q", title="Itens"),
+                tooltip=["severity", "quantidade"],
+            )
+            st.altair_chart(sev_chart, width="stretch")
+
+        display_cols = [
+            "queue_source",
+            "severity",
+            "status",
+            "title",
+            "customer_name",
+            "opportunity_title",
+            "sales_rep_name",
+            "due_at",
+            "priority_score",
+        ]
+        st.dataframe(
+            sort_by_available(df, [("priority_score", False), ("due_at", True)])[[c for c in display_cols if c in df.columns]],
+            height=420,
+            width="stretch",
+        )
     else:
-        alerts.append(("Sem proximo passo", "pendente"))
+        warn_crm_backend("vw_crm_agent_priority_queue", "fila prioritaria do CRM")
+        opps = sheets.get("oportunidades", pd.DataFrame())
+        alerts = []
+        if "data_proximo_passo" in opps.columns:
+            sem_passo = opps[opps["data_proximo_passo"].isna()]
+            alerts.append(("Sem proximo passo", len(sem_passo)))
+        else:
+            alerts.append(("Sem proximo passo", "pendente"))
 
-    for title, val in alerts:
-        st.metric(title, val)
+        for title, val in alerts:
+            st.metric(title, val)
 
 # Page G - Finance Control Tower
 if page == "Finance Control Tower":
@@ -721,32 +1088,45 @@ if page == "Auditoria":
 if page == "Metas Comerciais":
     st.subheader("Metas Comerciais")
     tabs = st.tabs(["Executive Summary", "Metas", "Cadastro", "Transferencia"])
+    targets_view_all = apply_acl_codes(load_sales_targets_view(), vendor_col="sales_rep_code")
+    targets_view_all = filter_vendor_scope(targets_view_all, sel_vendor, ["sales_rep_code", "sales_rep_name"])
+    periodo_tipo = "MONTH"
+    uf = ""
+    vend = ""
+    status = []
+    mes = None
+    quarter = None
 
     with tabs[0]:
         st.write("Resumo executivo das metas por UF, vendedor e periodo.")
         colf1, colf2, colf3, colf4, colf5 = st.columns(5)
         periodo_tipo = colf1.selectbox("Periodo", ["MONTH", "QUARTER"], key="metas_periodo_tipo")
-        # dynamic UF list
-        all_metas = list_metas({"ano": year})
-        if PROFILE == "gestor" and not all_metas.empty:
-            acl = load_acl().get("gestor", {})
-            allow = _clean_list(acl.get("allow_vendedores", []))
-            block = _clean_list(acl.get("block_vendedores", []))
-            if allow:
-                all_metas = all_metas[all_metas["vendedor_id"].isin(allow)]
-            elif block:
-                all_metas = all_metas[~all_metas["vendedor_id"].isin(block)]
-        uf_opts = [""] + sorted(all_metas["estado"].dropna().unique().tolist()) if not all_metas.empty else [""]
+
+        if not targets_view_all.empty:
+            all_targets_year = filter_targets_view(targets_view_all, year, periodo_tipo)
+            uf_opts = [""] + sorted([v for v in all_targets_year.get("state", pd.Series(dtype=str)).dropna().astype(str).unique().tolist() if v])
+            vend_opts = [""] + sorted([v for v in all_targets_year.get("sales_rep_code", pd.Series(dtype=str)).dropna().astype(str).unique().tolist() if v])
+        else:
+            all_metas = list_metas({"ano": year})
+            if PROFILE == "gestor" and not all_metas.empty:
+                acl = load_acl().get("gestor", {})
+                allow = _clean_list(acl.get("allow_vendedores", []))
+                block = _clean_list(acl.get("block_vendedores", []))
+                if allow:
+                    all_metas = all_metas[all_metas["vendedor_id"].isin(allow)]
+                elif block:
+                    all_metas = all_metas[~all_metas["vendedor_id"].isin(block)]
+            uf_opts = [""] + sorted(all_metas["estado"].dropna().unique().tolist()) if not all_metas.empty else [""]
+            vend_opts = [""] + sorted(all_metas["vendedor_id"].dropna().unique().tolist()) if not all_metas.empty else [""]
+
         uf = colf2.selectbox("UF (opcional)", options=uf_opts, key="metas_uf")
-        # dynamic vendedor list
-        vend_opts = [""] + sorted(all_metas["vendedor_id"].dropna().unique().tolist()) if not all_metas.empty else [""]
         vend = colf3.selectbox("Vendedor ID (opcional)", options=vend_opts, key="metas_vendedor")
-        status = colf4.multiselect("Status", ["ATIVO","PAUSADO","DESLIGADO","TRANSFERIDO"], key="metas_status")
+        status = colf4.multiselect("Status", ["ATIVO", "PAUSADO", "DESLIGADO", "TRANSFERIDO"], key="metas_status")
         if colf5.button("Criar dados demo", key="metas_seed"):
             seed_demo()
+            load_sales_targets_view.clear()
             st.success("Dados demo criados.")
 
-        # periodo filter
         if periodo_tipo == "MONTH":
             mes = st.selectbox("Mes", [""] + list(range(1, 13)), key="metas_mes")
             quarter = None
@@ -754,104 +1134,194 @@ if page == "Metas Comerciais":
             quarter = st.selectbox("Quarter", [""] + [1, 2, 3, 4], key="metas_quarter")
             mes = None
 
-        filtros = {
-            "ano": year,
-            "periodo_tipo": periodo_tipo,
-            "mes": mes or None,
-            "quarter": quarter or None,
-            "estado": uf or None,
-            "vendedor_id": vend or None,
-            "status": status or None,
-        }
-        # enforce ACL on summary (gestor)
-        if PROFILE == "gestor":
-            acl = load_acl().get("gestor", {})
-            allow = _clean_list(acl.get("allow_vendedores", []))
-            block = _clean_list(acl.get("block_vendedores", []))
-            if allow:
-                filtros["vendedor_id"] = allow
-            elif block:
-                filtros["vendedor_id"] = [v for v in vend_opts if v and v not in block]
-        res = summary_targets(filtros)
-        k = res["kpis"]
-        c1, c2, c3, c4 = st.columns(4)
-        c1.metric("Meta", fmt_brl_abbrev(k.get("meta", 0)))
-        c2.metric("Realizado", fmt_brl_abbrev(k.get("realizado", 0)))
-        c3.metric("Atingimento %", fmt_pct(k.get("atingimento_pct", 0)))
-        c4.metric("Delta", fmt_brl_abbrev(k.get("delta", 0)))
+        if not targets_view_all.empty:
+            filtered_view = filter_targets_view(
+                targets_view_all,
+                year,
+                periodo_tipo,
+                month_num=mes or None,
+                quarter_num=quarter or None,
+                state=uf or None,
+                sales_rep_code=vend or None,
+                statuses=status or None,
+            )
+            res = build_targets_summary(filtered_view, periodo_tipo)
+            k = res["kpis"]
+            c1, c2, c3, c4 = st.columns(4)
+            c1.metric("Meta", fmt_brl_abbrev(k.get("meta", 0)))
+            c2.metric("Realizado", fmt_brl_abbrev(k.get("realizado", 0)))
+            c3.metric("Atingimento %", fmt_pct(k.get("atingimento_pct", 0)))
+            c4.metric("Delta", fmt_brl_abbrev(k.get("delta", 0)))
 
-        if not res["series"].empty:
-            ser = res["series"].rename(columns={"meta_valor":"meta","realizado_valor":"receita"}).copy()
-            if periodo_tipo == "QUARTER":
-                if "quarter" in ser.columns:
-                    ser["periodo"] = ser["quarter"]
+            if not res["series"].empty:
+                ser = res["series"].rename(columns={"meta_valor": "meta", "realizado_valor": "receita"}).copy()
+                if periodo_tipo == "QUARTER":
+                    ser["periodo"] = ser.get("quarter")
                 else:
-                    ser["periodo"] = ser["mes"].apply(lambda m: ((int(m) - 1) // 3 + 1) if pd.notna(m) else None)
+                    ser["periodo"] = ser.get("mes")
+                line = alt.Chart(ser).transform_fold(
+                    ["meta", "receita"], as_=["tipo", "valor"]
+                ).mark_line(point=True).encode(
+                    x=alt.X("periodo:O", title="Periodo"),
+                    y=alt.Y("valor:Q", title="Valor"),
+                    color=alt.Color("tipo:N", title=""),
+                    tooltip=["periodo:O", "tipo:N", "valor:Q"],
+                )
+                st.altair_chart(line, width="stretch")
+
+            if not res["uf"].empty:
+                uf_df = res["uf"].copy()
+                uf_df["ating"] = (uf_df["realizado_valor"] / uf_df["meta_valor"] * 100).fillna(0)
+                st.write("Atingimento por UF")
+                st.bar_chart(uf_df.set_index("estado")[["meta_valor", "realizado_valor"]])
+                uf_df["delta"] = uf_df["realizado_valor"] - uf_df["meta_valor"]
+                st.write("Delta por UF")
+                st.bar_chart(uf_df.set_index("estado")[["delta"]])
+
+            if not filtered_view.empty:
+                heat = filtered_view.copy()
+                heat["periodo"] = heat["quarter_num"] if periodo_tipo == "QUARTER" else heat["month_num"]
+                heat_src = (
+                    heat.groupby(["state", "periodo"], dropna=False)["actual_value"]
+                    .sum()
+                    .reset_index()
+                    .rename(columns={"state": "estado", "actual_value": "realizado"})
+                )
+                st.write("Heatmap UF x periodo")
+                hm = alt.Chart(heat_src).mark_rect().encode(
+                    x=alt.X("periodo:O", title="Periodo"),
+                    y=alt.Y("estado:N", title="UF"),
+                    color=alt.Color("realizado:Q", title="Realizado"),
+                    tooltip=["estado", "periodo", "realizado"],
+                )
+                st.altair_chart(hm, width="stretch")
             else:
-                ser["periodo"] = ser["mes"]
-            line = alt.Chart(ser).transform_fold(
-                ["meta","receita"], as_=["tipo","valor"]
-            ).mark_line(point=True).encode(
-                x=alt.X("periodo:O", title="Periodo"),
-                y=alt.Y("valor:Q", title="Valor"),
-                color=alt.Color("tipo:N", title=""),
-                tooltip=["periodo:O","tipo:N","valor:Q"],
-            )
-            st.altair_chart(line, width="stretch")
+                st.info("Sem metas na view CRM para os filtros selecionados.")
+        else:
+            filtros = {
+                "ano": year,
+                "periodo_tipo": periodo_tipo,
+                "mes": mes or None,
+                "quarter": quarter or None,
+                "estado": uf or None,
+                "vendedor_id": vend or None,
+                "status": status or None,
+            }
+            if PROFILE == "gestor":
+                acl = load_acl().get("gestor", {})
+                allow = _clean_list(acl.get("allow_vendedores", []))
+                block = _clean_list(acl.get("block_vendedores", []))
+                if allow:
+                    filtros["vendedor_id"] = allow
+                elif block:
+                    filtros["vendedor_id"] = [v for v in vend_opts if v and v not in block]
+            res = summary_targets(filtros)
+            k = res["kpis"]
+            c1, c2, c3, c4 = st.columns(4)
+            c1.metric("Meta", fmt_brl_abbrev(k.get("meta", 0)))
+            c2.metric("Realizado", fmt_brl_abbrev(k.get("realizado", 0)))
+            c3.metric("Atingimento %", fmt_pct(k.get("atingimento_pct", 0)))
+            c4.metric("Delta", fmt_brl_abbrev(k.get("delta", 0)))
 
-        # Barras por UF
-        if not res["uf"].empty:
-            uf_df = res["uf"].copy()
-            uf_df["ating"] = (uf_df["realizado_valor"] / uf_df["meta_valor"] * 100).fillna(0)
-            st.write("Atingimento por UF")
-            st.bar_chart(uf_df.set_index("estado")[["meta_valor","realizado_valor"]])
+            if not res["series"].empty:
+                ser = res["series"].rename(columns={"meta_valor": "meta", "realizado_valor": "receita"}).copy()
+                if periodo_tipo == "QUARTER":
+                    if "quarter" in ser.columns:
+                        ser["periodo"] = ser["quarter"]
+                    else:
+                        ser["periodo"] = ser["mes"].apply(lambda m: ((int(m) - 1) // 3 + 1) if pd.notna(m) else None)
+                else:
+                    ser["periodo"] = ser["mes"]
+                line = alt.Chart(ser).transform_fold(
+                    ["meta", "receita"], as_=["tipo", "valor"]
+                ).mark_line(point=True).encode(
+                    x=alt.X("periodo:O", title="Periodo"),
+                    y=alt.Y("valor:Q", title="Valor"),
+                    color=alt.Color("tipo:N", title=""),
+                    tooltip=["periodo:O", "tipo:N", "valor:Q"],
+                )
+                st.altair_chart(line, width="stretch")
 
-            # Waterfall simple (delta por UF)
-            uf_df["delta"] = uf_df["realizado_valor"] - uf_df["meta_valor"]
-            st.write("Delta por UF")
-            st.bar_chart(uf_df.set_index("estado")[["delta"]])
+            if not res["uf"].empty:
+                uf_df = res["uf"].copy()
+                uf_df["ating"] = (uf_df["realizado_valor"] / uf_df["meta_valor"] * 100).fillna(0)
+                st.write("Atingimento por UF")
+                st.bar_chart(uf_df.set_index("estado")[["meta_valor", "realizado_valor"]])
+                uf_df["delta"] = uf_df["realizado_valor"] - uf_df["meta_valor"]
+                st.write("Delta por UF")
+                st.bar_chart(uf_df.set_index("estado")[["delta"]])
 
-        # Heatmap UF x periodo
-        dfm = list_metas(filtros)
-        if PROFILE == "gestor" and not dfm.empty:
-            acl = load_acl().get("gestor", {})
-            allow = _clean_list(acl.get("allow_vendedores", []))
-            block = _clean_list(acl.get("block_vendedores", []))
-            if allow:
-                dfm = dfm[dfm["vendedor_id"].isin(allow)]
-            elif block:
-                dfm = dfm[~dfm["vendedor_id"].isin(block)]
-        if not dfm.empty:
-            if periodo_tipo == "MONTH":
-                dfm["periodo"] = dfm["mes"]
-            else:
-                dfm["periodo"] = dfm["quarter"]
-            pivot = dfm.pivot_table(index="estado", columns="periodo", values="realizado_valor", aggfunc="sum", fill_value=0)
-            heat = pivot.reset_index().melt(id_vars=["estado"], var_name="periodo", value_name="realizado")
-            st.write("Heatmap UF x periodo")
-            hm = alt.Chart(heat).mark_rect().encode(
-                x=alt.X("periodo:O", title="Periodo"),
-                y=alt.Y("estado:N", title="UF"),
-                color=alt.Color("realizado:Q", title="Realizado"),
-                tooltip=["estado","periodo","realizado"],
-            )
-            st.altair_chart(hm, width="stretch")
+            dfm = list_metas(filtros)
+            if PROFILE == "gestor" and not dfm.empty:
+                acl = load_acl().get("gestor", {})
+                allow = _clean_list(acl.get("allow_vendedores", []))
+                block = _clean_list(acl.get("block_vendedores", []))
+                if allow:
+                    dfm = dfm[dfm["vendedor_id"].isin(allow)]
+                elif block:
+                    dfm = dfm[~dfm["vendedor_id"].isin(block)]
+            if not dfm.empty:
+                if periodo_tipo == "MONTH":
+                    dfm["periodo"] = dfm["mes"]
+                else:
+                    dfm["periodo"] = dfm["quarter"]
+                pivot = dfm.pivot_table(index="estado", columns="periodo", values="realizado_valor", aggfunc="sum", fill_value=0)
+                heat = pivot.reset_index().melt(id_vars=["estado"], var_name="periodo", value_name="realizado")
+                st.write("Heatmap UF x periodo")
+                hm = alt.Chart(heat).mark_rect().encode(
+                    x=alt.X("periodo:O", title="Periodo"),
+                    y=alt.Y("estado:N", title="UF"),
+                    color=alt.Color("realizado:Q", title="Realizado"),
+                    tooltip=["estado", "periodo", "realizado"],
+                )
+                st.altair_chart(hm, width="stretch")
 
     with tabs[1]:
         st.write("Listagem de metas")
-        df = list_metas({"ano": year})
-        if PROFILE == "gestor" and not df.empty:
-            acl = load_acl().get("gestor", {})
-            allow = _clean_list(acl.get("allow_vendedores", []))
-            block = _clean_list(acl.get("block_vendedores", []))
-            if allow:
-                df = df[df["vendedor_id"].isin(allow)]
-            elif block:
-                df = df[~df["vendedor_id"].isin(block)]
-        if not df.empty and "status" in df.columns:
-            df = df.copy()
-            df["status"] = df["status"].apply(status_chip)
-        st.dataframe(df, height=420)
+        if not targets_view_all.empty:
+            df = filter_targets_view(
+                targets_view_all,
+                year,
+                periodo_tipo,
+                month_num=mes or None,
+                quarter_num=quarter or None,
+                state=uf or None,
+                sales_rep_code=vend or None,
+                statuses=status or None,
+            )
+            if not df.empty:
+                df = df.rename(
+                    columns={
+                        "target_year": "ano",
+                        "period_type": "periodo_tipo",
+                        "month_num": "mes",
+                        "quarter_num": "quarter",
+                        "state": "estado",
+                        "sales_rep_code": "vendedor_id",
+                        "sales_rep_name": "vendedor",
+                        "target_value": "meta_valor",
+                        "actual_value": "realizado_valor",
+                        "attainment_pct": "atingimento_pct",
+                        "gap_value": "gap_valor",
+                    }
+                )
+                if "status" in df.columns:
+                    df["status"] = df["status"].apply(status_chip)
+            st.dataframe(df, height=420, width="stretch")
+        else:
+            df = list_metas({"ano": year})
+            if PROFILE == "gestor" and not df.empty:
+                acl = load_acl().get("gestor", {})
+                allow = _clean_list(acl.get("allow_vendedores", []))
+                block = _clean_list(acl.get("block_vendedores", []))
+                if allow:
+                    df = df[df["vendedor_id"].isin(allow)]
+                elif block:
+                    df = df[~df["vendedor_id"].isin(block)]
+            if not df.empty and "status" in df.columns:
+                df = df.copy()
+                df["status"] = df["status"].apply(status_chip)
+            st.dataframe(df, height=420)
 
     with tabs[2]:
         st.write("Cadastrar nova meta")
@@ -908,6 +1378,7 @@ if page == "Metas Comerciais":
                         "status": mf.get("status") or "ATIVO",
                         "observacoes": None,
                     }, actor_id="ui")
+                    load_sales_targets_view.clear()
                     st.success("Meta criada.")
 
     with tabs[3]:
@@ -922,4 +1393,5 @@ if page == "Metas Comerciais":
             st.success("Ativos transferidos")
         if st.button("Transferir metas futuras"):
             transfer_metas_futuras(origem, destino, actor_id="ui")
+            load_sales_targets_view.clear()
             st.success("Metas transferidas")

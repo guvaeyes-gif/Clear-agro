@@ -5,6 +5,7 @@ import csv
 import json
 import os
 import subprocess
+import sys
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
@@ -13,16 +14,17 @@ from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 
+ROOT = Path(__file__).resolve().parents[3]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from integrations.shared.bling_paths import resolve_bling_root
+from integrations.shared.lock_utils import LockAcquisitionError, managed_lock
+
+
 def parse_args() -> argparse.Namespace:
     root = Path(__file__).resolve().parents[3]
-    default_bling = (
-        root
-        / "11_agentes_automacoes"
-        / "11_dev_codex_agent"
-        / "repos"
-        / "CRM_Clear_Agro"
-        / "bling_api"
-    )
+    default_bling = resolve_bling_root("pipeline")
     default_status = (
         root
         / "11_agentes_automacoes"
@@ -412,53 +414,102 @@ def write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
             w.writerow({k: row.get(k) for k in fields})
 
 
+def write_blocked_status(
+    status_dir: Path,
+    run_id: str,
+    from_date: str,
+    company_scope: str,
+    error_message: str,
+) -> Path:
+    payload = {
+        "status": "blocked",
+        "run_id": run_id,
+        "from_date": from_date,
+        "company_scope": company_scope,
+        "generated_at": datetime.now().isoformat(timespec="seconds"),
+        "error_code": "lock_not_acquired",
+        "error_message": error_message,
+    }
+    status_path = status_dir / f"bling_supabase_reconciliation_{run_id}_status.json"
+    status_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    return status_path
+
+
 def main() -> int:
     args = parse_args()
-    root = Path(__file__).resolve().parents[3]
+    root = ROOT
     bling_dir = Path(args.bling_dir)
     status_dir = Path(args.status_dir)
     project_ref_file = Path(args.project_ref_file)
     token_path = Path(args.supabase_token_path)
     status_dir.mkdir(parents=True, exist_ok=True)
+    audit_root = root / "logs" / "audit"
 
-    project_ref = resolve_project_ref(args.project_ref, project_ref_file)
-    supabase_access_token = read_supabase_token(token_path)
-    service_role_key = fetch_service_role_key(root, project_ref, supabase_access_token)
     selected = str(args.company or "ALL").strip().upper()
     selected_companies = ["CZ", "CR"] if selected == "ALL" else [selected]
-
-    source, contato_to_company = load_source_metrics(bling_dir, args.from_date, selected_companies)
-    ap_rows = fetch_table_rows(project_ref, service_role_key, "accounts_payable", page_size=max(100, args.page_size))
-    ar_rows = fetch_table_rows(
-        project_ref, service_role_key, "accounts_receivable", page_size=max(100, args.page_size)
-    )
-    destination = build_destination_metrics(ap_rows, ar_rows, args.from_date, contato_to_company, selected_companies)
-    checks = build_checks(source, destination, selected_companies)
-    pass_count = sum(1 for row in checks if row["status"] == "PASS")
-    fail_count = sum(1 for row in checks if row["status"] == "FAIL")
-    overall = "success" if fail_count == 0 else "failed"
-
-    status = {
-        "status": overall,
+    lock_resource = f"bling_reconciliation_{selected}"
+    lock_metadata = {
+        "module_name": "integrations/bling/reconciliation",
+        "company_scope": selected,
         "run_id": args.run_id,
         "from_date": args.from_date,
-        "company_scope": selected,
-        "project_ref": project_ref,
-        "generated_at": datetime.now().isoformat(timespec="seconds"),
-        "source": source,
-        "destination": destination,
-        "checks_summary": {"pass": pass_count, "fail": fail_count},
-        "checks": checks,
     }
 
-    status_path = status_dir / f"bling_supabase_reconciliation_{args.run_id}_status.json"
-    qa_path = status_dir / f"bling_supabase_reconciliation_{args.run_id}_qa.csv"
-    status_path.write_text(json.dumps(status, ensure_ascii=False, indent=2), encoding="utf-8")
-    write_csv(qa_path, checks)
+    try:
+        with managed_lock(
+            audit_root=audit_root,
+            resource_name=lock_resource,
+            execution_id=args.run_id,
+            metadata=lock_metadata,
+        ):
+            project_ref = resolve_project_ref(args.project_ref, project_ref_file)
+            supabase_access_token = read_supabase_token(token_path)
+            service_role_key = fetch_service_role_key(root, project_ref, supabase_access_token)
 
-    print(str(status_path))
-    print(str(qa_path))
-    return 0 if fail_count == 0 else 2
+            source, contato_to_company = load_source_metrics(bling_dir, args.from_date, selected_companies)
+            ap_rows = fetch_table_rows(
+                project_ref, service_role_key, "accounts_payable", page_size=max(100, args.page_size)
+            )
+            ar_rows = fetch_table_rows(
+                project_ref, service_role_key, "accounts_receivable", page_size=max(100, args.page_size)
+            )
+            destination = build_destination_metrics(ap_rows, ar_rows, args.from_date, contato_to_company, selected_companies)
+            checks = build_checks(source, destination, selected_companies)
+            pass_count = sum(1 for row in checks if row["status"] == "PASS")
+            fail_count = sum(1 for row in checks if row["status"] == "FAIL")
+            overall = "success" if fail_count == 0 else "failed"
+
+            status = {
+                "status": overall,
+                "run_id": args.run_id,
+                "from_date": args.from_date,
+                "company_scope": selected,
+                "project_ref": project_ref,
+                "generated_at": datetime.now().isoformat(timespec="seconds"),
+                "source": source,
+                "destination": destination,
+                "checks_summary": {"pass": pass_count, "fail": fail_count},
+                "checks": checks,
+            }
+
+            status_path = status_dir / f"bling_supabase_reconciliation_{args.run_id}_status.json"
+            qa_path = status_dir / f"bling_supabase_reconciliation_{args.run_id}_qa.csv"
+            status_path.write_text(json.dumps(status, ensure_ascii=False, indent=2), encoding="utf-8")
+            write_csv(qa_path, checks)
+
+            print(str(status_path))
+            print(str(qa_path))
+            return 0 if fail_count == 0 else 2
+    except LockAcquisitionError as exc:
+        status_path = write_blocked_status(
+            status_dir=status_dir,
+            run_id=args.run_id,
+            from_date=args.from_date,
+            company_scope=selected,
+            error_message=str(exc),
+        )
+        print(str(status_path))
+        return 3
 
 
 if __name__ == "__main__":

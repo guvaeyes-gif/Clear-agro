@@ -1,0 +1,52 @@
+{
+  "workflow_id": "monthly-fin-close",
+  "name": "Monthly Financial Close",
+  "version": "1.0.0",
+  "input_contract": {
+    "required": [
+      "run_id"
+    ],
+    "optional": [
+      "input_dir",
+      "fail_fast"
+    ]
+  },
+  "steps": [
+    {
+      "id": "run_control_tower",
+      "agent": "control_tower_orchestrator",
+      "action": "execute",
+      "with": {
+        "run_id": "${input.run_id}",
+        "input_dir": "${input.input_dir}",
+        "fail_fast": "${input.fail_fast}"
+      }
+    },
+    {
+      "id": "route_exceptions",
+      "agent": "exception_router",
+      "action": "route",
+      "depends_on": [
+        "run_control_tower"
+      ]
+    },
+    {
+      "id": "pm_governance_gate",
+      "agent": "pm_governance",
+      "action": "review_and_register",
+      "depends_on": [
+        "route_exceptions"
+      ],
+      "with": {
+        "run_id": "${input.run_id}",
+        "governance_level": "monthly_close"
+      }
+    }
+  ],
+  "outputs": [
+    "out/aios/monthly-fin-close/${input.run_id}/execution.json",
+    "out/aios/monthly-fin-close/${input.run_id}/orchestrator_status.json",
+    "out/aios/monthly-fin-close/${input.run_id}/orchestrator_summary.md",
+    "out/aios/monthly-fin-close/${input.run_id}/pm_governance_decision.json"
+  ]
+}

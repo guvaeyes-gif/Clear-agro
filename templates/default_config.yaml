@@ -1,0 +1,35 @@
+{
+  "project_root": "..",
+  "output_dir": "out/dashboard_financeiro_v1",
+  "metabase_collection": "Clear OS / Financeiro / v1",
+  "sql_cards_dir": "dashboards/metabase",
+  "runbook_path": "docs/runbooks/dashboard_financeiro_v1_runbook.md",
+  "required_files": [
+    "supabase/migrations/20260311152000_finance_dashboard_v1_views.sql",
+    "dashboards/specs/dashboard_financeiro_v1.md",
+    "dashboards/metabase/01_kpis_diarios.sql",
+    "dashboards/metabase/02_ap_aging.sql",
+    "dashboards/metabase/03_ar_aging.sql",
+    "dashboards/metabase/04_cash_projection_30d.sql",
+    "dashboards/metabase/05_data_quality_banner.sql",
+    "docs/runbooks/dashboard_financeiro_v1_runbook.md"
+  ],
+  "required_status_globs": [
+    [
+      "logs/integration/status/finance_ingest_hub*_status.json",
+      "11_agentes_automacoes/12_integracoes_agent/pipeline/out/status/finance_ingest_hub*_status.json"
+    ],
+    [
+      "logs/integration/status/bling_import_generator*_status.json",
+      "11_agentes_automacoes/12_integracoes_agent/pipeline/out/status/bling_import_generator*_status.json"
+    ],
+    [
+      "logs/integration/status/bling_supabase_reconciliation*_status.json",
+      "11_agentes_automacoes/12_integracoes_agent/pipeline/out/status/bling_supabase_reconciliation*_status.json"
+    ]
+  ],
+  "quality_gate_status_glob": [
+    "logs/integration/status/bling_supabase_reconciliation*_status.json",
+    "11_agentes_automacoes/12_integracoes_agent/pipeline/out/status/bling_supabase_reconciliation*_status.json"
+  ]
+}

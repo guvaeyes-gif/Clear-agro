@@ -28,3 +28,6 @@ lint:
 
 test:
 	$(PYTHON) -m pytest
+
+check-migration-governance:
+	$(PYTHON) scripts/check_migration_governance.py

@@ -2,11 +2,16 @@ from __future__ import annotations
 
 from pathlib import Path
 import os
-from typing import Dict
+from typing import Any, Dict
 import unicodedata
 
 import pandas as pd
 import streamlit as st
+
+from integrations.shared.bling_paths import resolve_bling_file
+from src import metas_db
+
+_CRM_VIEW_ERRORS: dict[str, str] = {}
 
 ROOT = Path(__file__).resolve().parents[1]
 _PROFILE = os.getenv("CRM_PROFILE", "director").strip().lower()
@@ -14,19 +19,19 @@ if _PROFILE == "gestor" and (ROOT / "out" / "base_unificada_gestor.xlsx").exists
     BASE = ROOT / "out" / "base_unificada_gestor.xlsx"
 else:
     BASE = ROOT / "out" / "base_unificada.xlsx"
-BLING_VENDAS = ROOT / "bling_api" / "vendas_2026_cache.jsonl"
-BLING_VENDAS_FALLBACK = ROOT / "bling_api" / "vendas_2025_cache.jsonl"
-BLING_VENDAS_CR = ROOT / "bling_api" / "vendas_2026_cache_cr.jsonl"
-BLING_VENDAS_CR_FALLBACK = ROOT / "bling_api" / "vendas_2025_cache_cr.jsonl"
-BLING_VENDEDORES = ROOT / "bling_api" / "vendedores_map.csv"
-BLING_VENDEDORES_CR = ROOT / "bling_api" / "vendedores_map_cr.csv"
-BLING_NFE_2026 = ROOT / "bling_api" / "nfe_2026_cache.jsonl"
-BLING_NFE_2025 = ROOT / "bling_api" / "nfe_2025_cache.jsonl"
-BLING_NFE_2026_CR = ROOT / "bling_api" / "nfe_2026_cache_cr.jsonl"
-BLING_NFE_2025_CR = ROOT / "bling_api" / "nfe_2025_cache_cr.jsonl"
-BLING_CONTAS_RECEBER = ROOT / "bling_api" / "contas_receber_cache.jsonl"
-BLING_CONTAS_PAGAR = ROOT / "bling_api" / "contas_pagar_cache.jsonl"
-BLING_ESTOQUE = ROOT / "bling_api" / "estoque_cache.jsonl"
+BLING_VENDAS = resolve_bling_file("vendas_2026_cache.jsonl", mode="app")
+BLING_VENDAS_FALLBACK = resolve_bling_file("vendas_2025_cache.jsonl", mode="app")
+BLING_VENDAS_CR = resolve_bling_file("vendas_2026_cache_cr.jsonl", mode="app")
+BLING_VENDAS_CR_FALLBACK = resolve_bling_file("vendas_2025_cache_cr.jsonl", mode="app")
+BLING_VENDEDORES = resolve_bling_file("vendedores_map.csv", mode="app")
+BLING_VENDEDORES_CR = resolve_bling_file("vendedores_map_cr.csv", mode="app")
+BLING_NFE_2026 = resolve_bling_file("nfe_2026_cache.jsonl", mode="app")
+BLING_NFE_2025 = resolve_bling_file("nfe_2025_cache.jsonl", mode="app")
+BLING_NFE_2026_CR = resolve_bling_file("nfe_2026_cache_cr.jsonl", mode="app")
+BLING_NFE_2025_CR = resolve_bling_file("nfe_2025_cache_cr.jsonl", mode="app")
+BLING_CONTAS_RECEBER = resolve_bling_file("contas_receber_cache.jsonl", mode="app")
+BLING_CONTAS_PAGAR = resolve_bling_file("contas_pagar_cache.jsonl", mode="app")
+BLING_ESTOQUE = resolve_bling_file("estoque_cache.jsonl", mode="app")
 
 
 def _norm(col: str) -> str:
@@ -76,6 +81,109 @@ def _standardize_metas(df: pd.DataFrame) -> pd.DataFrame:
         df["realizado"] = pd.to_numeric(df["realizado"], errors="coerce")
     if "data" in df.columns:
         df["data"] = pd.to_datetime(df["data"], errors="coerce")
+    return df
+
+
+def _coerce_numeric(df: pd.DataFrame, columns: list[str]) -> pd.DataFrame:
+    out = df.copy()
+    for column in columns:
+        if column in out.columns:
+            out[column] = pd.to_numeric(out[column], errors="coerce")
+    return out
+
+
+def _coerce_datetime(df: pd.DataFrame, columns: list[str]) -> pd.DataFrame:
+    out = df.copy()
+    for column in columns:
+        if column in out.columns:
+            out[column] = pd.to_datetime(out[column], errors="coerce")
+    return out
+
+
+def _fetch_crm_view(view_name: str, params: dict[str, Any] | None = None) -> pd.DataFrame:
+    mode = metas_db._backend_mode()
+    try:
+        if mode == "postgres":
+            with metas_db._connect_pg() as conn:
+                with conn.cursor() as cur:
+                    df = metas_db._fetch_dataframe(cur, f"select * from public.{view_name}", [])
+                    _CRM_VIEW_ERRORS[view_name] = ""
+                    return df
+        if mode == "supabase-rest":
+            query = {"select": "*", "limit": "5000"}
+            if params:
+                query.update({k: str(v) for k, v in params.items() if v not in (None, "")})
+            rows = metas_db._rest_request("GET", view_name, params=query) or []
+            _CRM_VIEW_ERRORS[view_name] = ""
+            return pd.DataFrame(rows)
+        _CRM_VIEW_ERRORS[view_name] = f"CRM backend nao suportado: {mode or 'indefinido'}"
+    except Exception as exc:
+        _CRM_VIEW_ERRORS[view_name] = f"{type(exc).__name__}: {exc}"
+        return pd.DataFrame()
+    return pd.DataFrame()
+
+
+def get_crm_view_error(view_name: str) -> str:
+    return _CRM_VIEW_ERRORS.get(view_name, "")
+
+
+@st.cache_data(show_spinner=False)
+def load_sales_targets_view() -> pd.DataFrame:
+    df = _fetch_crm_view("vw_sales_targets_summary")
+    if df.empty:
+        return df
+    df = _normalize_columns(df)
+    if "status" in df.columns:
+        df["status"] = df["status"].apply(metas_db._map_status_from_db)
+    if "period_type" in df.columns:
+        df["period_type"] = df["period_type"].apply(metas_db._map_period_from_db)
+    df = _coerce_numeric(
+        df,
+        [
+            "target_year",
+            "month_num",
+            "quarter_num",
+            "target_value",
+            "actual_value",
+            "gap_value",
+            "attainment_pct",
+            "target_volume",
+            "actual_volume",
+        ],
+    )
+    df = _coerce_datetime(df, ["updated_at"])
+    return df
+
+
+@st.cache_data(show_spinner=False)
+def load_sales_pipeline_view() -> pd.DataFrame:
+    df = _fetch_crm_view("vw_sales_pipeline_summary")
+    if df.empty:
+        return df
+    df = _normalize_columns(df)
+    df = _coerce_numeric(
+        df,
+        [
+            "opportunities_count",
+            "pipeline_value",
+            "weighted_pipeline_value",
+            "avg_probability",
+            "opportunities_without_next_step",
+            "opportunities_with_overdue_step",
+        ],
+    )
+    df = _coerce_datetime(df, ["expected_close_month", "last_opportunity_update"])
+    return df
+
+
+@st.cache_data(show_spinner=False)
+def load_crm_priority_queue() -> pd.DataFrame:
+    df = _fetch_crm_view("vw_crm_agent_priority_queue")
+    if df.empty:
+        return df
+    df = _normalize_columns(df)
+    df = _coerce_numeric(df, ["priority_score"])
+    df = _coerce_datetime(df, ["due_at", "completed_at", "created_at", "updated_at"])
     return df
 
 

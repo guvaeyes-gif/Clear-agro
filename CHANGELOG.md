@@ -9,7 +9,7 @@
 - Reorganizados artefatos por copia segura para novo padrao (sem quebrar legado):
   - roadmap em `docs/roadmap`
   - runbooks em `docs/runbooks`
-  - migrations em `database/migrations`
+  - migrations canonicas em `supabase/migrations`
+  - espelhos SQL legados arquivados em `archive/database_migrations_legacy`
   - scripts Bling em `integrations/bling/*`
   - jobs/scheduler em `automation/*`
-

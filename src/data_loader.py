@@ -6,11 +6,13 @@ from typing import Dict
 import pandas as pd
 import streamlit as st
 
+from integrations.shared.bling_paths import resolve_bling_file
+
 ROOT = Path(__file__).resolve().parents[1]
 BASE = ROOT / "out" / "base_unificada.xlsx"
-BLING_VENDAS = ROOT / "bling_api" / "vendas_2026_cache.jsonl"
-BLING_VENDAS_FALLBACK = ROOT / "bling_api" / "vendas_2025_cache.jsonl"
-BLING_VENDEDORES = ROOT / "bling_api" / "vendedores_map.csv"
+BLING_VENDAS = resolve_bling_file("vendas_2026_cache.jsonl", mode="app")
+BLING_VENDAS_FALLBACK = resolve_bling_file("vendas_2025_cache.jsonl", mode="app")
+BLING_VENDEDORES = resolve_bling_file("vendedores_map.csv", mode="app")
 
 
 def _norm(col: str) -> str:

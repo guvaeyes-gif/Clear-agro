@@ -47,6 +47,7 @@ def compute_kpis(
     month: Optional[int],
     ytd: bool,
     quarter: Optional[int] = None,
+    pipeline_view: Optional[pd.DataFrame] = None,
 ) -> KPIs:
     opps = sheets.get("oportunidades", pd.DataFrame())
     real = sheets.get("realizado", pd.DataFrame())
@@ -68,14 +69,28 @@ def compute_kpis(
 
     pipeline_total = 0.0
     pipeline_ponderado = None
-    if not opps.empty and "volume_potencial" in opps.columns:
+    if pipeline_view is not None and not pipeline_view.empty:
+        if "pipeline_value" in pipeline_view.columns:
+            pipeline_total = float(pd.to_numeric(pipeline_view["pipeline_value"], errors="coerce").fillna(0).sum())
+        if "weighted_pipeline_value" in pipeline_view.columns:
+            pipeline_ponderado = float(
+                pd.to_numeric(pipeline_view["weighted_pipeline_value"], errors="coerce").fillna(0).sum()
+            )
+    elif not opps.empty and "volume_potencial" in opps.columns:
         pipeline_total = float(opps["volume_potencial"].fillna(0).sum())
         if "probabilidade" in opps.columns:
             prob = pd.to_numeric(opps["probabilidade"], errors="coerce").fillna(0) / 100.0
             pipeline_ponderado = float((opps["volume_potencial"].fillna(0) * prob).sum())
 
     pct_next = None
-    if "data_proximo_passo" in opps.columns:
+    if pipeline_view is not None and not pipeline_view.empty:
+        if {"opportunities_count", "opportunities_without_next_step"}.issubset(pipeline_view.columns):
+            total_opps = float(pd.to_numeric(pipeline_view["opportunities_count"], errors="coerce").fillna(0).sum())
+            sem_passo = float(
+                pd.to_numeric(pipeline_view["opportunities_without_next_step"], errors="coerce").fillna(0).sum()
+            )
+            pct_next = float(((total_opps - sem_passo) / total_opps) * 100) if total_opps else 0.0
+    elif "data_proximo_passo" in opps.columns:
         pct_next = float(opps["data_proximo_passo"].notna().mean() * 100)
 
     atividades_semana = None

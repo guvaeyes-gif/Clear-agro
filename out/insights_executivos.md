@@ -1,1 +1,0 @@
-Sem alertas gerados.

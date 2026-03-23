@@ -1,0 +1,10 @@
+{
+  "connector_id": "codex_orchestrator_adapter",
+  "type": "local_process",
+  "target": "finance-control-tower-orchestrator",
+  "command_template": "python scripts/run_monthly_fin_close.py --run-id {run_id}",
+  "artifacts": {
+    "status_json": "out/aios/monthly-fin-close/{run_id}/orchestrator_status.json",
+    "summary_md": "out/aios/monthly-fin-close/{run_id}/orchestrator_summary.md"
+  }
+}

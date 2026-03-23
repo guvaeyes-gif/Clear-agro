@@ -7,17 +7,12 @@ from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any, Iterable
 
+from integrations.shared.bling_paths import resolve_bling_root
+
 
 def parse_args() -> argparse.Namespace:
     root = Path(__file__).resolve().parents[3]
-    default_bling = (
-        root
-        / "11_agentes_automacoes"
-        / "11_dev_codex_agent"
-        / "repos"
-        / "CRM_Clear_Agro"
-        / "bling_api"
-    )
+    default_bling = resolve_bling_root("pipeline")
     default_mig = root / "supabase" / "migrations"
     default_out = (
         root

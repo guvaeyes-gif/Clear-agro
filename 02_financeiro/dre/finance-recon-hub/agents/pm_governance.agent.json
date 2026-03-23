@@ -1,0 +1,20 @@
+{
+  "agent_id": "pm_governance",
+  "name": "PM Governance",
+  "type": "governance",
+  "owner_agent": "@pm",
+  "worker": "pm-adapter",
+  "checklist_worker": "pm-checklist",
+  "capabilities": [
+    "close_review_gate",
+    "approval_registration",
+    "decision_log"
+  ],
+  "inputs": [
+    "out/aios/monthly-fin-close/${input.run_id}/orchestrator_status.json",
+    "out/aios/monthly-fin-close/${input.run_id}/orchestrator_summary.md"
+  ],
+  "outputs": [
+    "out/aios/monthly-fin-close/${input.run_id}/pm_governance_decision.json"
+  ]
+}

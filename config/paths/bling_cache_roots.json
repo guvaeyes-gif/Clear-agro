@@ -1,0 +1,30 @@
+{
+  "canonical_root": "bling_api",
+  "compatibility_root": "11_agentes_automacoes/11_dev_codex_agent/repos/CRM_Clear_Agro/bling_api",
+  "app_preferred_root": "bling_api",
+  "pipeline_preferred_root": "bling_api",
+  "sync_source_root": "11_agentes_automacoes/11_dev_codex_agent/repos/CRM_Clear_Agro/bling_api",
+  "sync_target_root": "bling_api",
+  "sync_files": [
+    "contatos_cache.jsonl",
+    "contatos_cache_cr.jsonl",
+    "contas_pagar_cache.jsonl",
+    "contas_pagar_cache_cr.jsonl",
+    "contas_receber_cache.jsonl",
+    "contas_receber_cache_cr.jsonl",
+    "estoque_cache.jsonl",
+    "estoque_cache_cr.jsonl",
+    "nfe_2025_cache.jsonl",
+    "nfe_2026_cache.jsonl",
+    "nfe_2026_cache_cr.jsonl",
+    "produtos_cache.jsonl",
+    "produtos_cache_cr.jsonl",
+    "produtos_composicao_cache.jsonl",
+    "produtos_composicao_cache_cr.jsonl",
+    "vendas_2025_cache.jsonl",
+    "vendas_2026_cache.jsonl",
+    "vendas_2026_cache_cr.jsonl",
+    "vendedores_map.csv",
+    "vendedores_map_cr.csv"
+  ]
+}

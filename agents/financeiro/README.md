@@ -21,7 +21,7 @@ Operar AP/AR, reconciliacao e indicadores financeiros com rastreabilidade.
 
 ## Fontes de dados
 - `integrations/bling/*`
-- `database/migrations`
+- `supabase/migrations`
 - `database/views`
 
 ## Permissoes esperadas
@@ -34,4 +34,3 @@ Operar AP/AR, reconciliacao e indicadores financeiros com rastreabilidade.
 ## Riscos
 - Divergencia de empresa (`CZ`/`CR`)
 - Conflitos de chave unica em upsert
-

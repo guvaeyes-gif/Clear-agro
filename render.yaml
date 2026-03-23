@@ -4,9 +4,26 @@ services:
     runtime: python
     plan: free
     region: oregon
+    healthCheckPath: /
     envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.11"
       - key: CRM_PUBLIC_REVIEW
         value: "1"
-    buildCommand: pip install -r requirements.txt
+      - key: CRM_PROFILE
+        value: "director"
+      - key: APP_BUILD
+        value: "render-public-review-2026-03-13"
+      - key: CRM_DATABASE_URL
+        sync: false
+      - key: SUPABASE_DB_URL
+        sync: false
+      - key: SUPABASE_PROJECT_REF
+        sync: false
+      - key: SUPABASE_ACCESS_TOKEN
+        sync: false
+      - key: SUPABASE_TOKEN_PATH
+        value: ""
+    buildCommand: python -m pip install --upgrade pip && pip install -r requirements.txt
     startCommand: streamlit run app/main.py --server.address 0.0.0.0 --server.port $PORT --server.headless true
     autoDeploy: true

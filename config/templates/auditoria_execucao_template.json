@@ -1,0 +1,11 @@
+{
+  "execution_id": "change_20260311_190000",
+  "change_type": "scheduler_update",
+  "related_module": "automation/scheduler",
+  "approved_by": "plataforma",
+  "risk_level": "high",
+  "rollback_reference": "re-registrar task anterior",
+  "evidence_ref": "docs/processos/inventario_final_2026-03-11.md",
+  "status": "approved",
+  "recorded_at": "2026-03-11T19:00:00-03:00"
+}

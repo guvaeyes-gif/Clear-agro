@@ -1,0 +1,17 @@
+{
+  "agent_id": "exception_router",
+  "name": "Exception Router",
+  "type": "router",
+  "routes": [
+    {
+      "match": "steps_failed > 0",
+      "target": "manual_review_queue",
+      "priority": "high"
+    },
+    {
+      "match": "steps_failed == 0",
+      "target": "auto_publish",
+      "priority": "normal"
+    }
+  ]
+}

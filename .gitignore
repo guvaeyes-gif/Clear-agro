@@ -45,6 +45,10 @@ logs/audit/*
 11_agentes_automacoes/12_integracoes_agent/pipeline/out/status/*
 11_agentes_automacoes/12_integracoes_agent/pipeline/out/staging/*
 11_agentes_automacoes/11_dev_codex_agent/repos/**/out/*
+02_financeiro/**/out/*
+12_dashboards_interface/**/out/*
+out/*
+!out/README.md
 
 # Binaries / caches / temp
 *.sqlite
@@ -56,3 +60,23 @@ supabase/.temp/
 archive/*
 !archive/README.md
 !security/audit/README.md
+.openclaw/
+
+# Local integration caches / tokens
+bling_api/*_cache*.jsonl
+bling_api/*tokens*.json
+bling_api/vendedores_map*.csv
+**/legacy_imports/*
+02_financeiro/dre/finance-recon-hub/data/*
+09_diretoria_estrategia/projetos_estrategicos/*
+11_agentes_automacoes/**/data/google/*.json
+11_agentes_automacoes/**/data/google/*.yaml
+11_agentes_automacoes/**/data/google/*.yml
+11_agentes_automacoes/**/repos/*
+11_agentes_automacoes/**/bling_api/*_cache*.jsonl
+11_agentes_automacoes/**/bling_api/*tokens*.json
+11_agentes_automacoes/**/repos/**/data/google/*.json
+11_agentes_automacoes/**/repos/**/data/google/*.yaml
+11_agentes_automacoes/**/repos/**/data/google/*.yml
+11_agentes_automacoes/**/repos/**/bling_api/*_cache*.jsonl
+11_agentes_automacoes/**/repos/**/bling_api/*tokens*.json

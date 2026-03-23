@@ -10,9 +10,10 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from integrations.shared.bling_paths import resolve_bling_file  # noqa: E402
 from src.telegram import send_telegram_message, telegram_enabled  # noqa: E402
 
-CACHE = ROOT / "bling_api" / "contas_receber_cache.jsonl"
+CACHE = resolve_bling_file("contas_receber_cache.jsonl", mode="pipeline")
 CUTOFF = pd.Timestamp.today().normalize()
 
 

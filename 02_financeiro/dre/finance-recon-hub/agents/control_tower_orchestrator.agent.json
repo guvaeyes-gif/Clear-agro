@@ -1,0 +1,16 @@
+{
+  "agent_id": "control_tower_orchestrator",
+  "name": "Control Tower Orchestrator",
+  "type": "executor",
+  "entrypoint": "scripts/run_monthly_fin_close.py",
+  "capabilities": [
+    "finance_pipeline_orchestration",
+    "artifact_publication",
+    "status_reporting"
+  ],
+  "sla_minutes": 30,
+  "retry_policy": {
+    "max_retries": 1,
+    "backoff_seconds": 30
+  }
+}

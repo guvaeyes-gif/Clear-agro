@@ -15,6 +15,20 @@ Antes de publicar:
 2. Publicar somente se `quality_status = 'PASS'`
 3. Se `FAIL`, mostrar banner "Dados em validacao"
 
+### Automacao do gate (publisher)
+Executar:
+
+`python scripts/finance_dashboard_publisher.py --config templates/default_config.yaml --run-id <RUN_ID>`
+
+Saidas geradas em `out/dashboard_financeiro_v1/`:
+- `dashboard_healthcheck.json`
+- `finance_dashboard_publisher_<RUN_ID>_status.json`
+- `launch_dashboard_financeiro_v1_<RUN_ID>.cmd`
+
+Quando o gate falhar, o publisher gera alerta automatico em arquivo e tenta enviar Telegram se as variaveis estiverem configuradas:
+- `TELEGRAM_BOT_TOKEN`
+- `TELEGRAM_CHAT_ID`
+
 ## Evidencias minimas
 Arquivos em `11_agentes_automacoes/12_integracoes_agent/pipeline/out/status`:
 

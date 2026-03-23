@@ -1,0 +1,21 @@
+{
+  "policy_id": "approval_policy_finance_close_v1",
+  "description": "Approval gates for monthly financial close run.",
+  "rules": [
+    {
+      "id": "require_pm_governance_gate",
+      "if": "workflow_id == 'monthly-fin-close'",
+      "action": "require_pm_governance_decision"
+    },
+    {
+      "id": "require_manual_review_on_partial",
+      "if": "status == 'partial'",
+      "action": "queue_manual_review"
+    },
+    {
+      "id": "allow_auto_publish_on_success",
+      "if": "status == 'success'",
+      "action": "auto_publish"
+    }
+  ]
+}

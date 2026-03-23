@@ -26,7 +26,7 @@ Colecao recomendada:
 
 - `Clear OS / Financeiro / v1`
 
-Cards recomendados (usar SQL em `metabase/sql_cards`):
+Cards recomendados (usar SQL em `dashboards/metabase`):
 
 - `01_kpis_diarios.sql`
 - `02_ap_aging.sql`

@@ -20,9 +20,9 @@ function Stop-ProcessOnPort {
   foreach ($ln in $lines) {
     $parts = ($ln.ToString() -split "\s+") | Where-Object { $_ -ne "" }
     if ($parts.Count -ge 5) {
-      $pid = [int]$parts[-1]
-      if ($pid -gt 0) {
-        Stop-Process -Id $pid -Force -ErrorAction SilentlyContinue
+      $procId = [int]$parts[-1]
+      if ($procId -gt 0) {
+        Stop-Process -Id $procId -Force -ErrorAction SilentlyContinue
       }
     }
   }
@@ -103,3 +103,4 @@ Write-Host "[crm] logs: $stdoutLog"
 if ($OpenBrowser) {
   Start-Process $url | Out-Null
 }
+

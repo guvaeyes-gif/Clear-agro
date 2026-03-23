@@ -1,0 +1,20 @@
+{
+  "policy_id": "risk_policy_finance_close_v1",
+  "risk_levels": [
+    {
+      "name": "low",
+      "condition": "steps_failed == 0",
+      "action": "proceed"
+    },
+    {
+      "name": "medium",
+      "condition": "steps_failed == 1",
+      "action": "proceed_with_flag"
+    },
+    {
+      "name": "high",
+      "condition": "steps_failed > 1",
+      "action": "halt_and_escalate"
+    }
+  ]
+}

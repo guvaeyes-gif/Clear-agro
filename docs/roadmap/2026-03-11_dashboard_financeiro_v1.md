@@ -22,5 +22,10 @@
 
 ## Proximo passo
 - Publicar cards no Metabase e validar com time financeiro.
-- Adicionar notificador automatico quando `quality_status = 'FAIL'`.
+- Definir fase v2 (filtros por centro de custo, drilldown por fornecedor/cliente e metas vs realizado).
+
+## Atualizacao 2026-03-11 (etapa pendente fechada)
+- Criado `scripts/finance_dashboard_publisher.py` para healthcheck e status operacional.
+- Criado `templates/default_config.yaml` com checklist padrao do Dashboard Financeiro v1.
+- Ativado notificador automatico em caso de FAIL (arquivo + tentativa Telegram).
 

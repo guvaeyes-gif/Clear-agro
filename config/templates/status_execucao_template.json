@@ -1,0 +1,21 @@
+{
+  "execution_id": "job_20260311_061000",
+  "run_id": "job_20260311_061000",
+  "job_name": "run_bling_supabase_daily",
+  "module_name": "integrations/bling",
+  "source_system": "bling",
+  "target_system": "supabase",
+  "company_code": "CZ",
+  "started_at": "2026-03-11T06:10:00-03:00",
+  "finished_at": "2026-03-11T06:18:10-03:00",
+  "duration_ms": 490000,
+  "status": "success",
+  "records_read": 1200,
+  "records_written": 1188,
+  "records_failed": 12,
+  "error_code": "",
+  "error_message": "",
+  "payload_ref": "logs/integration/status/bling_supabase_reconciliation_job_20260311_061000_status.json",
+  "triggered_by": "scheduler",
+  "environment": "local"
+}

@@ -4,17 +4,17 @@
   "input_sources": [
     {
       "name": "bling_contas_pagar_cz",
-      "path": "C:\\Users\\cesar.zarovski\\Documents\\Clear_OS\\11_agentes_automacoes\\11_dev_codex_agent\\repos\\CRM_Clear_Agro\\bling_api\\contas_pagar_cache.jsonl",
+      "path": "C:\\Users\\cesar.zarovski\\Documents\\Clear_OS\\bling_api\\contas_pagar_cache.jsonl",
       "type": "jsonl"
     },
     {
       "name": "bling_contas_receber_cz",
-      "path": "C:\\Users\\cesar.zarovski\\Documents\\Clear_OS\\11_agentes_automacoes\\11_dev_codex_agent\\repos\\CRM_Clear_Agro\\bling_api\\contas_receber_cache.jsonl",
+      "path": "C:\\Users\\cesar.zarovski\\Documents\\Clear_OS\\bling_api\\contas_receber_cache.jsonl",
       "type": "jsonl"
     },
     {
       "name": "bling_contatos_cz",
-      "path": "C:\\Users\\cesar.zarovski\\Documents\\Clear_OS\\11_agentes_automacoes\\11_dev_codex_agent\\repos\\CRM_Clear_Agro\\bling_api\\contatos_cache.jsonl",
+      "path": "C:\\Users\\cesar.zarovski\\Documents\\Clear_OS\\bling_api\\contatos_cache.jsonl",
       "type": "jsonl"
     }
   ]

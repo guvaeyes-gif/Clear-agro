@@ -1,0 +1,11 @@
+{
+  "execution_id": "job_20260311_061000",
+  "job_name": "run_bling_supabase_daily",
+  "module_name": "integrations/bling",
+  "level": "INFO",
+  "message": "Inicio da execucao",
+  "company_code": "CZ",
+  "triggered_by": "scheduler",
+  "environment": "local",
+  "logged_at": "2026-03-11T06:10:00-03:00"
+}

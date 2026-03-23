@@ -69,3 +69,42 @@ def test_compute_kpis_quarter():
     assert kpis.realizado == 350.0
     assert kpis.meta == 900.0
     assert kpis.gap == 550.0
+
+
+def test_compute_kpis_prefers_pipeline_view_when_available():
+    sheets = {
+        "realizado": pd.DataFrame(
+            {
+                "data": pd.to_datetime(["2026-01-05"]),
+                "receita": [100.0],
+            }
+        ),
+        "metas": pd.DataFrame(
+            {
+                "data": pd.to_datetime(["2026-01-01"]),
+                "meta": [500.0],
+            }
+        ),
+        "oportunidades": pd.DataFrame(
+            {
+                "volume_potencial": [9999.0],
+                "probabilidade": [10.0],
+                "data_proximo_passo": [pd.NaT],
+            }
+        ),
+        "atividades": pd.DataFrame(),
+    }
+    pipeline_view = pd.DataFrame(
+        {
+            "pipeline_value": [200.0, 300.0],
+            "weighted_pipeline_value": [80.0, 90.0],
+            "opportunities_count": [2, 3],
+            "opportunities_without_next_step": [1, 1],
+        }
+    )
+
+    kpis = compute_kpis(sheets, year=2026, month=1, ytd=False, pipeline_view=pipeline_view)
+
+    assert kpis.pipeline_total == 500.0
+    assert kpis.pipeline_ponderado == 170.0
+    assert kpis.pct_proximo_passo == 60.0

@@ -1,9 +1,9 @@
 SELECT
-  company,
-  aging_bucket,
-  titles_count,
-  amount_total,
-  amount_pct
+  company AS empresa,
+  aging_bucket AS faixa,
+  titles_count AS titulos,
+  amount_total AS valor_total,
+  amount_pct AS valor_percentual
 FROM public.vw_finance_ap_aging
 WHERE company = {{company}}
 ORDER BY

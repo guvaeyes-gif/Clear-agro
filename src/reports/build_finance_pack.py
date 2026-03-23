@@ -11,6 +11,7 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from integrations.shared.bling_paths import resolve_bling_file
 from src.utils import ensure_dir, save_quality_log
 
 DATA_STAGING = ROOT / "data" / "staging"
@@ -18,8 +19,8 @@ DATA_MARTS = ROOT / "data" / "marts"
 DATA_EXPORTS = ROOT / "data" / "exports"
 DATA_QUALITY = ROOT / "data" / "quality"
 
-AP_CACHE = ROOT / "bling_api" / "contas_pagar_cache.jsonl"
-AR_CACHE = ROOT / "bling_api" / "contas_receber_cache.jsonl"
+AP_CACHE = resolve_bling_file("contas_pagar_cache.jsonl", mode="pipeline")
+AR_CACHE = resolve_bling_file("contas_receber_cache.jsonl", mode="pipeline")
 
 DRE_FILES = {
     "CR": DATA_STAGING / "stg_dre_cr.csv",
