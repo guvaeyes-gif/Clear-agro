@@ -4,7 +4,7 @@ services:
     runtime: python
     plan: free
     region: oregon
-    healthCheckPath: /
+    healthCheckPath: /_stcore/health
     envVars:
       - key: PYTHON_VERSION
         value: "3.11.11"
@@ -13,7 +13,7 @@ services:
       - key: CRM_PROFILE
         value: "director"
       - key: APP_BUILD
-        value: "render-public-review-2026-03-13"
+        value: "render-public-review-2026-03-23"
       - key: CRM_DATABASE_URL
         sync: false
       - key: SUPABASE_DB_URL
@@ -24,6 +24,10 @@ services:
         sync: false
       - key: SUPABASE_TOKEN_PATH
         value: ""
+      - key: STREAMLIT_SERVER_HEADLESS
+        value: "true"
+      - key: STREAMLIT_BROWSER_GATHER_USAGE_STATS
+        value: "false"
     buildCommand: python -m pip install --upgrade pip && pip install -r requirements.txt
     startCommand: streamlit run app/main.py --server.address 0.0.0.0 --server.port $PORT --server.headless true
     autoDeploy: true

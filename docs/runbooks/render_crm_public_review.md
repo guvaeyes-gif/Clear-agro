@@ -27,10 +27,12 @@ Publicar o CRM em URL HTTPS estavel para revisao externa, sem usar tunel tempora
 3. Confirmar a leitura do arquivo `render.yaml`.
 4. Preencher `CRM_DATABASE_URL` com a string do banco Supabase.
 5. Disparar o primeiro deploy.
-6. Abrir a URL gerada pelo Render e validar as paginas `Pipeline Manager` e `Insights & Alertas`.
+6. Confirmar que o healthcheck do servico responde em `/_stcore/health`.
+7. Abrir a URL gerada pelo Render e validar as paginas `Pipeline Manager` e `Insights & Alertas`.
 
 ## Validacao minima
 - a home abre sem bloqueio de seguranca do navegador
+- o healthcheck `/_stcore/health` responde sem erro
 - `Pipeline Manager` mostra oportunidades e fila prioritaria
 - `Insights & Alertas` mostra itens da fila CRM
 - se o banco falhar, a UI mostra warning explicito em vez de parecer vazia
@@ -39,3 +41,4 @@ Publicar o CRM em URL HTTPS estavel para revisao externa, sem usar tunel tempora
 - o modo publico nao deve depender de arquivos locais em `out/` ou `bling_api/`
 - `Metas Comerciais` fica fora do modo publico
 - se quiser URL fixa corporativa, conectar dominio proprio ao servico Render apos o primeiro deploy
+- a configuracao padrao do Streamlit fica em `.streamlit/config.toml`

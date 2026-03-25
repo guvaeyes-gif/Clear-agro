@@ -1,5 +1,6 @@
 import os
 import json
+import base64
 import unicodedata
 import streamlit as st
 import pandas as pd
@@ -17,6 +18,9 @@ BASE = ROOT / "out" / "base_unificada.xlsx"
 from src.data import (
     load_sheets,
     load_bling_realizado,
+    load_bling_vendor_map,
+    load_vendor_links,
+    load_bling_sales_detail,
     load_bling_nfe,
     load_bling_contas,
     load_bling_estoque,
@@ -33,9 +37,31 @@ from src.telegram import build_alerts_message, send_telegram_message, telegram_e
 PROFILE = os.getenv("CRM_PROFILE", "director").strip().lower()
 PUBLIC_REVIEW = os.getenv("CRM_PUBLIC_REVIEW", "").strip().lower() in {"1", "true", "yes", "on"}
 APP_BUILD = os.getenv("APP_BUILD", "2026-03-01.1")
-APP_TITLE = "Clear Agro CRM"
+APP_TITLE = "CRM"
 ACL_PATH = ROOT / "data" / "access_control.json"
 DEFAULT_YEAR = 2026
+LOGO_CANDIDATES = [
+    ROOT / "data" / "CLEAR.png",
+    Path(r"C:\Users\admin\OneDrive\Imágenes\LOGOS\Logo clear agro-2025.pdf"),
+    ROOT / "data" / "logo_empresa.png",
+    ROOT / "data" / "logo_empresa.jpg",
+    ROOT / "data" / "logo_empresa.jpeg",
+    ROOT / "data" / "logo_empresa.svg",
+    ROOT / "app" / "logo_empresa.png",
+    ROOT / "app" / "logo_empresa.jpg",
+    ROOT / "app" / "logo_empresa.jpeg",
+    ROOT / "app" / "logo_empresa.svg",
+]
+BLING_REALIZADO_CACHES = [
+    ROOT / "bling_api" / "nfe_2026_cache.jsonl",
+    ROOT / "bling_api" / "nfe_2026_cache_cr.jsonl",
+    ROOT / "bling_api" / "nfe_2025_cache.jsonl",
+    ROOT / "bling_api" / "nfe_2025_cache_cr.jsonl",
+    ROOT / "bling_api" / "vendas_2026_cache.jsonl",
+    ROOT / "bling_api" / "vendas_2026_cache_cr.jsonl",
+    ROOT / "bling_api" / "vendas_2025_cache.jsonl",
+    ROOT / "bling_api" / "vendas_2025_cache_cr.jsonl",
+]
 
 st.set_page_config(page_title=APP_TITLE, layout="wide")
 
@@ -65,6 +91,56 @@ def style_table(df: pd.DataFrame, numeric_cols=None):
     return styler
 
 
+def fmt_brl_full(value: object) -> str:
+    try:
+        num = float(value)
+    except Exception:
+        return "-"
+    return f"R$ {num:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+
+def fmt_int_br(value: object) -> str:
+    try:
+        num = int(float(value))
+    except Exception:
+        return "-"
+    return f"{num:,}".replace(",", ".")
+
+
+def fmt_brl_table(value: object) -> str:
+    try:
+        num = float(value)
+    except Exception:
+        return "-"
+    return f"R$ {num:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+
+def _upper_dashboard_value(value: object) -> object:
+    if isinstance(value, str):
+        stripped = value.strip()
+        if not stripped:
+            return value
+        return stripped.upper()
+    return value
+
+
+def upper_dashboard_text(df: pd.DataFrame) -> pd.DataFrame:
+    if df.empty:
+        return df
+    out = df.copy()
+    skip_keywords = {"id", "code", "cpf", "cnpj", "email", "url", "fone", "phone", "numero"}
+    text_cols = []
+    for col in out.columns:
+        col_key = str(col).strip().lower()
+        if any(token in col_key for token in skip_keywords):
+            continue
+        if pd.api.types.is_object_dtype(out[col]) or pd.api.types.is_string_dtype(out[col]):
+            text_cols.append(col)
+    for col in text_cols:
+        out[col] = out[col].map(_upper_dashboard_value)
+    return out
+
+
 def status_chip(s: str) -> str:
     s = (s or "").upper()
     if s == "ATIVO":
@@ -88,6 +164,93 @@ def load_acl() -> dict:
         return {}
 
 
+def find_dashboard_logo() -> Path | None:
+    env_logo = os.getenv("CRM_LOGO_PATH", "").strip()
+    if env_logo:
+        logo_path = Path(env_logo)
+        if not logo_path.is_absolute():
+            logo_path = ROOT / logo_path
+        if logo_path.exists():
+            return logo_path
+    for path in LOGO_CANDIDATES:
+        if path.exists():
+            return path
+    return None
+
+
+def render_dashboard_logo(path: Path, width: int = 180) -> None:
+    suffix = path.suffix.lower()
+    if suffix in {".png", ".jpg", ".jpeg", ".gif", ".webp"}:
+        st.image(str(path), width=width)
+        return
+    if suffix == ".svg":
+        svg = path.read_text(encoding="utf-8")
+        st.markdown(
+            f"<div style='max-width:{width}px'>{svg}</div>",
+            unsafe_allow_html=True,
+        )
+        return
+    if suffix == ".pdf":
+        pdf_b64 = base64.b64encode(path.read_bytes()).decode("ascii")
+        st.markdown(
+            f"""
+            <object
+                data="data:application/pdf;base64,{pdf_b64}#page=1&view=FitH"
+                type="application/pdf"
+                width="{width}"
+                height="120"
+                style="border:none;"
+            >
+            </object>
+            """,
+            unsafe_allow_html=True,
+        )
+        return
+    st.caption(path.name)
+
+
+def render_header(title: str, logo_path: Path | None) -> None:
+    if logo_path is None or logo_path.suffix.lower() not in {".png", ".jpg", ".jpeg", ".gif", ".webp"}:
+        st.title(title)
+        if logo_path is not None:
+            render_dashboard_logo(logo_path, width=260)
+        return
+    mime = {
+        ".png": "image/png",
+        ".jpg": "image/jpeg",
+        ".jpeg": "image/jpeg",
+        ".gif": "image/gif",
+        ".webp": "image/webp",
+    }[logo_path.suffix.lower()]
+    img_b64 = base64.b64encode(logo_path.read_bytes()).decode("ascii")
+    st.markdown(
+        f"""
+        <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:24px; margin:1.1rem 0 0.5rem 0;">
+            <h1 style="margin:34px 0 0 0; color:#1f264d; flex:1 1 auto; font-size:5.2rem; line-height:0.92; font-family:inherit; font-weight:700; letter-spacing:0.02em; text-align:left;">{title}</h1>
+            <img
+                src="data:{mime};base64,{img_b64}"
+                alt="Logo"
+                style="width:380px; max-width:34vw; height:auto; object-fit:contain; display:block; margin-top:22px;"
+            />
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def should_default_to_bling_realizado() -> bool:
+    if PUBLIC_REVIEW:
+        return True
+    if not BASE.exists():
+        return True
+    try:
+        base_mtime = BASE.stat().st_mtime
+        cache_mtimes = [path.stat().st_mtime for path in BLING_REALIZADO_CACHES if path.exists()]
+        return bool(cache_mtimes) and max(cache_mtimes) > base_mtime
+    except Exception:
+        return False
+
+
 def _clean_list(values):
     return [v for v in values if v not in (None, "", "TODOS")]
 
@@ -98,6 +261,176 @@ def _vendor_key(value: object) -> str:
         return ""
     txt = "".join(ch for ch in unicodedata.normalize("NFKD", txt) if not unicodedata.combining(ch))
     return " ".join(txt.split())
+
+
+def _extract_vendor_id_from_label(value: object) -> str:
+    txt = str(value or "").strip()
+    if txt.endswith(")") and "(" in txt:
+        possible_id = txt.rsplit("(", 1)[-1].rstrip(")").strip()
+        if possible_id:
+            return possible_id
+    return ""
+
+
+def _build_vendor_alias_map(
+    realizado_df: pd.DataFrame,
+    vendor_map: pd.DataFrame,
+    vendor_links: pd.DataFrame | None = None,
+) -> dict[str, str]:
+    alias_map: dict[str, str] = {}
+    if vendor_links is not None and not vendor_links.empty:
+        links = vendor_links.copy()
+        links["vendedor_id"] = links["vendedor_id"].fillna("").astype(str).str.strip()
+        links["nome_meta"] = links["nome_meta"].fillna("").astype(str).str.strip()
+        links["nome_exibicao"] = links["nome_exibicao"].fillna("").astype(str).str.strip()
+        links = links[links["vendedor_id"] != ""]
+        for _, row in links.iterrows():
+            preferred_name = row["nome_meta"] or row["nome_exibicao"]
+            if preferred_name:
+                alias_map[row["vendedor_id"]] = preferred_name
+    if not vendor_map.empty:
+        vm = vendor_map.copy()
+        vm["vendedor_id"] = vm["vendedor_id"].fillna("").astype(str).str.strip()
+        vm["vendedor"] = vm["vendedor"].fillna("").astype(str).str.strip()
+        vm = vm[(vm["vendedor_id"] != "") & (vm["vendedor"] != "")]
+        for _, row in vm.iterrows():
+            alias_map.setdefault(row["vendedor_id"], row["vendedor"])
+
+    if not realizado_df.empty and {"vendedor_id", "vendedor"}.issubset(realizado_df.columns):
+        rr = realizado_df.copy()
+        rr["vendedor_id"] = rr["vendedor_id"].fillna("").astype(str).str.strip()
+        rr["vendedor"] = rr["vendedor"].fillna("").astype(str).str.strip()
+        rr = rr[
+            (rr["vendedor_id"] != "")
+            & (rr["vendedor"] != "")
+            & rr["vendedor"].ne("SEM_VENDEDOR")
+            & rr["vendedor"].map(_vendor_key).ne(rr["vendedor_id"].map(_vendor_key))
+        ]
+        if not rr.empty:
+            pairs = (
+                rr.groupby(["vendedor_id", "vendedor"], dropna=False)
+                .size()
+                .reset_index(name="cnt")
+                .sort_values(["vendedor_id", "cnt", "vendedor"], ascending=[True, False, True])
+                .drop_duplicates(subset=["vendedor_id"], keep="first")
+            )
+            for _, row in pairs.iterrows():
+                alias_map.setdefault(row["vendedor_id"], row["vendedor"])
+    return alias_map
+
+
+def _vendor_candidates(
+    selected_vendor: str,
+    vendor_map: pd.DataFrame | None = None,
+    vendor_alias_map: dict[str, str] | None = None,
+) -> set[str]:
+    selected_txt = str(selected_vendor or "").strip()
+    selected_key = _vendor_key(selected_txt)
+    keys = {selected_key}
+    possible_id = _extract_vendor_id_from_label(selected_txt)
+    if possible_id:
+        keys.add(_vendor_key(possible_id))
+    if vendor_alias_map:
+        for vendor_id, vendor_name in vendor_alias_map.items():
+            if _vendor_key(vendor_id) in keys or _vendor_key(vendor_name) in keys:
+                keys.add(_vendor_key(vendor_id))
+                keys.add(_vendor_key(vendor_name))
+    if vendor_map is None or vendor_map.empty:
+        return {key for key in keys if key}
+    match = vendor_map[
+        vendor_map["vendedor_id"].map(_vendor_key).isin(keys)
+        | vendor_map["vendedor"].map(_vendor_key).isin(keys)
+    ]
+    for column in ["vendedor_id", "vendedor"]:
+        if column in match.columns:
+            keys.update({_vendor_key(v) for v in match[column].dropna().tolist()})
+    return {key for key in keys if key}
+
+
+def _vendor_display(name: object, vendor_id: object) -> str:
+    name_txt = str(name or "").strip()
+    vendor_id_txt = str(vendor_id or "").strip()
+    if name_txt and vendor_id_txt and _vendor_key(name_txt) != _vendor_key(vendor_id_txt):
+        return f"{name_txt} ({vendor_id_txt})"
+    return name_txt or vendor_id_txt or "SEM_VENDEDOR"
+
+
+def _vendor_display_label(option: str, option_counts: dict[str, int] | None = None) -> str:
+    txt = str(option or "").strip()
+    if txt in {"", "TODOS"}:
+        return txt or "TODOS"
+    vendor_id = _extract_vendor_id_from_label(txt)
+    if vendor_id:
+        base_name = txt.rsplit("(", 1)[0].strip()
+        if base_name and (option_counts or {}).get(_vendor_key(base_name), 0) <= 1:
+            return base_name
+        return f"{base_name} ({vendor_id})" if base_name else f"ID {vendor_id}"
+    if txt.isdigit():
+        return f"ID {txt}"
+    return txt
+
+
+def _collect_vendor_metrics(
+    df: pd.DataFrame,
+    value_col: str,
+    vendor_map: pd.DataFrame,
+    vendor_alias_map: dict[str, str],
+    year: int,
+    selected_month: int | None,
+    effective_ytd: bool,
+    selected_quarter: int | None,
+    today: pd.Timestamp,
+) -> dict[str, float]:
+    if df.empty:
+        return {}
+    out = df.copy()
+    if "vendedor_id" not in out.columns:
+        out["vendedor_id"] = ""
+    if "vendedor" not in out.columns:
+        out["vendedor"] = ""
+    out["vendedor_id"] = out["vendedor_id"].fillna("").astype(str).str.strip()
+    out["vendedor"] = out["vendedor"].fillna("").astype(str).str.strip()
+    reverse_alias_map = {
+        _vendor_key(vendor_name): vendor_id
+        for vendor_id, vendor_name in vendor_alias_map.items()
+        if str(vendor_name or "").strip()
+    }
+    if reverse_alias_map:
+        missing_ids = out["vendedor_id"].eq("") & out["vendedor"].map(_vendor_key).isin(reverse_alias_map.keys())
+        out.loc[missing_ids, "vendedor_id"] = out.loc[missing_ids, "vendedor"].map(lambda v: reverse_alias_map.get(_vendor_key(v), ""))
+    if not vendor_map.empty:
+        out = out.merge(
+            vendor_map[["vendedor_id", "vendedor"]].rename(columns={"vendedor": "__vendor_name"}),
+            on="vendedor_id",
+            how="left",
+        )
+        missing = out["vendedor"].eq("")
+        out.loc[missing, "vendedor"] = out.loc[missing, "__vendor_name"].fillna("")
+        out = out.drop(columns=["__vendor_name"], errors="ignore")
+    if vendor_alias_map:
+        resolved = out["vendedor_id"].map(vendor_alias_map).fillna("")
+        missing = out["vendedor"].eq("") | out["vendedor"].map(_vendor_key).eq(out["vendedor_id"].map(_vendor_key))
+        out.loc[missing, "vendedor"] = resolved.loc[missing]
+    if "data" in out.columns:
+        mask = out["data"].dt.year == year
+        if selected_quarter is not None:
+            q_start = (selected_quarter - 1) * 3 + 1
+            q_end = q_start + 2
+            mask &= out["data"].dt.month.between(q_start, q_end)
+        elif effective_ytd:
+            mask &= out["data"].dt.month <= today.month
+        elif selected_month is not None:
+            mask &= out["data"].dt.month == selected_month
+        out = out[mask]
+    if out.empty:
+        return {}
+    out["vendor_label"] = [_vendor_display(name, vendor_id) for name, vendor_id in zip(out["vendedor"], out["vendedor_id"])]
+    if value_col in out.columns:
+        out[value_col] = pd.to_numeric(out[value_col], errors="coerce").fillna(0)
+        grouped = out.groupby("vendor_label")[value_col].sum()
+    else:
+        grouped = out.groupby("vendor_label").size().astype(float)
+    return {str(vendor).strip(): float(value) for vendor, value in grouped.items() if str(vendor).strip()}
 
 
 def apply_acl(df: pd.DataFrame, vendor_col: str = "vendedor") -> pd.DataFrame:
@@ -158,15 +491,116 @@ def apply_acl_codes(df: pd.DataFrame, vendor_col: str = "sales_rep_code") -> pd.
     return out
 
 
-def filter_vendor_scope(df: pd.DataFrame, selected_vendor: str, columns: list[str]) -> pd.DataFrame:
+def filter_vendor_scope(
+    df: pd.DataFrame,
+    selected_vendor: str,
+    columns: list[str],
+    vendor_candidates: set[str] | None = None,
+) -> pd.DataFrame:
     if df.empty or selected_vendor == "TODOS":
         return df
-    selected_key = _vendor_key(selected_vendor)
+    vendor_candidates = vendor_candidates or _vendor_candidates(
+        selected_vendor,
+        load_bling_vendor_map(),
+        _build_vendor_alias_map(load_bling_realizado(), load_bling_vendor_map()),
+    )
     mask = pd.Series(False, index=df.index)
     for column in columns:
         if column in df.columns:
-            mask = mask | df[column].map(_vendor_key).eq(selected_key)
+            mask = mask | df[column].map(_vendor_key).isin(vendor_candidates)
     return df[mask]
+
+
+def filter_company_scope(df: pd.DataFrame, selected_company: str) -> pd.DataFrame:
+    if df.empty or selected_company == "TODOS" or "empresa" not in df.columns:
+        return df
+    return df[df["empresa"].astype(str).str.upper() == str(selected_company).upper()]
+
+
+def filter_period_scope(
+    df: pd.DataFrame,
+    year: int,
+    selected_month: int | None,
+    effective_ytd: bool,
+    selected_quarter: int | None,
+    date_col: str = "data",
+) -> pd.DataFrame:
+    if df.empty or date_col not in df.columns:
+        return df
+    out = df.copy()
+    out[date_col] = pd.to_datetime(out[date_col], errors="coerce")
+    out = out[out[date_col].notna()]
+    if out.empty:
+        return out
+    mask = out[date_col].dt.year == int(year)
+    if selected_quarter is not None:
+        q_start = (selected_quarter - 1) * 3 + 1
+        q_end = q_start + 2
+        mask &= out[date_col].dt.month.between(q_start, q_end)
+    elif effective_ytd:
+        ref_today = pd.Timestamp.today()
+        if int(year) == ref_today.year:
+            mask &= out[date_col].dt.month <= ref_today.month
+    elif selected_month is not None:
+        mask &= out[date_col].dt.month == int(selected_month)
+    return out[mask]
+
+
+def top_client_movement_table(
+    df: pd.DataFrame,
+    year: int,
+    selected_month: int | None,
+    effective_ytd: bool,
+    selected_quarter: int | None,
+    limit: int = 3,
+    sort_by_abs: bool = False,
+) -> pd.DataFrame:
+    if df.empty or not {"data", "cliente", "receita"}.issubset(df.columns):
+        return pd.DataFrame()
+    out = df.copy()
+    out["data"] = pd.to_datetime(out["data"], errors="coerce")
+    out["receita"] = pd.to_numeric(out["receita"], errors="coerce").fillna(0)
+    out["cliente"] = out["cliente"].fillna("").astype(str).str.strip()
+    out = out[(out["data"].notna()) & (out["cliente"] != "")]
+    out = filter_period_scope(out, year, selected_month, effective_ytd, selected_quarter)
+    if out.empty:
+        return pd.DataFrame()
+    grouped = (
+        out.groupby("cliente", dropna=False)["receita"]
+        .sum()
+        .reset_index()
+    )
+    if sort_by_abs:
+        grouped["movimento_abs"] = grouped["receita"].abs()
+        grouped = grouped.sort_values(["movimento_abs", "receita", "cliente"], ascending=[False, False, True])
+    else:
+        grouped = grouped.sort_values(["receita", "cliente"], ascending=[False, True])
+    grouped = grouped.head(limit).copy()
+    grouped["receita_fmt"] = grouped["receita"].map(fmt_brl_table)
+    return grouped[["cliente", "receita_fmt"]]
+
+
+def filter_sales_nature_scope(df: pd.DataFrame, selected_scope: str) -> pd.DataFrame:
+    if df.empty or selected_scope == "Tudo":
+        return df
+    out = df.copy()
+    natureza_txt = (
+        out.get("natureza_label", pd.Series("", index=out.index)).fillna("").astype(str)
+        + " "
+        + out.get("natureza", pd.Series("", index=out.index)).fillna("").astype(str)
+    ).str.upper()
+    receita = pd.to_numeric(out.get("receita", pd.Series(0, index=out.index)), errors="coerce").fillna(0)
+    vendedor_id = out.get("vendedor_id", pd.Series("", index=out.index)).fillna("").astype(str).str.strip()
+    is_devolucao = natureza_txt.str.contains("DEVOL|RETORNO|ESTORNO|CANCEL", regex=True) | receita.lt(0)
+    is_non_sale = natureza_txt.str.contains("REMESSA|CONSIGN", regex=True)
+    is_vendor_zero = vendedor_id.eq("0")
+    if selected_scope == "Vendas efetivas":
+        return out[~is_devolucao & ~is_non_sale & ~is_vendor_zero & receita.gt(0)]
+    if selected_scope == "Devolucoes/Ajustes":
+        return out[is_devolucao | is_vendor_zero]
+    if selected_scope == "Nao vendas":
+        return out[is_non_sale & ~is_devolucao & ~is_vendor_zero]
+    return out
 
 
 def filter_targets_view(
@@ -175,6 +609,7 @@ def filter_targets_view(
     period_type: str,
     month_num: int | None = None,
     quarter_num: int | None = None,
+    ytd: bool = False,
     state: str | None = None,
     sales_rep_code: str | None = None,
     statuses: list[str] | None = None,
@@ -190,6 +625,10 @@ def filter_targets_view(
         df = df[pd.to_numeric(df["month_num"], errors="coerce").eq(int(month_num))]
     if quarter_num is not None and "quarter_num" in df.columns:
         df = df[pd.to_numeric(df["quarter_num"], errors="coerce").eq(int(quarter_num))]
+    if ytd and month_num is None and quarter_num is None and str(period_type).upper() == "MONTH" and "month_num" in df.columns:
+        ref_today = pd.Timestamp.today()
+        max_month = ref_today.month if int(target_year) == ref_today.year else 12
+        df = df[pd.to_numeric(df["month_num"], errors="coerce").between(1, max_month)]
     if state and "state" in df.columns:
         df = df[df["state"].astype(str).str.upper() == str(state).upper()]
     if sales_rep_code and "sales_rep_code" in df.columns:
@@ -329,14 +768,98 @@ def build_targets_summary(view_df: pd.DataFrame, period_type: str) -> dict:
     }
 
 
+def current_targets_period_params(
+    target_year: int,
+    month_num: int | None,
+    ytd: bool,
+    quarter_num: int | None,
+) -> dict[str, object]:
+    if quarter_num is not None:
+        return {
+            "periodo_tipo": "QUARTER",
+            "mes": None,
+            "quarter": int(quarter_num),
+            "period_label": f"Q{int(quarter_num)}",
+        }
+    if month_num is not None and not ytd:
+        return {
+            "periodo_tipo": "MONTH",
+            "mes": int(month_num),
+            "quarter": None,
+            "period_label": pd.Timestamp(year=target_year, month=int(month_num), day=1).strftime("%b/%Y").upper(),
+        }
+    return {
+        "periodo_tipo": "MONTH",
+        "mes": None,
+        "quarter": None,
+        "period_label": f"YTD {target_year}",
+    }
+
+
+def format_targets_table(df: pd.DataFrame) -> pd.DataFrame:
+    if df.empty:
+        return df
+    out = df.copy()
+    if "periodo_tipo" in out.columns:
+        out["periodo_tipo"] = out["periodo_tipo"].astype(str).str.upper()
+    if "meta_valor" in out.columns:
+        out["meta_valor"] = pd.to_numeric(out["meta_valor"], errors="coerce").fillna(0)
+    if "realizado_valor" in out.columns:
+        out["realizado_valor"] = pd.to_numeric(out["realizado_valor"], errors="coerce").fillna(0)
+    if "atingimento_pct" not in out.columns and {"meta_valor", "realizado_valor"}.issubset(out.columns):
+        out["atingimento_pct"] = out.apply(
+            lambda row: (row["realizado_valor"] / row["meta_valor"] * 100) if row["meta_valor"] else 0.0,
+            axis=1,
+        )
+    if "gap_valor" not in out.columns and {"meta_valor", "realizado_valor"}.issubset(out.columns):
+        out["gap_valor"] = out["realizado_valor"] - out["meta_valor"]
+    if "status" in out.columns:
+        out["status"] = out["status"].apply(status_chip)
+    return out
+
+
 init_db()
 
+sidebar_logo_path = find_dashboard_logo()
+if sidebar_logo_path is not None and sidebar_logo_path.suffix.lower() in {".png", ".jpg", ".jpeg", ".gif", ".webp"}:
+    sidebar_logo_b64 = base64.b64encode(sidebar_logo_path.read_bytes()).decode("ascii")
+    sidebar_logo_mime = {
+        ".png": "image/png",
+        ".jpg": "image/jpeg",
+        ".jpeg": "image/jpeg",
+        ".gif": "image/gif",
+        ".webp": "image/webp",
+    }[sidebar_logo_path.suffix.lower()]
+    st.sidebar.markdown(
+        f"""
+        <div style="display:flex; justify-content:center; margin:-1.45rem 0 1.35rem 0;">
+            <img
+                src="data:{sidebar_logo_mime};base64,{sidebar_logo_b64}"
+                alt="Logo"
+                style="width:205px; max-width:92%; height:auto; object-fit:contain; display:block;"
+            />
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
 if st.sidebar.button("Recarregar base"):
-    for loader in [load_sheets, load_sales_targets_view, load_sales_pipeline_view, load_crm_priority_queue]:
+    for loader in [
+        load_sheets,
+        load_sales_targets_view,
+        load_sales_pipeline_view,
+        load_crm_priority_queue,
+        load_bling_realizado,
+        load_bling_nfe,
+        load_bling_sales_detail,
+    ]:
         try:
             loader.clear()
         except Exception:
             pass
+use_bling = st.sidebar.checkbox("Usar realizado do Bling (NF-e)", value=should_default_to_bling_realizado())
+show_inactive_vendors = st.sidebar.checkbox("Mostrar inativos/historico", value=False)
+
 sheets = load_sheets()
 if not sheets:
     st.warning("Base principal nao encontrada. Carregando modo revisao com dados vazios.")
@@ -346,6 +869,9 @@ if not sheets:
         "oportunidades": pd.DataFrame(columns=["cliente", "vendedor", "volume_potencial", "probabilidade", "data_proximo_passo"]),
         "atividades": pd.DataFrame(columns=["data"]),
     }
+for key, value in list(sheets.items()):
+    if isinstance(value, pd.DataFrame):
+        sheets[key] = upper_dashboard_text(value)
 
 # Apply ACL on loaded sheets (gestor profile)
 for key in ["metas", "realizado", "oportunidades"]:
@@ -353,6 +879,25 @@ for key in ["metas", "realizado", "oportunidades"]:
         sheets[key] = apply_acl(sheets[key], vendor_col="vendedor")
 
 # Sidebar controls
+page_options = [
+    "Executive Cockpit",
+    "Lab Comercial",
+    "Finance Control Tower",
+    "Pipeline Manager",
+    "Performance & Ritmo",
+    "Insights & Alertas",
+    "Metas Comerciais",
+    "Auditoria",
+]
+if PUBLIC_REVIEW:
+    page_options = [
+        "Pipeline Manager",
+        "Insights & Alertas",
+    ]
+
+page = st.sidebar.selectbox("Pagina", options=page_options)
+
+st.sidebar.markdown("### Periodo")
 years = set()
 for key in ["metas", "realizado"]:
     df = sheets.get(key, pd.DataFrame())
@@ -395,13 +940,25 @@ elif period_mode == "Quarter":
 else:
     effective_ytd = True
 
-use_bling = st.sidebar.checkbox("Usar realizado do Bling", value=PUBLIC_REVIEW)
+sales_scope = st.sidebar.selectbox(
+    "Movimento fiscal",
+    options=["Vendas efetivas", "Tudo", "Devolucoes/Ajustes", "Nao vendas"],
+    index=0,
+)
 if use_bling:
     br = load_bling_realizado()
     if not br.empty:
-        sheets["realizado"] = br
+        sheets["realizado"] = upper_dashboard_text(filter_sales_nature_scope(br, sales_scope))
+        if "origem" in br.columns and not br["origem"].astype(str).eq("bling_nfe").any():
+            st.sidebar.warning("NF-e nao encontrada no cache local. Realizado ainda em fallback por pedido.")
 
-show_inactive_vendors = st.sidebar.checkbox("Mostrar inativos/historico", value=False)
+st.sidebar.markdown("### Filtros")
+company_options = ["TODOS", "CZ", "CR"]
+sel_company = st.sidebar.selectbox("Empresa", options=company_options, index=0)
+
+vendor_map = upper_dashboard_text(load_bling_vendor_map())
+vendor_links = upper_dashboard_text(load_vendor_links())
+vendor_alias_map = _build_vendor_alias_map(sheets.get("realizado", pd.DataFrame()), vendor_map, vendor_links)
 
 # Build vendor list focused on selected period; keep optional historical expansion.
 vendor_scores: dict[str, float] = {}
@@ -410,32 +967,24 @@ today = pd.Timestamp.today()
 
 for sheet_name, value_col in [("metas", "meta"), ("realizado", "receita")]:
     dfv = sheets.get(sheet_name, pd.DataFrame())
-    if dfv.empty or "vendedor" not in dfv.columns:
-        continue
-    dfv = dfv.copy()
-    all_vendors_set.update([str(v).strip() for v in dfv["vendedor"].dropna().tolist() if str(v).strip()])
-    if "data" in dfv.columns:
-        mask = dfv["data"].dt.year == year
-        if selected_quarter is not None:
-            q_start = (selected_quarter - 1) * 3 + 1
-            q_end = q_start + 2
-            mask &= dfv["data"].dt.month.between(q_start, q_end)
-        elif effective_ytd:
-            mask &= dfv["data"].dt.month <= today.month
-        elif selected_month is not None:
-            mask &= dfv["data"].dt.month == selected_month
-        dfv = dfv[mask]
     if dfv.empty:
         continue
-    if value_col in dfv.columns:
-        dfv[value_col] = pd.to_numeric(dfv[value_col], errors="coerce").fillna(0)
-        grouped = dfv.groupby("vendedor")[value_col].sum()
-    else:
-        grouped = dfv.groupby("vendedor").size().astype(float)
-    for vend, val in grouped.items():
-        vend_txt = str(vend).strip()
-        if vend_txt:
-            vendor_scores[vend_txt] = vendor_scores.get(vend_txt, 0.0) + float(val)
+    all_vendors_set.update(
+        _collect_vendor_metrics(dfv, value_col, vendor_map, vendor_alias_map, year, None, False, None, today).keys()
+    )
+    period_scores = _collect_vendor_metrics(
+        dfv,
+        value_col,
+        vendor_map,
+        vendor_alias_map,
+        year,
+        selected_month,
+        effective_ytd,
+        selected_quarter,
+        today,
+    )
+    for vend, val in period_scores.items():
+        vendor_scores[vend] = vendor_scores.get(vend, 0.0) + float(val)
 
 active_ranked = sorted(
     [v for v, score in vendor_scores.items() if score > 0],
@@ -450,56 +999,70 @@ else:
     if len(vendors) == 1:
         vendors = ["TODOS"] + sorted(all_vendors_set)
 
-sel_vendor = st.sidebar.selectbox("Vendedor", options=vendors, index=0)
-
-page_options = [
-    "Executive Cockpit",
-    "Finance Control Tower",
-    "Pipeline Manager",
-    "Performance & Ritmo",
-    "Insights & Alertas",
-    "Metas Comerciais",
-    "Auditoria",
-]
-if PUBLIC_REVIEW:
-    page_options = [
-        "Pipeline Manager",
-        "Insights & Alertas",
-    ]
-
-page = st.sidebar.selectbox("Pagina", options=page_options)
+vendor_name_counts: dict[str, int] = {}
+for option in vendors:
+    vendor_id = _extract_vendor_id_from_label(option)
+    if vendor_id:
+        base_name = option.rsplit("(", 1)[0].strip()
+        if base_name:
+            vendor_name_counts[_vendor_key(base_name)] = vendor_name_counts.get(_vendor_key(base_name), 0) + 1
+display_vendor_map = {option: _vendor_display_label(option, vendor_name_counts) for option in vendors}
+sel_vendor = st.sidebar.selectbox(
+    "Vendedor",
+    options=vendors,
+    index=0,
+    format_func=lambda option: display_vendor_map.get(option, str(option)),
+)
+selected_vendor_candidates = _vendor_candidates(sel_vendor, vendor_map, vendor_alias_map) if sel_vendor != "TODOS" else set()
 
 if PROFILE == "gestor":
     acl = load_acl().get("gestor", {})
     title = acl.get("title") or "Clear Agro CRM - Gestor"
 else:
     title = APP_TITLE
-st.title(title)
+logo_path = find_dashboard_logo()
+render_header(title, logo_path)
 if PUBLIC_REVIEW:
     st.info("Modo revisao publica ativo: acesso sem login, somente visualizacao e paginas CRM.")
     st.caption(f"Build: {APP_BUILD}")
 period = period_label(year, selected_month, effective_ytd, selected_quarter)
 st.caption(f"Periodo: {period}")
+st.caption(f"Filtros: Empresa={sel_company} | Movimento={sales_scope}")
 
 if PUBLIC_REVIEW and page == "Metas Comerciais":
     st.warning("Pagina indisponivel no modo de revisao publica.")
     st.stop()
 
 # Apply vendor filter to metas/realizado
+if sel_company != "TODOS":
+    for key in ["realizado", "oportunidades", "atividades"]:
+        if key in sheets and isinstance(sheets[key], pd.DataFrame):
+            sheets[key] = filter_company_scope(sheets[key], sel_company)
+
 if sel_vendor != "TODOS":
-    sel_vendor_key = _vendor_key(sel_vendor)
-    if "metas" in sheets and "vendedor" in sheets["metas"].columns:
-        vm = sheets["metas"]["vendedor"].map(_vendor_key)
-        sheets["metas"] = sheets["metas"][vm == sel_vendor_key]
-    if "realizado" in sheets and "vendedor" in sheets["realizado"].columns:
-        vr = sheets["realizado"]["vendedor"].map(_vendor_key)
-        sheets["realizado"] = sheets["realizado"][vr == sel_vendor_key]
+    if "metas" in sheets:
+        mask = pd.Series(False, index=sheets["metas"].index)
+        for column in ["vendedor", "vendedor_id"]:
+            if column in sheets["metas"].columns:
+                mask = mask | sheets["metas"][column].map(_vendor_key).isin(selected_vendor_candidates)
+        sheets["metas"] = sheets["metas"][mask]
+    if "realizado" in sheets:
+        mask = pd.Series(False, index=sheets["realizado"].index)
+        for column in ["vendedor", "vendedor_id"]:
+            if column in sheets["realizado"].columns:
+                mask = mask | sheets["realizado"][column].map(_vendor_key).isin(selected_vendor_candidates)
+        sheets["realizado"] = sheets["realizado"][mask]
+
+if sales_scope != "Vendas efetivas" and "metas" in sheets:
+    sheets["metas"] = sheets["metas"].iloc[0:0].copy()
 
 # Page A - Executive Cockpit
 if page == "Executive Cockpit":
     st.subheader("Executive Cockpit")
-    crm_pipeline_view = apply_acl_codes(load_sales_pipeline_view(), vendor_col="sales_rep_code")
-    crm_pipeline_view = filter_vendor_scope(crm_pipeline_view, sel_vendor, ["sales_rep_code", "sales_rep_name"])
+    crm_pipeline_view = upper_dashboard_text(apply_acl_codes(load_sales_pipeline_view(), vendor_col="sales_rep_code"))
+    crm_pipeline_view = filter_vendor_scope(
+        crm_pipeline_view, sel_vendor, ["sales_rep_code", "sales_rep_name"], selected_vendor_candidates
+    )
     crm_pipeline_view = filter_pipeline_period(crm_pipeline_view, year, selected_month, effective_ytd, selected_quarter)
     kpis = compute_kpis(
         sheets,
@@ -514,10 +1077,13 @@ if page == "Executive Cockpit":
 
     # fallback meta from metas.db when base_unificada meta is missing
     meta_display = kpis.meta
-    if meta_display == 0:
+    if meta_display == 0 and sales_scope == "Vendas efetivas":
         mf = {"ano": year, "periodo_tipo": "MONTH"}
         if sel_vendor != "TODOS":
-            mf["vendedor_id"] = sel_vendor
+            mf["vendedor_id"] = next(
+                (value for value in vendor_map["vendedor_id"].tolist() if _vendor_key(value) in selected_vendor_candidates),
+                sel_vendor,
+            )
         dfm_all = list_metas(mf)
         if PROFILE == "gestor" and not dfm_all.empty:
             acl = load_acl().get("gestor", {})
@@ -550,9 +1116,9 @@ if page == "Executive Cockpit":
 
     c1, c2, c3, c4, c5, c6 = st.columns(6)
     c1.metric("Realizado", fmt_brl_abbrev(kpis.realizado))
-    c2.metric("Meta", fmt_brl_abbrev(meta_display))
-    c3.metric("Atingimento %", fmt_pct(ating_display))
-    c4.metric("Gap (R$)", fmt_brl_abbrev(gap_display))
+    c2.metric("Meta", fmt_brl_abbrev(meta_display) if sales_scope == "Vendas efetivas" else "-")
+    c3.metric("Atingimento %", fmt_pct(ating_display) if sales_scope == "Vendas efetivas" else "-")
+    c4.metric("Gap (R$)", fmt_brl_abbrev(gap_display) if sales_scope == "Vendas efetivas" else "-")
     c5.metric("Pipeline Ponderado", fmt_brl_abbrev(kpis.pipeline_ponderado) if kpis.pipeline_ponderado is not None else "-")
     c6.metric("% c/ Proximo Passo", fmt_pct(kpis.pct_proximo_passo) if kpis.pct_proximo_passo is not None else "-")
 
@@ -579,6 +1145,32 @@ if page == "Executive Cockpit":
                 st.info("Pendencia: sem dados no mes selecionado.")
     else:
         st.info("Pendencia: faltam dados de metas ou realizado com data.")
+
+    if sales_scope == "Vendas efetivas":
+        top_clients = top_client_movement_table(
+            sheets.get("realizado", pd.DataFrame()),
+            year,
+            selected_month,
+            effective_ytd,
+            selected_quarter,
+            limit=5,
+        )
+        if not top_clients.empty:
+            st.caption("Top 5 clientes por vendas efetivas")
+            st.dataframe(top_clients, hide_index=True, width="stretch")
+    elif sales_scope in {"Devolucoes/Ajustes", "Nao vendas"}:
+        top_clients = top_client_movement_table(
+            sheets.get("realizado", pd.DataFrame()),
+            year,
+            selected_month,
+            effective_ytd,
+            selected_quarter,
+            limit=3,
+            sort_by_abs=True,
+        )
+        if not top_clients.empty:
+            st.caption(f"Top 3 clientes por maior valor de movimento em {sales_scope.lower()}")
+            st.dataframe(top_clients, hide_index=True, width="stretch")
 
     # So what
     st.subheader("So what?")
@@ -623,11 +1215,311 @@ if page == "Executive Cockpit":
     for b in bullets[:5]:
         st.write(f"- {b}")
 
+# Page A2 - Lab Comercial
+if page == "Lab Comercial":
+    st.subheader("Lab Comercial")
+    st.caption("Pagina paralela para testar visoes comerciais sem alterar o cockpit principal.")
+
+    lab_realizado = sheets.get("realizado", pd.DataFrame()).copy()
+    if lab_realizado.empty or not {"data", "receita"}.issubset(lab_realizado.columns):
+        st.info("Pendencia: sem base suficiente de realizado para o laboratorio comercial.")
+    else:
+        lab_realizado = filter_period_scope(lab_realizado, year, selected_month, effective_ytd, selected_quarter)
+        lab_realizado["data"] = pd.to_datetime(lab_realizado["data"], errors="coerce")
+        lab_realizado["receita"] = pd.to_numeric(lab_realizado["receita"], errors="coerce").fillna(0)
+        lab_realizado = lab_realizado[lab_realizado["data"].notna()].copy()
+        st.caption(f"RECORTE ATUAL: {period} | EMPRESA={sel_company} | MOVIMENTO={sales_scope} | VENDEDOR={display_vendor_map.get(sel_vendor, sel_vendor)}")
+
+        if lab_realizado.empty:
+            st.info("Sem dados para os filtros selecionados.")
+            st.stop()
+
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("Realizado", fmt_brl_abbrev(float(lab_realizado["receita"].sum())))
+        c2.metric("Clientes", int(lab_realizado["cliente"].nunique()) if "cliente" in lab_realizado.columns else 0)
+        c3.metric("Vendedores", int(lab_realizado["vendedor_id"].astype(str).nunique()) if "vendedor_id" in lab_realizado.columns else 0)
+        ticket_medio = float(lab_realizado["receita"].mean()) if not lab_realizado.empty else 0.0
+        c4.metric("Ticket medio", fmt_brl_abbrev(ticket_medio))
+
+        monthly = (
+            lab_realizado.assign(mes=lab_realizado["data"].dt.to_period("M").astype(str))
+            .groupby("mes", dropna=False)["receita"]
+            .sum()
+            .reset_index()
+        )
+        if not monthly.empty:
+            st.markdown("#### Evolucao")
+            monthly_chart = (
+                alt.Chart(monthly)
+                .mark_bar(cornerRadiusTopLeft=4, cornerRadiusTopRight=4, color="#1f264d")
+                .encode(
+                    x=alt.X("mes:N", title="Mes"),
+                    y=alt.Y("receita:Q", title="Receita"),
+                    tooltip=["mes", alt.Tooltip("receita:Q", format=",.2f", title="Receita")],
+                )
+                .properties(height=280)
+            )
+            st.altair_chart(monthly_chart, width="stretch")
+
+            monthly_sorted = monthly.copy()
+            monthly_sorted["receita_prev"] = monthly_sorted["receita"].shift(1)
+            monthly_sorted["variacao_pct"] = (
+                (monthly_sorted["receita"] - monthly_sorted["receita_prev"])
+                / monthly_sorted["receita_prev"].replace(0, pd.NA)
+            ) * 100
+            if len(monthly_sorted) >= 2:
+                latest_row = monthly_sorted.iloc[-1]
+                prev_row = monthly_sorted.iloc[-2]
+                latest_delta = float(latest_row["variacao_pct"]) if pd.notna(latest_row["variacao_pct"]) else 0.0
+                st.caption(
+                    f"Ritmo mensal: {latest_row['mes']} vs {prev_row['mes']} = {fmt_pct(latest_delta)}"
+                )
+
+        left_col, right_col = st.columns(2)
+
+        with left_col:
+            if "vendedor" in lab_realizado.columns:
+                st.markdown("#### Ranking Comercial")
+                top_vendedores = (
+                    lab_realizado.assign(vendedor_lab=lab_realizado["vendedor"].fillna("").replace("", "SEM_VENDEDOR"))
+                    .groupby("vendedor_lab", dropna=False)["receita"]
+                    .sum()
+                    .reset_index()
+                    .sort_values("receita", ascending=False)
+                    .head(10)
+                )
+                if not top_vendedores.empty:
+                    st.caption("Top 10 vendedores")
+                    chart_vendedores = (
+                        alt.Chart(top_vendedores)
+                        .mark_bar(cornerRadiusEnd=4, color="#00b6b9")
+                        .encode(
+                            y=alt.Y("vendedor_lab:N", sort="-x", title="Vendedor"),
+                            x=alt.X("receita:Q", title="Receita"),
+                            tooltip=["vendedor_lab", alt.Tooltip("receita:Q", format=",.2f", title="Receita")],
+                        )
+                        .properties(height=320)
+                    )
+                    st.altair_chart(chart_vendedores, width="stretch")
+
+        with right_col:
+            if "cliente" in lab_realizado.columns:
+                st.markdown("#### Ranking de Clientes")
+                top_clientes_lab = (
+                    lab_realizado.groupby("cliente", dropna=False)["receita"]
+                    .sum()
+                    .reset_index()
+                    .sort_values("receita", ascending=False)
+                    .head(10)
+                )
+                if not top_clientes_lab.empty:
+                    st.caption("Top 10 clientes")
+                    chart_clientes = (
+                        alt.Chart(top_clientes_lab)
+                        .mark_bar(cornerRadiusEnd=4, color="#5fbd65")
+                        .encode(
+                            y=alt.Y("cliente:N", sort="-x", title="Cliente"),
+                            x=alt.X("receita:Q", title="Receita"),
+                            tooltip=["cliente", alt.Tooltip("receita:Q", format=",.2f", title="Receita")],
+                        )
+                        .properties(height=320)
+                    )
+                    st.altair_chart(chart_clientes, width="stretch")
+
+        curve_col, mix_col = st.columns(2)
+
+        with curve_col:
+            if "cliente" in lab_realizado.columns:
+                st.markdown("#### Curva ABC")
+                abc = (
+                    lab_realizado.groupby("cliente", dropna=False)["receita"]
+                    .sum()
+                    .reset_index()
+                    .sort_values("receita", ascending=False)
+                )
+                if not abc.empty:
+                    abc["share_pct"] = abc["receita"] / abc["receita"].sum() * 100
+                    abc["cum_pct"] = abc["share_pct"].cumsum()
+                    abc["faixa"] = pd.cut(
+                        abc["cum_pct"],
+                        bins=[-1, 80, 95, 100],
+                        labels=["A", "B", "C"],
+                    )
+                    abc_summary = (
+                        abc.groupby("faixa", dropna=False)
+                        .agg(clientes=("cliente", "count"), receita=("receita", "sum"))
+                        .reset_index()
+                    )
+                    st.caption("Curva ABC de clientes")
+                    abc_chart = (
+                        alt.Chart(abc_summary)
+                        .mark_bar(cornerRadiusTopLeft=4, cornerRadiusTopRight=4)
+                        .encode(
+                            x=alt.X("faixa:N", title="Faixa"),
+                            y=alt.Y("receita:Q", title="Receita"),
+                            color=alt.Color("faixa:N", scale=alt.Scale(range=["#1f264d", "#00b6b9", "#5fbd65"])),
+                            tooltip=[
+                                "faixa",
+                                alt.Tooltip("clientes:Q", format=",.0f", title="Clientes"),
+                                alt.Tooltip("receita:Q", format=",.2f", title="Receita"),
+                            ],
+                        )
+                        .properties(height=260)
+                    )
+                    st.altair_chart(abc_chart, width="stretch")
+
+        with mix_col:
+            if "empresa" in lab_realizado.columns:
+                st.markdown("#### Mix")
+                mix_empresa = (
+                    lab_realizado.groupby("empresa", dropna=False)["receita"]
+                    .sum()
+                    .reset_index()
+                    .sort_values("receita", ascending=False)
+                )
+                if not mix_empresa.empty:
+                    total_mix = float(mix_empresa["receita"].sum())
+                    mix_empresa["participacao"] = mix_empresa["receita"] / total_mix * 100 if total_mix else 0.0
+                    st.caption("Mix por empresa")
+                    mix_chart = (
+                        alt.Chart(mix_empresa)
+                        .mark_arc(innerRadius=55)
+                        .encode(
+                            theta=alt.Theta("receita:Q"),
+                            color=alt.Color("empresa:N", scale=alt.Scale(range=["#1f264d", "#5fbd65", "#00b6b9"])),
+                            tooltip=[
+                                "empresa",
+                                alt.Tooltip("receita:Q", format=",.2f", title="Receita"),
+                                alt.Tooltip("participacao:Q", format=",.2f", title="Participacao %"),
+                            ],
+                        )
+                        .properties(height=260)
+                    )
+                    st.altair_chart(mix_chart, width="stretch")
+
+        concentration_col, growth_col = st.columns(2)
+
+        with concentration_col:
+            if "vendedor" in lab_realizado.columns:
+                st.markdown("#### Concentracao")
+                vendedor_conc = (
+                    lab_realizado.assign(vendedor_lab=lab_realizado["vendedor"].fillna("").replace("", "SEM_VENDEDOR"))
+                    .groupby("vendedor_lab", dropna=False)["receita"]
+                    .sum()
+                    .reset_index()
+                    .sort_values("receita", ascending=False)
+                )
+                if not vendedor_conc.empty:
+                    total_vendedores = float(vendedor_conc["receita"].sum())
+                    top3_share = vendedor_conc["receita"].head(3).sum() / total_vendedores * 100 if total_vendedores else 0.0
+                    top5_share = vendedor_conc["receita"].head(5).sum() / total_vendedores * 100 if total_vendedores else 0.0
+                    st.caption(
+                        f"Concentracao comercial: Top 3 = {fmt_pct(top3_share)} | Top 5 = {fmt_pct(top5_share)}"
+                    )
+                    conc_view = vendedor_conc.head(8).assign(
+                        share_pct=lambda df: df["receita"] / total_vendedores * 100 if total_vendedores else 0.0
+                    )[["vendedor_lab", "receita", "share_pct"]]
+                    conc_view["receita"] = conc_view["receita"].map(fmt_brl_full)
+                    conc_view["share_pct"] = conc_view["share_pct"].map(fmt_pct)
+                    st.dataframe(
+                        conc_view,
+                        hide_index=True,
+                        width="stretch",
+                    )
+
+        with growth_col:
+            if "cliente" in lab_realizado.columns:
+                st.markdown("#### Crescimento")
+                client_month = (
+                    lab_realizado.assign(mes=lab_realizado["data"].dt.to_period("M").astype(str))
+                    .groupby(["cliente", "mes"], dropna=False)["receita"]
+                    .sum()
+                    .reset_index()
+                )
+                if not client_month.empty and len(monthly) >= 2:
+                    recent_months = monthly["mes"].tolist()[-2:]
+                    growth = (
+                        client_month[client_month["mes"].isin(recent_months)]
+                        .pivot_table(index="cliente", columns="mes", values="receita", aggfunc="sum", fill_value=0)
+                        .reset_index()
+                    )
+                    if len(recent_months) == 2 and all(month in growth.columns for month in recent_months):
+                        growth["delta"] = growth[recent_months[1]] - growth[recent_months[0]]
+                        growth = growth.sort_values("delta", ascending=False).head(8)
+                        growth_view = growth[["cliente", recent_months[0], recent_months[1], "delta"]].copy()
+                        for col in [recent_months[0], recent_months[1], "delta"]:
+                            growth_view[col] = growth_view[col].map(fmt_brl_full)
+                        st.caption(f"Clientes que mais cresceram: {recent_months[0]} -> {recent_months[1]}")
+                        st.dataframe(
+                            growth_view,
+                            hide_index=True,
+                            width="stretch",
+                        )
+
+        if "cliente" in lab_realizado.columns:
+            st.markdown("#### Carteira")
+            recency = (
+                lab_realizado.groupby("cliente", dropna=False)
+                .agg(ultima_compra=("data", "max"), receita=("receita", "sum"))
+                .reset_index()
+            )
+            if not recency.empty:
+                recency["dias_sem_compra"] = (today.normalize() - recency["ultima_compra"].dt.normalize()).dt.days
+                carteira_risco = recency[recency["dias_sem_compra"] >= 30].sort_values(
+                    ["dias_sem_compra", "receita"], ascending=[False, False]
+                ).head(10)
+                if not carteira_risco.empty:
+                    carteira_view = carteira_risco[["cliente", "ultima_compra", "dias_sem_compra", "receita"]].copy()
+                    carteira_view["ultima_compra"] = carteira_view["ultima_compra"].dt.strftime("%d/%m/%Y")
+                    carteira_view["dias_sem_compra"] = carteira_view["dias_sem_compra"].map(fmt_int_br)
+                    carteira_view["receita"] = carteira_view["receita"].map(fmt_brl_full)
+                    st.caption("Carteira sem compra recente")
+                    st.dataframe(
+                        carteira_view,
+                        hide_index=True,
+                        width="stretch",
+                    )
+
+        if "empresa" in lab_realizado.columns and sel_company == "TODOS":
+            st.markdown("#### Comparativo Entre Empresas")
+            company_month = (
+                lab_realizado.assign(mes=lab_realizado["data"].dt.to_period("M").astype(str))
+                .groupby(["mes", "empresa"], dropna=False)["receita"]
+                .sum()
+                .reset_index()
+            )
+            if not company_month.empty:
+                st.caption("Evolucao mensal por empresa")
+                company_chart = (
+                    alt.Chart(company_month)
+                    .mark_line(point=True, strokeWidth=3)
+                    .encode(
+                        x=alt.X("mes:N", title="Mes"),
+                        y=alt.Y("receita:Q", title="Receita"),
+                        color=alt.Color("empresa:N", title="Empresa"),
+                        tooltip=["mes", "empresa", alt.Tooltip("receita:Q", format=",.2f", title="Receita")],
+                    )
+                    .properties(height=280)
+                )
+                st.altair_chart(company_chart, width="stretch")
+
+        if sales_scope == "Vendas efetivas" and "metas" in sheets and not sheets["metas"].empty:
+            metas_lab = filter_period_scope(sheets["metas"].copy(), year, selected_month, effective_ytd, selected_quarter)
+            metas_lab["meta"] = pd.to_numeric(metas_lab["meta"], errors="coerce").fillna(0)
+            meta_total_lab = float(metas_lab["meta"].sum())
+            realizado_total_lab = float(lab_realizado["receita"].sum())
+            ating_lab = (realizado_total_lab / meta_total_lab * 100) if meta_total_lab else 0.0
+            st.caption(
+                f"Comparativo laboratorio: Meta {fmt_brl_abbrev(meta_total_lab)} | Realizado {fmt_brl_abbrev(realizado_total_lab)} | Atingimento {fmt_pct(ating_lab)}"
+            )
+
 # Page B - Pipeline Manager
 if page == "Pipeline Manager":
     st.subheader("Pipeline Manager")
-    pipeline_view = apply_acl_codes(load_sales_pipeline_view(), vendor_col="sales_rep_code")
-    pipeline_view = filter_vendor_scope(pipeline_view, sel_vendor, ["sales_rep_code", "sales_rep_name"])
+    pipeline_view = upper_dashboard_text(apply_acl_codes(load_sales_pipeline_view(), vendor_col="sales_rep_code"))
+    pipeline_view = filter_vendor_scope(
+        pipeline_view, sel_vendor, ["sales_rep_code", "sales_rep_name"], selected_vendor_candidates
+    )
     pipeline_view = filter_pipeline_period(pipeline_view, year, selected_month, effective_ytd, selected_quarter)
 
     if not pipeline_view.empty:
@@ -700,8 +1592,10 @@ if page == "Pipeline Manager":
         view.to_excel(out, index=False, sheet_name="pipeline")
         st.download_button("Exportar Pipeline", data=out.getvalue(), file_name="pipeline_manager.xlsx")
 
-        queue_df = apply_acl_codes(load_crm_priority_queue(), vendor_col="sales_rep_code")
-        queue_df = filter_vendor_scope(queue_df, sel_vendor, ["sales_rep_code", "sales_rep_name"])
+        queue_df = upper_dashboard_text(apply_acl_codes(load_crm_priority_queue(), vendor_col="sales_rep_code"))
+        queue_df = filter_vendor_scope(
+            queue_df, sel_vendor, ["sales_rep_code", "sales_rep_name"], selected_vendor_candidates
+        )
         queue_df = filter_queue_period(queue_df, year, selected_month, effective_ytd, selected_quarter)
         if not queue_df.empty:
             queue_df = sort_by_available(queue_df, [("priority_score", False), ("due_at", True)])
@@ -758,8 +1652,10 @@ if page == "Pipeline Manager":
 # Page C - Performance & Ritmo
 if page == "Performance & Ritmo":
     st.subheader("Performance & Ritmo")
-    perf_pipeline_view = apply_acl_codes(load_sales_pipeline_view(), vendor_col="sales_rep_code")
-    perf_pipeline_view = filter_vendor_scope(perf_pipeline_view, sel_vendor, ["sales_rep_code", "sales_rep_name"])
+    perf_pipeline_view = upper_dashboard_text(apply_acl_codes(load_sales_pipeline_view(), vendor_col="sales_rep_code"))
+    perf_pipeline_view = filter_vendor_scope(
+        perf_pipeline_view, sel_vendor, ["sales_rep_code", "sales_rep_name"], selected_vendor_candidates
+    )
     perf_pipeline_view = filter_pipeline_period(perf_pipeline_view, year, selected_month, effective_ytd, selected_quarter)
     perf_kpis = compute_kpis(
         sheets,
@@ -809,7 +1705,9 @@ if page == "Performance & Ritmo":
 if page == "Insights & Alertas":
     st.subheader("Insights & Alertas")
     queue_df = apply_acl_codes(load_crm_priority_queue(), vendor_col="sales_rep_code")
-    queue_df = filter_vendor_scope(queue_df, sel_vendor, ["sales_rep_code", "sales_rep_name"])
+    queue_df = filter_vendor_scope(
+        queue_df, sel_vendor, ["sales_rep_code", "sales_rep_name"], selected_vendor_candidates
+    )
     queue_df = filter_queue_period(queue_df, year, selected_month, effective_ytd, selected_quarter)
 
     if not queue_df.empty:
@@ -870,6 +1768,15 @@ if page == "Finance Control Tower":
 
     exports_dir = ROOT / "data" / "exports"
     marts_dir = ROOT / "data" / "marts"
+    quality_path = ROOT / "data" / "quality" / "finance_pack_report.json"
+    finance_inputs = {
+        "DRE CR": ROOT / "data" / "staging" / "stg_dre_cr.csv",
+        "DRE CZ": ROOT / "data" / "staging" / "stg_dre_cz.csv",
+        "DRE EMPRESA": ROOT / "data" / "staging" / "stg_dre_empresa.csv",
+        "Bancos": ROOT / "data" / "staging" / "stg_banks.csv",
+        "Contas a pagar": ROOT / "bling_api" / "contas_pagar_cache.jsonl",
+        "Contas a receber": ROOT / "bling_api" / "contas_receber_cache.jsonl",
+    }
 
     def _read_csv(path: Path) -> pd.DataFrame:
         try:
@@ -879,12 +1786,68 @@ if page == "Finance Control Tower":
             return pd.DataFrame()
         return pd.DataFrame()
 
+    def _fmt_ts(path: Path) -> str:
+        if not path.exists():
+            return "ausente"
+        return pd.Timestamp(path.stat().st_mtime, unit="s").strftime("%Y-%m-%d %H:%M")
+
+    def _load_finance_quality() -> dict:
+        if not quality_path.exists():
+            return {}
+        try:
+            with quality_path.open("r", encoding="utf-8") as f:
+                payload = json.load(f)
+        except Exception:
+            return {}
+        return payload if isinstance(payload, dict) else {}
+
     df_exec = _read_csv(exports_dir / "finance_executive_summary.csv")
     df_kpis = _read_csv(exports_dir / "finance_kpis_monthly.csv")
     df_exc = _read_csv(exports_dir / "finance_reconciliation_exceptions.csv")
     df_ap_ar = _read_csv(marts_dir / "fact_ap_ar.csv")
     df_cash = _read_csv(marts_dir / "fact_cashflow_detailed.csv")
     df_dre = _read_csv(marts_dir / "fact_dre_finance.csv")
+    quality_payload = _load_finance_quality()
+    quality_rows = quality_payload.get("rows", {}) if isinstance(quality_payload.get("rows"), dict) else {}
+    missing_inputs = [label for label, path in finance_inputs.items() if not path.exists()]
+    empty_outputs = [
+        label
+        for label, rows in [
+            ("DRE", quality_rows.get("fact_dre_finance")),
+            ("AP/AR", quality_rows.get("fact_ap_ar")),
+            ("Caixa", quality_rows.get("fact_cashflow_detailed")),
+        ]
+        if rows in (None, 0)
+    ]
+
+    if missing_inputs or empty_outputs:
+        parts = []
+        if missing_inputs:
+            parts.append("fontes ausentes: " + ", ".join(missing_inputs))
+        if empty_outputs:
+            parts.append("saidas vazias: " + ", ".join(empty_outputs))
+        st.warning("Base financeira incompleta. " + " | ".join(parts))
+    else:
+        st.success("Base financeira carregada com insumos locais disponiveis.")
+
+    with st.expander("Status das fontes financeiras", expanded=False):
+        status_rows = pd.DataFrame(
+            [
+                {
+                    "fonte": label,
+                    "arquivo": str(path.relative_to(ROOT)),
+                    "status": "ok" if path.exists() else "ausente",
+                    "ultima_atualizacao": _fmt_ts(path),
+                }
+                for label, path in finance_inputs.items()
+            ]
+        )
+        st.dataframe(status_rows, width="stretch", height=250)
+        if quality_payload:
+            st.caption(
+                f"finance_pack_report.json: status={quality_payload.get('status', 'desconhecido')} | "
+                f"gerado_em={_fmt_ts(quality_path)}"
+            )
 
     tabs = st.tabs(["Executive", "KPIs Mensais", "Reconciliacao", "Detalhes"])
 
@@ -1013,6 +1976,7 @@ if page == "Auditoria":
         nfe_m["valor"] = 0.0
     else:
         nfe = nfe.copy()
+        nfe = filter_company_scope(nfe, sel_company)
         nfe = nfe[nfe["data"].dt.year == year]
         nfe_m = nfe.groupby(nfe["data"].dt.to_period("M"))["valor"].sum().reset_index()
         nfe_m["data"] = nfe_m["data"].dt.to_timestamp()
@@ -1089,7 +2053,9 @@ if page == "Metas Comerciais":
     st.subheader("Metas Comerciais")
     tabs = st.tabs(["Executive Summary", "Metas", "Cadastro", "Transferencia"])
     targets_view_all = apply_acl_codes(load_sales_targets_view(), vendor_col="sales_rep_code")
-    targets_view_all = filter_vendor_scope(targets_view_all, sel_vendor, ["sales_rep_code", "sales_rep_name"])
+    targets_view_all = filter_vendor_scope(
+        targets_view_all, sel_vendor, ["sales_rep_code", "sales_rep_name"], selected_vendor_candidates
+    )
     periodo_tipo = "MONTH"
     uf = ""
     vend = ""

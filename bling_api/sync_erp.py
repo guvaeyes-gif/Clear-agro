@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 import time
 import unicodedata
@@ -37,6 +38,10 @@ def _report_path(company: str) -> Path:
     if tag == "cz":
         return REPORT_FILE
     return ROOT / f"bling_sync_report_{tag}.json"
+
+
+def _vendor_map_path(company: str) -> Path:
+    return _cache_path("vendedores_map.csv", company)
 
 
 def _read_existing_ids(path: Path) -> set[str]:
@@ -97,6 +102,14 @@ def _extract_vendedor_info(obj: dict[str, Any]) -> tuple[str | None, str | None]
         if isinstance(val, str) and val.strip():
             return vid, val.strip()
     return vid, None
+
+
+def _merge_nested_objects(base: dict[str, Any], detail: dict[str, Any]) -> dict[str, Any]:
+    out = dict(base)
+    for key, value in detail.items():
+        if key not in out or out.get(key) in (None, "", [], {}):
+            out[key] = value
+    return out
 
 
 def _collect_component_dicts(value: Any) -> list[dict[str, Any]]:
@@ -168,13 +181,49 @@ def _enrich_venda_with_detail(client: BlingClient, row: dict[str, Any]) -> dict[
     if rid is None:
         return row
     detail = client.get_detail(f"/pedidos/vendas/{rid}")
-    out = dict(row)
+    out = _merge_nested_objects(row, detail)
     vid, vname = _extract_vendedor_info(detail)
     if vid is not None:
         out["vendedor_id"] = vid
     if vname:
         out["vendedor"] = vname
     return out
+
+
+def _enrich_nfe_with_detail(client: BlingClient, row: dict[str, Any]) -> dict[str, Any]:
+    rid = row.get("id")
+    if rid is None:
+        return row
+    detail = client.get_detail(f"/nfe/{rid}")
+    return _merge_nested_objects(row, detail)
+
+
+def _build_vendedores_map_rows(rows: list[dict[str, Any]], company: str) -> list[dict[str, str]]:
+    by_id: dict[str, dict[str, str]] = {}
+    for row in rows:
+        vid, vname = _extract_vendedor_info(row)
+        if vid is None:
+            continue
+        key = str(vid).strip()
+        if not key:
+            continue
+        name = str(vname or "").strip()
+        current = by_id.get(key)
+        if current is None or (not current["vendedor"] and name):
+            by_id[key] = {
+                "vendedor_id": key,
+                "vendedor": name,
+                "empresa": _company_tag(company),
+            }
+    return sorted(by_id.values(), key=lambda item: item["vendedor_id"])
+
+
+def _write_vendedores_map(path: Path, rows: list[dict[str, str]]) -> None:
+    with path.open("w", encoding="utf-8-sig", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=["vendedor_id", "vendedor", "empresa"])
+        writer.writeheader()
+        for row in rows:
+            writer.writerow(row)
 
 
 def _read_jsonl(path: Path) -> list[dict[str, Any]]:
@@ -275,7 +324,7 @@ def sync_vendas(client: BlingClient, year: int, max_pages: int | None) -> dict[s
     start_date, end_date = _year_range(year)
     cache = _cache_path(f"vendas_{year}_cache.jsonl", client.account)
     params = {"dataEmissaoInicial": start_date, "dataEmissaoFinal": end_date}
-    return _sync_paginated(
+    result = _sync_paginated(
         client,
         "/pedidos/vendas",
         cache,
@@ -284,6 +333,12 @@ def sync_vendas(client: BlingClient, year: int, max_pages: int | None) -> dict[s
         enrich_row=lambda r: _enrich_venda_with_detail(client, r),
         max_pages=max_pages,
     )
+    vendor_rows = _build_vendedores_map_rows(_read_jsonl(cache), client.account)
+    vendor_map = _vendor_map_path(client.account)
+    _write_vendedores_map(vendor_map, vendor_rows)
+    result["vendor_map_file"] = str(vendor_map)
+    result["vendor_map_rows"] = len(vendor_rows)
+    return result
 
 
 def backfill_vendas_vendedor(client: BlingClient, year: int, limit: int | None = None) -> dict[str, Any]:
@@ -300,10 +355,70 @@ def backfill_vendas_vendedor(client: BlingClient, year: int, limit: int | None =
     for i, row in enumerate(rows):
         has_name = bool(_normalize_text(row.get("vendedor")))
         has_id = row.get("vendedor_id") not in (None, "", 0, "0")
-        if has_name or has_id:
+        has_items = isinstance(row.get("itens"), list) and len(row.get("itens")) > 0
+        if has_name and has_id and has_items:
             continue
         try:
             rows[i] = _enrich_venda_with_detail(client, row)
+            updated += 1
+        except Exception:
+            errors += 1
+        touched += 1
+        if limit and touched >= limit:
+            break
+        time.sleep(0.03)
+
+    if updated:
+        _rewrite_jsonl(cache, rows)
+
+    vendor_rows = _build_vendedores_map_rows(rows, client.account)
+    vendor_map = _vendor_map_path(client.account)
+    _write_vendedores_map(vendor_map, vendor_rows)
+
+    return {
+        "cache_file": str(cache),
+        "vendor_map_file": str(vendor_map),
+        "vendor_map_rows": len(vendor_rows),
+        "records": len(rows),
+        "updated": updated,
+        "errors": errors,
+        "elapsed_s": round(time.time() - started, 2),
+    }
+
+
+def sync_nfe(client: BlingClient, year: int, max_pages: int | None) -> dict[str, Any]:
+    start_date, end_date = _year_range(year)
+    cache = _cache_path(f"nfe_{year}_cache.jsonl", client.account)
+    params = {"dataEmissaoInicial": start_date, "dataEmissaoFinal": end_date}
+    return _sync_paginated(
+        client,
+        "/nfe",
+        cache,
+        company=client.account,
+        params=params,
+        enrich_row=lambda r: _enrich_nfe_with_detail(client, r),
+        max_pages=max_pages,
+    )
+
+
+def backfill_nfe_detail(client: BlingClient, year: int, limit: int | None = None) -> dict[str, Any]:
+    cache = _cache_path(f"nfe_{year}_cache.jsonl", client.account)
+    rows = _read_jsonl(cache)
+    if not rows:
+        return {"cache_file": str(cache), "records": 0, "updated": 0, "errors": 0, "elapsed_s": 0}
+
+    started = time.time()
+    updated = 0
+    errors = 0
+    touched = 0
+
+    for i, row in enumerate(rows):
+        has_value = row.get("valorNota") not in (None, "", 0, "0")
+        has_contact = isinstance(row.get("contato"), dict) and bool(row.get("contato"))
+        if has_value and has_contact:
+            continue
+        try:
+            rows[i] = _enrich_nfe_with_detail(client, row)
             updated += 1
         except Exception:
             errors += 1
@@ -322,13 +437,6 @@ def backfill_vendas_vendedor(client: BlingClient, year: int, limit: int | None =
         "errors": errors,
         "elapsed_s": round(time.time() - started, 2),
     }
-
-
-def sync_nfe(client: BlingClient, year: int, max_pages: int | None) -> dict[str, Any]:
-    start_date, end_date = _year_range(year)
-    cache = _cache_path(f"nfe_{year}_cache.jsonl", client.account)
-    params = {"dataEmissaoInicial": start_date, "dataEmissaoFinal": end_date}
-    return _sync_paginated(client, "/nfe", cache, company=client.account, params=params, max_pages=max_pages)
 
 
 def sync_contatos(client: BlingClient, max_pages: int | None) -> dict[str, Any]:
@@ -496,10 +604,15 @@ def parse_args() -> argparse.Namespace:
         help="Preenche vendedor_id/vendedor no cache de vendas via detalhe do pedido.",
     )
     p.add_argument(
+        "--backfill-nfe-detail",
+        action="store_true",
+        help="Preenche valorNota e demais campos no cache de NF-e via detalhe da nota.",
+    )
+    p.add_argument(
         "--backfill-limit",
         type=int,
         default=None,
-        help="Limite de registros sem vendedor para backfill (opcional).",
+        help="Limite de registros pendentes para backfill (opcional).",
     )
     return p.parse_args()
 
@@ -553,6 +666,15 @@ def main() -> int:
         except Exception as exc:
             report["errors"].append({"module": "vendas_backfill", "error": str(exc)})
             print(f"[ERR] vendas_backfill: {exc}")
+
+    if args.backfill_nfe_detail:
+        try:
+            bf = backfill_nfe_detail(client, args.year, args.backfill_limit)
+            report["results"].append({"module": "nfe_backfill", **bf})
+            print(f"[OK] nfe_backfill: {bf['updated']} atualizados ({bf['errors']} erros)")
+        except Exception as exc:
+            report["errors"].append({"module": "nfe_backfill", "error": str(exc)})
+            print(f"[ERR] nfe_backfill: {exc}")
 
     report["finished_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
     try:

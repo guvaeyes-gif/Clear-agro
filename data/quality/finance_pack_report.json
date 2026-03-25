@@ -1,0 +1,34 @@
+{
+  "status": "warning",
+  "message": "Finance pack generated with missing or empty critical sources",
+  "rows": {
+    "fact_dre_finance": 0,
+    "fact_ap_ar": 0,
+    "fact_cashflow_detailed": 0,
+    "fact_reconciliation_finance": 1,
+    "reconciliation_exceptions": 0
+  },
+  "missing_inputs": [
+    "data\\staging\\stg_dre_cr.csv",
+    "data\\staging\\stg_dre_cz.csv",
+    "data\\staging\\stg_dre_empresa.csv",
+    "data\\staging\\stg_banks.csv",
+    "bling_api\\contas_pagar_cache.jsonl",
+    "bling_api\\contas_receber_cache.jsonl"
+  ],
+  "critical_sources_empty": [
+    "fact_dre_finance",
+    "fact_ap_ar",
+    "fact_cashflow_detailed"
+  ],
+  "outputs": [
+    "data\\marts\\fact_dre_finance.csv",
+    "data\\marts\\fact_ap_ar.csv",
+    "data\\marts\\fact_cashflow_detailed.csv",
+    "data\\marts\\fact_reconciliation_finance.csv",
+    "data\\exports\\finance_executive_summary.csv",
+    "data\\exports\\finance_kpis_monthly.csv",
+    "data\\exports\\finance_reconciliation_exceptions.csv",
+    "data\\exports\\finance_pack.md"
+  ]
+}

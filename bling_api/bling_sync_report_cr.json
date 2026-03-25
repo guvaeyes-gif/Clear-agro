@@ -1,0 +1,21 @@
+{
+  "company": "CR",
+  "year": 2026,
+  "modules": [
+    "nfe",
+    "vendas"
+  ],
+  "started_at": "2026-03-24 16:42:41",
+  "results": [],
+  "errors": [
+    {
+      "module": "vendas",
+      "error": "refresh_token failed: 400 {\"error\":{\"type\":\"invalid_client\",\"message\":\"invalid_client\",\"description\":\"The client credentials are invalid\"}}"
+    },
+    {
+      "module": "nfe",
+      "error": "refresh_token failed: 400 {\"error\":{\"type\":\"invalid_client\",\"message\":\"invalid_client\",\"description\":\"The client credentials are invalid\"}}"
+    }
+  ],
+  "finished_at": "2026-03-24 16:42:42"
+}

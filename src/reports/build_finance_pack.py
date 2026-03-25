@@ -364,17 +364,37 @@ def main() -> int:
 
     write_pack(kpis, recon, exceptions)
 
+    row_counts = {
+        "fact_dre_finance": int(len(dre)),
+        "fact_ap_ar": int(len(ap_ar)),
+        "fact_cashflow_detailed": int(len(cash)),
+        "fact_reconciliation_finance": int(len(recon)),
+        "reconciliation_exceptions": int(len(exceptions)),
+    }
+    missing_inputs = [
+        str(path.relative_to(ROOT))
+        for path in [*DRE_FILES.values(), BANKS_FILE, AP_CACHE, AR_CACHE]
+        if not path.exists()
+    ]
+    critical_sources_empty = [
+        name
+        for name in ["fact_dre_finance", "fact_ap_ar", "fact_cashflow_detailed"]
+        if row_counts[name] == 0
+    ]
+    quality_status = "ok"
+    message = "Finance pack generated"
+    if missing_inputs or critical_sources_empty:
+        quality_status = "warning"
+        message = "Finance pack generated with missing or empty critical sources"
+
     save_quality_log(
         OUT_QUALITY,
         {
-            "status": "ok",
-            "rows": {
-                "fact_dre_finance": int(len(dre)),
-                "fact_ap_ar": int(len(ap_ar)),
-                "fact_cashflow_detailed": int(len(cash)),
-                "fact_reconciliation_finance": int(len(recon)),
-                "reconciliation_exceptions": int(len(exceptions)),
-            },
+            "status": quality_status,
+            "message": message,
+            "rows": row_counts,
+            "missing_inputs": missing_inputs,
+            "critical_sources_empty": critical_sources_empty,
             "outputs": [
                 str(OUT_FACT_DRE.relative_to(ROOT)),
                 str(OUT_FACT_AP_AR.relative_to(ROOT)),

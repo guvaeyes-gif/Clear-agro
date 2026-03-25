@@ -1,3 +1,4 @@
 @echo off
-cd /d C:\Users\cesar.zarovski\CRM_Clear_Agro
-python -m streamlit run app\main.py --server.port 8502
+set ROOT=%~dp0
+python -m streamlit run "%ROOT%app\main.py" --server.port 8502 --server.address 127.0.0.1
+pause

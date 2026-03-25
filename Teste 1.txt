@@ -1,0 +1,11 @@
+$env:BLING_CLIENT_ID_CR="1f066c22997f98227a0df305e00b6b1f86833500"
+  $env:BLING_CLIENT_SECRET_CR="181da5de2db1c2eec426a916b8ab2fe86948a675e296a3c240a8610e79d"
+  $env:BLING_REDIRECT_URI_CR="http://localhost:8080/bling/callback"
+
+
+echo $env:BLING_1f066c22997f98227a0df305e00b6b1f86833500
+  echo $env:BLING_181da5de2db1c2eec426a916b8ab2fe86948a675e296a3c240a8610e79d
+  echo $env:BLING_http://localhost:8080/bling/callback
+
+cd C:\Users\admin\Desktop\Clear-agro\bling_api
+  & "C:\Users\admin\AppData\Local\Programs\Python\Python311\python.exe" authorize_url.py --company cr
