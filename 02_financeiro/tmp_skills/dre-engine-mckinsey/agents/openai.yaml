@@ -1,0 +1,4 @@
+interface:
+  display_name: "DRE McKinsey"
+  short_description: "Motor DRE McKinsey para Clear Agro"
+  default_prompt: "Use $dre-engine-mckinsey para montar ou auditar um DRE McKinsey com base nos exports e regras do projeto."
