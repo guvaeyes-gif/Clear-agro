@@ -3,16 +3,19 @@ from __future__ import annotations
 import base64
 import json
 from datetime import datetime
+from io import BytesIO
 from pathlib import Path
 from typing import Any
 
 import pandas as pd
 import streamlit as st
+from PIL import Image, ImageDraw, ImageFont
 
 
 BASE_DIR = Path(__file__).resolve().parent
 WORKSPACE_ROOT = BASE_DIR.parents[1]
 SNAPSHOT_PATH = BASE_DIR / "data" / "latest_snapshot.json"
+DUPLICATAS_GARANTIA_PATH = WORKSPACE_ROOT / "02_financeiro" / "Duplicatas en Garantía.xlsx"
 LOGO_CANDIDATES = [
     WORKSPACE_ROOT / "02_financeiro" / "CLEAR logo.png",
     WORKSPACE_ROOT / "data" / "CLEAR.png",
@@ -60,7 +63,7 @@ def inject_styles() -> None:
         }
         .block-container {
             max-width: 1420px;
-            padding-top: 1.1rem;
+            padding-top: 2.4rem;
             padding-bottom: 2rem;
         }
         html, body, [class*="css"] {
@@ -86,31 +89,54 @@ def inject_styles() -> None:
             text-transform: uppercase;
             letter-spacing: 0.06em;
         }
+        .hero-card {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 28px;
+            margin: 3.4rem 0 1.8rem 0;
+            padding: 2.2rem 2.4rem;
+            background: linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(241,247,240,0.96) 100%);
+            border: 1px solid rgba(47,101,72,0.18);
+            border-radius: 28px;
+            box-shadow: 0 22px 44px rgba(25,51,38,0.10);
+            position: relative;
+            overflow: hidden;
+        }
+        .hero-card::before {
+            content: "";
+            position: absolute;
+            inset: 0 auto 0 0;
+            width: 8px;
+            background: linear-gradient(180deg, var(--brand-gold) 0%, var(--brand-green) 100%);
+        }
         .hero-title-wrap {
-            padding: 5.2rem 0 0.8rem 0;
+            padding: 0 0 0 1rem;
         }
         .hero-title {
-            font-size: 2.8rem;
+            font-size: 3.4rem;
             line-height: 1;
             font-weight: 700;
             margin: 0;
             color: var(--brand-ink);
-            letter-spacing: 0.01em;
+            letter-spacing: 0.08em;
         }
         .hero-header {
             display: flex;
-            align-items: flex-start;
+            align-items: center;
             justify-content: flex-start;
             gap: 28px;
-            margin-bottom: 0.8rem;
         }
         .hero-title-box {
             flex: 1 1 auto;
             min-width: 0;
         }
         .hero-logo-box {
-            flex: 0 0 34%;
-            padding-top: 4.2rem;
+            flex: 0 0 32%;
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            padding-right: 0.4rem;
         }
         .section-note {
             background: rgba(255,255,255,0.76);
@@ -142,10 +168,59 @@ def inject_styles() -> None:
             white-space: normal;
             overflow-wrap: anywhere;
         }
+        .finance-metric-card {
+            background: var(--brand-card);
+            border: 1px solid var(--brand-line);
+            border-radius: 18px;
+            padding: 0.9rem 1rem 1rem 1rem;
+            box-shadow: 0 10px 22px rgba(25,51,38,0.05);
+            text-align: center;
+            min-height: 112px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .finance-metric-card.finance-metric-card-highlight {
+            min-height: 132px;
+        }
+        .finance-metric-label {
+            color: #617166;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-size: 0.72rem;
+            margin-bottom: 0.45rem;
+        }
+        .finance-metric-card.finance-metric-card-highlight .finance-metric-label {
+            font-size: 0.9rem;
+            margin-bottom: 0.6rem;
+        }
+        .finance-metric-value {
+            color: var(--brand-ink);
+            font-size: 1.15rem;
+            line-height: 1.25;
+            font-weight: 700;
+            word-break: break-word;
+            overflow-wrap: anywhere;
+        }
+        .finance-metric-card.finance-metric-card-highlight .finance-metric-value {
+            font-size: 1.85rem;
+            line-height: 1.15;
+        }
         .sidebar-logo {
             display: flex;
             justify-content: center;
             margin: -0.2rem 0 1rem 0;
+        }
+        .sidebar-logo-badge {
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            padding: 0.85rem 0.7rem;
+            background: linear-gradient(135deg, rgba(255,255,255,0.94) 0%, rgba(241,247,240,0.98) 100%);
+            border: 1px solid rgba(47,101,72,0.14);
+            border-radius: 18px;
+            box-shadow: 0 10px 18px rgba(25,51,38,0.06), 0 22px 42px rgba(25,51,38,0.10);
         }
         .sidebar-box {
             background: rgba(255,255,255,0.78);
@@ -295,8 +370,11 @@ def render_logo(path: Path, width: int = 220, sidebar: bool = False) -> None:
     image_b64 = base64.b64encode(path.read_bytes()).decode("ascii")
     style = "width:220px; max-width:94%; height:auto;" if sidebar else f"width:{width}px; max-width:100%; height:auto;"
     wrapper = "sidebar-logo" if sidebar else ""
+    content = f'<img src="data:{mime};base64,{image_b64}" alt="Clear Agro" style="{style}">'
+    if sidebar:
+        content = f'<div class="sidebar-logo-badge">{content}</div>'
     st.markdown(
-        f'<div class="{wrapper}"><img src="data:{mime};base64,{image_b64}" alt="Clear Agro" style="{style}"></div>',
+        f'<div class="{wrapper}">{content}</div>',
         unsafe_allow_html=True,
     )
 
@@ -308,6 +386,17 @@ def brl(value: Any) -> str:
         return "R$ 0,00"
     formatted = f"{number:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
     return f"R$ {formatted}"
+
+
+def bold_headers(frame: pd.DataFrame) -> pd.io.formats.style.Styler:
+    return frame.style.set_table_styles(
+        [
+            {
+                "selector": "th",
+                "props": [("font-weight", "700")],
+            }
+        ]
+    )
 
 
 def pct(value: Any) -> str:
@@ -438,11 +527,16 @@ def metric_section(title: str, metrics: list[tuple[str, str]], columns: int = 2)
     metric_grid(metrics, columns=columns)
 
 
-def metric_rows(rows: list[list[tuple[str, str] | None]]) -> None:
+def metric_rows(rows: list[list[tuple[str, str] | None]], center_single_item_rows: bool = False) -> None:
     if not rows:
         return
     width = max(len(row) for row in rows)
     for row in rows:
+        if center_single_item_rows and len(row) == 1:
+            _, metric_col, _ = st.columns([1, 2, 1])
+            label, value = row[0]
+            metric_col.metric(label, value)
+            continue
         cols = st.columns(width)
         for idx in range(width):
             item = row[idx] if idx < len(row) else None
@@ -451,6 +545,52 @@ def metric_rows(rows: list[list[tuple[str, str] | None]]) -> None:
             else:
                 label, value = item
                 cols[idx].metric(label, value)
+
+
+def render_centered_metric_rows(rows: list[list[tuple[str, str] | None]], highlight_labels: set[str] | None = None) -> None:
+    if not rows:
+        return
+
+    highlight_labels = {str(label).strip().upper() for label in (highlight_labels or set())}
+
+    def _metric_html(label: str, value: str) -> str:
+        safe_label = (
+            str(label or "")
+            .replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+        )
+        safe_value = (
+            str(value or "")
+            .replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+        )
+        card_class = "finance-metric-card"
+        if str(label).strip().upper() in highlight_labels:
+            card_class += " finance-metric-card-highlight"
+        return (
+            f'<div class="{card_class}">'
+            f'<div class="finance-metric-label">{safe_label}</div>'
+            f'<div class="finance-metric-value">{safe_value}</div>'
+            "</div>"
+        )
+
+    width = max(len(row) for row in rows)
+    for row in rows:
+        if len(row) == 1 and row[0] is not None:
+            _, metric_col, _ = st.columns([1, 2, 1])
+            label, value = row[0]
+            metric_col.markdown(_metric_html(label, value), unsafe_allow_html=True)
+            continue
+        cols = st.columns(width)
+        for idx in range(width):
+            item = row[idx] if idx < len(row) else None
+            if item is None:
+                cols[idx].markdown("&nbsp;")
+            else:
+                label, value = item
+                cols[idx].markdown(_metric_html(label, value), unsafe_allow_html=True)
 
 
 def render_dre_column(title: str, rows: list[tuple[str, str]], total_label: str, total_value: str, note: str = "") -> None:
@@ -548,6 +688,206 @@ def upper_text(value: Any) -> str:
     return str(value or "").strip().upper()
 
 
+def _pdf_font(size: int, bold: bool = False) -> ImageFont.ImageFont:
+    candidates = [
+        "C:/Windows/Fonts/arialbd.ttf" if bold else "C:/Windows/Fonts/arial.ttf",
+        "C:/Windows/Fonts/calibrib.ttf" if bold else "C:/Windows/Fonts/calibri.ttf",
+        "C:/Windows/Fonts/segoeuib.ttf" if bold else "C:/Windows/Fonts/segoeui.ttf",
+    ]
+    for candidate in candidates:
+        try:
+            return ImageFont.truetype(candidate, size=size)
+        except OSError:
+            continue
+    return ImageFont.load_default()
+
+
+def _text_width(draw: ImageDraw.ImageDraw, text: str, font: ImageFont.ImageFont) -> int:
+    return int(draw.textbbox((0, 0), text, font=font)[2])
+
+
+def _fit_text(draw: ImageDraw.ImageDraw, text: str, font: ImageFont.ImageFont, max_width: int) -> str:
+    value = str(text or "")
+    if _text_width(draw, value, font) <= max_width:
+        return value
+    shortened = value
+    while len(shortened) > 1 and _text_width(draw, f"{shortened}...", font) > max_width:
+        shortened = shortened[:-1]
+    return f"{shortened}..."
+
+
+def _load_pdf_logo(logo_path: Path | None, max_width: int, max_height: int) -> Image.Image | None:
+    if logo_path is None or not logo_path.exists():
+        return None
+    try:
+        logo = Image.open(logo_path).convert("RGBA")
+    except Exception:
+        return None
+    logo.thumbnail((max_width, max_height))
+    return logo
+
+
+def _dre_row_is_strong(label: Any) -> bool:
+    text = upper_text(label)
+    if "RESULTADO" in text or "MARGEM" in text or "CMV" in text:
+        return True
+    return "RECEITA TOTAL" in text or "DESPESAS OPERACIONAIS" in text or "CAPITAL ATUAL INVESTIDO" in text
+
+
+def build_dre_analytic_pdf(
+    matrix_df: pd.DataFrame,
+    analysis_year: int,
+    period_label_value: str,
+    source_label: str,
+    logo_path: Path | None,
+) -> bytes:
+    if matrix_df.empty:
+        return b""
+
+    page_width = 1654
+    page_height = 1169
+    margin_x = 56
+    margin_y = 46
+    header_h = 170
+    table_top = margin_y + header_h + 24
+    table_bottom = page_height - 52
+    row_h = 28
+    header_row_h = 34
+    usable_table_h = table_bottom - table_top - header_row_h
+    rows_per_page = max(8, usable_table_h // row_h)
+
+    account_col = "CONTA"
+    trailing_cols = [col for col in ["TOTAL", "TOTAL %"] if col in matrix_df.columns]
+    detail_cols = [col for col in matrix_df.columns if col not in {account_col, *trailing_cols}]
+    chunk_size = 6
+    detail_chunks = [detail_cols[i:i + chunk_size] for i in range(0, len(detail_cols), chunk_size)] or [[]]
+
+    title_font = _pdf_font(34, bold=True)
+    meta_font = _pdf_font(16, bold=False)
+    small_font = _pdf_font(13, bold=False)
+    small_bold = _pdf_font(13, bold=True)
+    body_font = _pdf_font(12, bold=False)
+    body_bold = _pdf_font(12, bold=True)
+
+    pages: list[Image.Image] = []
+    timestamp = datetime.now().strftime("%d/%m/%Y %H:%M")
+    total_page_count = sum(max(1, (len(matrix_df) + rows_per_page - 1) // rows_per_page) for _ in detail_chunks)
+    current_page = 1
+
+    for chunk_index, chunk in enumerate(detail_chunks, start=1):
+        selected_cols = [account_col, *chunk, *trailing_cols]
+        chunk_df = matrix_df[selected_cols].copy()
+
+        if len(chunk) == 0:
+            chunk_label = "TOTAL"
+        else:
+            visible_months = [str(col).replace(" %", "") for col in chunk if not str(col).endswith("%")]
+            chunk_label = f"{visible_months[0]} A {visible_months[-1]}"
+
+        for start in range(0, len(chunk_df), rows_per_page):
+            page = Image.new("RGB", (page_width, page_height), "white")
+            draw = ImageDraw.Draw(page)
+
+            draw.rounded_rectangle(
+                (margin_x, margin_y, page_width - margin_x, margin_y + header_h),
+                radius=28,
+                fill=(245, 249, 245),
+                outline=(214, 224, 214),
+                width=2,
+            )
+            draw.rounded_rectangle(
+                (margin_x, margin_y, margin_x + 10, margin_y + header_h),
+                radius=12,
+                fill=(184, 139, 47),
+            )
+            draw.rectangle((margin_x + 5, margin_y, margin_x + 10, margin_y + header_h), fill=(47, 101, 72))
+
+            draw.text((margin_x + 34, margin_y + 26), "DRE ANALITICO", fill=(25, 51, 38), font=title_font)
+            draw.text(
+                (margin_x + 36, margin_y + 80),
+                f"Ano {analysis_year} | Periodo {period_label_value} | Fonte {source_label}",
+                fill=(70, 88, 76),
+                font=meta_font,
+            )
+            draw.text(
+                (margin_x + 36, margin_y + 112),
+                f"Faixa exportada: {chunk_label} | Gerado em {timestamp}",
+                fill=(97, 113, 102),
+                font=meta_font,
+            )
+
+            logo = _load_pdf_logo(logo_path, max_width=340, max_height=118)
+            if logo is not None:
+                logo_x = page_width - margin_x - logo.width - 20
+                logo_y = margin_y + (header_h - logo.height) // 2
+                page.paste(logo, (logo_x, logo_y), logo)
+
+            current_top = table_top
+            page_rows = chunk_df.iloc[start:start + rows_per_page]
+
+            account_width = 430
+            trailing_widths = []
+            for col in trailing_cols:
+                trailing_widths.append(150 if str(col) == "TOTAL" else 94)
+            remaining_width = page_width - (2 * margin_x) - account_width - sum(trailing_widths)
+            dynamic_count = max(1, len(chunk))
+            dynamic_width = max(74, remaining_width // dynamic_count)
+            col_widths: list[int] = [account_width]
+            col_widths.extend([dynamic_width for _ in chunk])
+            col_widths.extend(trailing_widths)
+
+            header_x = margin_x
+            for col, width in zip(selected_cols, col_widths, strict=False):
+                draw.rectangle(
+                    (header_x, current_top, header_x + width, current_top + header_row_h),
+                    fill=(232, 239, 232),
+                    outline=(205, 214, 204),
+                    width=1,
+                )
+                label = "%" if str(col).endswith("%") else str(col)
+                label = _fit_text(draw, label, small_bold, width - 14)
+                draw.text((header_x + 8, current_top + 9), label, fill=(25, 51, 38), font=small_bold)
+                header_x += width
+
+            current_top += header_row_h
+
+            for _, row in page_rows.iterrows():
+                row_label = str(row.get(account_col, ""))
+                strong_row = _dre_row_is_strong(row_label)
+                row_fill = (248, 251, 248) if strong_row else (255, 255, 255)
+                text_fill = (25, 51, 38)
+                row_x = margin_x
+                for col, width in zip(selected_cols, col_widths, strict=False):
+                    draw.rectangle(
+                        (row_x, current_top, row_x + width, current_top + row_h),
+                        fill=row_fill,
+                        outline=(223, 229, 222),
+                        width=1,
+                    )
+                    raw_value = str(row.get(col, "") or "")
+                    font = body_bold if strong_row else body_font
+                    if col == account_col:
+                        value = _fit_text(draw, raw_value, font, width - 12)
+                        draw.text((row_x + 8, current_top + 7), value, fill=text_fill, font=font)
+                    else:
+                        value = _fit_text(draw, raw_value, font, width - 10)
+                        value_fill = (198, 40, 40) if raw_value.startswith("R$ -") else text_fill
+                        value_width = _text_width(draw, value, font)
+                        draw.text((row_x + width - value_width - 8, current_top + 7), value, fill=value_fill, font=font)
+                    row_x += width
+                current_top += row_h
+
+            footer = f"Pagina {current_page} de {total_page_count}"
+            footer_width = _text_width(draw, footer, small_font)
+            draw.text((page_width - margin_x - footer_width, page_height - 34), footer, fill=(97, 113, 102), font=small_font)
+            pages.append(page)
+            current_page += 1
+
+    pdf_buffer = BytesIO()
+    pages[0].save(pdf_buffer, format="PDF", save_all=True, append_images=pages[1:] if len(pages) > 1 else [])
+    return pdf_buffer.getvalue()
+
+
 def monthly_frame(snapshot: dict[str, Any], key: str = "monthly") -> pd.DataFrame:
     frame = as_frame(snapshot.get(key))
     if frame.empty:
@@ -618,6 +958,32 @@ def future_flow_monthly(frame: pd.DataFrame, value_col: str = "valor") -> pd.Dat
     out["periodo"] = out["mes_num"].map(MONTH_NAMES).fillna(out["mes_num"].astype(str)) + "/" + out["ano"].astype(str)
     out = out.rename(columns={value_col: "valor"})
     return out.sort_values(["ano", "mes_num"]).reset_index(drop=True)
+
+
+@st.cache_data(show_spinner=False)
+def load_duplicatas_garantia() -> pd.DataFrame:
+    if not DUPLICATAS_GARANTIA_PATH.exists():
+        return pd.DataFrame(columns=["company", "banco", "pagador", "valor", "vencimento", "data_vencimento", "ano", "mes_num", "data_label"])
+    try:
+        frame = pd.read_excel(DUPLICATAS_GARANTIA_PATH, sheet_name="Base_CZ")
+    except Exception:
+        return pd.DataFrame(columns=["company", "banco", "pagador", "valor", "vencimento", "data_vencimento", "ano", "mes_num", "data_label"])
+    if frame.empty:
+        return pd.DataFrame(columns=["company", "banco", "pagador", "valor", "vencimento", "data_vencimento", "ano", "mes_num", "data_label"])
+    out = pd.DataFrame()
+    out["company"] = frame.get("Empresa", "CZ").fillna("CZ").astype(str).str.upper()
+    out["banco"] = frame.get("Banco", "").fillna("").astype(str).str.upper()
+    out["pagador"] = frame.get("Pagador", "").fillna("").astype(str).str.upper()
+    out["valor"] = pd.to_numeric(frame.get("Valor (R$)"), errors="coerce").fillna(0.0)
+    out["data_vencimento"] = pd.to_datetime(frame.get("Vencimento"), errors="coerce")
+    out = out.dropna(subset=["data_vencimento"]).copy()
+    today = pd.Timestamp(datetime.now().date())
+    out.loc[out["data_vencimento"] < today, "data_vencimento"] = today
+    out["vencimento"] = out["data_vencimento"].dt.strftime("%Y-%m-%d")
+    out["ano"] = out["data_vencimento"].dt.year.astype(int)
+    out["mes_num"] = out["data_vencimento"].dt.month.astype(int)
+    out["data_label"] = out["data_vencimento"].dt.strftime("%d/%m/%Y")
+    return out.sort_values("data_vencimento").reset_index(drop=True)
 
 
 def top_flow_frame(rows: list[dict[str, Any]] | None) -> pd.DataFrame:
@@ -920,13 +1286,15 @@ def render_hero(snapshot: dict[str, Any], title: str, subtitle: str, logo_path: 
         )
     st.markdown(
         f"""
-        <div class="hero-header">
-            <div class="hero-title-box">
-                <div class="hero-title-wrap" style="text-align:left;">
-                    <div class="hero-title">{title}</div>
+        <div class="hero-card">
+            <div class="hero-header">
+                <div class="hero-title-box">
+                    <div class="hero-title-wrap" style="text-align:left;">
+                        <div class="hero-title">{title}</div>
+                    </div>
                 </div>
+                {logo_html}
             </div>
-            {logo_html}
         </div>
         """,
         unsafe_allow_html=True,
@@ -1251,8 +1619,7 @@ def render_dre(
 
     with tab_analitico:
         commercial_sales_total = effective_sales_total(year, month)
-        bank_balances = bank_balance_frame(snapshot)
-        capital_atual = float(bank_balances["balance"].sum()) if not bank_balances.empty else 0.0
+        capital_atual = 0.0
         cmv_sales_total = (
             float(pd.to_numeric(monthly_period.get("cmv_sales_cost"), errors="coerce").fillna(0.0).sum())
             if "cmv_sales_cost" in monthly_period.columns
@@ -1462,6 +1829,20 @@ def render_dre(
         st.subheader(f"DRE ANALITICA EM COLUNAS - {analysis_year}")
         if matrix_rows:
             matrix_df = pd.DataFrame(matrix_rows)
+            pdf_bytes = build_dre_analytic_pdf(
+                matrix_df=matrix_df,
+                analysis_year=int(analysis_year),
+                period_label_value=label,
+                source_label=source_label,
+                logo_path=find_logo(),
+            )
+            st.download_button(
+                "Exportar Analitico em PDF",
+                data=pdf_bytes,
+                file_name=f"dre_analitico_{analysis_year}_{source_label.lower().replace(' ', '_')}.pdf",
+                mime="application/pdf",
+                use_container_width=False,
+            )
             render_dre_matrix(matrix_df)
         else:
             st.info("NAO HA BASE MENSAL SUFICIENTE PARA MONTAR A DRE ANALITICA EM COLUNAS PARA O ANO SELECIONADO.")
@@ -1563,9 +1944,10 @@ def render_cash_management(
     ap_all: pd.DataFrame,
     ar_all: pd.DataFrame,
     selected_company: str,
+    selected_year: int | None,
+    selected_month: int | None,
+    selected_weeks: int,
 ) -> None:
-    st.header("FX de Caixa Proj.")
-
     work_banks = bank_balances.copy() if not bank_balances.empty else pd.DataFrame()
     if not work_banks.empty and selected_company != "Todas" and "company" in work_banks.columns:
         work_banks = work_banks[
@@ -1576,11 +1958,14 @@ def render_cash_management(
     horizon = cash_all.copy() if not cash_all.empty else pd.DataFrame()
     ap_future = ap_all.copy() if not ap_all.empty else pd.DataFrame()
     ar_future = ar_all.copy() if not ar_all.empty else pd.DataFrame()
+    dup_future = load_duplicatas_garantia()
     if selected_company != "Todas":
         if not ap_future.empty and "company" in ap_future.columns:
             ap_future = ap_future[ap_future["company"].fillna("").astype(str).str.upper() == str(selected_company).upper()].copy()
         if not ar_future.empty and "company" in ar_future.columns:
             ar_future = ar_future[ar_future["company"].fillna("").astype(str).str.upper() == str(selected_company).upper()].copy()
+        if not dup_future.empty and "company" in dup_future.columns:
+            dup_future = dup_future[dup_future["company"].fillna("").astype(str).str.upper() == str(selected_company).upper()].copy()
     if not horizon.empty:
         horizon = horizon.sort_values("data").reset_index(drop=True)
         horizon["projected_balance"] = total_balance + pd.to_numeric(
@@ -1588,73 +1973,232 @@ def render_cash_management(
         ).fillna(0.0)
     ap_monthly = future_flow_monthly(ap_future)
     ar_monthly = future_flow_monthly(ar_future)
-    horizon_days = [0, 15, 30, 60, 90, 120]
+    dup_monthly = future_flow_monthly(dup_future)
+
+    def _month_label(ts: pd.Timestamp) -> str:
+        return f"{MONTH_NAMES.get(int(ts.month), str(ts.month))}/{int(ts.year)}"
+
+    def _sum_between_dates(frame: pd.DataFrame, start_date: pd.Timestamp, end_date: pd.Timestamp) -> float:
+        if frame.empty or "data_vencimento" not in frame.columns:
+            return 0.0
+        work = frame.copy()
+        work["data_vencimento"] = pd.to_datetime(work["data_vencimento"], errors="coerce")
+        work["valor"] = pd.to_numeric(work["valor"], errors="coerce").fillna(0.0)
+        mask = (work["data_vencimento"] >= start_date) & (work["data_vencimento"] <= end_date)
+        return float(work.loc[mask, "valor"].sum())
+
     horizon_projection_rows: list[dict[str, Any]] = []
     today = pd.Timestamp(datetime.now().date())
-    for days in horizon_days:
-        cutoff = today + pd.Timedelta(days=days)
-        ar_h = 0.0
-        ap_h = 0.0
-        if not ar_future.empty and "data_vencimento" in ar_future.columns:
-            ar_work = ar_future.copy()
-            ar_work["data_vencimento"] = pd.to_datetime(ar_work["data_vencimento"], errors="coerce")
-            ar_work["valor"] = pd.to_numeric(ar_work["valor"], errors="coerce").fillna(0.0)
-            ar_h = float(ar_work.loc[(ar_work["data_vencimento"] >= today) & (ar_work["data_vencimento"] <= cutoff), "valor"].sum())
-        if not ap_future.empty and "data_vencimento" in ap_future.columns:
-            ap_work = ap_future.copy()
-            ap_work["data_vencimento"] = pd.to_datetime(ap_work["data_vencimento"], errors="coerce")
-            ap_work["valor"] = pd.to_numeric(ap_work["valor"], errors="coerce").fillna(0.0)
-            ap_h = float(ap_work.loc[(ap_work["data_vencimento"] >= today) & (ap_work["data_vencimento"] <= cutoff), "valor"].sum())
-        caixa_h = ar_h - ap_h
+    if selected_year is not None and selected_month is not None:
+        base_month = pd.Timestamp(year=int(selected_year), month=int(selected_month), day=1)
+    else:
+        base_month = today.replace(day=1)
+    month_starts = [base_month + pd.DateOffset(months=offset) for offset in range(6)]
+    running_month_balance = total_balance
+    for month_start in month_starts:
+        month_end = month_start + pd.offsets.MonthEnd(0)
+        period_start = max(month_start, today) if selected_month is None else month_start
+        ar_h = _sum_between_dates(ar_future, period_start, month_end)
+        ap_h = _sum_between_dates(ap_future, period_start, month_end)
+        dup_h = _sum_between_dates(dup_future, period_start, month_end)
+        caixa_h = ar_h - ap_h - dup_h
+        opening_balance = running_month_balance
+        closing_balance = opening_balance + caixa_h
         horizon_projection_rows.append(
             {
-                "janela": "Hoje" if days == 0 else f"{days}d",
+                "janela": _month_label(month_start),
+                "banco_inicial": opening_balance,
                 "a_receber": ar_h,
                 "a_pagar": ap_h,
+                "duplicatas_garantia": dup_h,
                 "caixa": caixa_h,
-                "banco_projetado": total_balance + caixa_h,
+                "banco_projetado": closing_balance,
             }
         )
+        running_month_balance = closing_balance
     horizon_projection = pd.DataFrame(horizon_projection_rows)
 
-    proj_7 = total_balance
-    proj_15 = total_balance
-    proj_30 = total_balance
+    current_month_label = _month_label(month_starts[0]) if month_starts else "Atual"
+    third_month_label = _month_label(month_starts[2]) if len(month_starts) >= 3 else current_month_label
+    sixth_month_label = _month_label(month_starts[5]) if len(month_starts) >= 6 else current_month_label
+    proj_current = total_balance
+    proj_3m = total_balance
+    proj_6m = total_balance
     min_balance = total_balance
     risk_days = 0
     ar_total_future = float(ar_monthly["valor"].sum()) if not ar_monthly.empty else 0.0
     ap_total_future = float(ap_monthly["valor"].sum()) if not ap_monthly.empty else 0.0
+    dup_total_future = float(dup_monthly["valor"].sum()) if not dup_monthly.empty else 0.0
+    ap_total_future_combined = ap_total_future + dup_total_future
+    if not horizon_projection.empty:
+        proj_current = float(horizon_projection.iloc[0]["banco_projetado"])
+        proj_3m = float(horizon_projection.iloc[min(2, len(horizon_projection) - 1)]["banco_projetado"])
+        proj_6m = float(horizon_projection.iloc[min(5, len(horizon_projection) - 1)]["banco_projetado"])
     if not horizon.empty:
-        proj_7 = float(horizon.head(8)["projected_balance"].iloc[-1])
-        proj_15 = float(horizon.head(16)["projected_balance"].iloc[-1]) if len(horizon) >= 16 else float(horizon["projected_balance"].iloc[-1])
-        proj_30 = float(horizon["projected_balance"].iloc[-1])
         min_balance = float(horizon["projected_balance"].min())
         risk_days = int((horizon["projected_balance"] < 0).sum())
 
-    metric_rows(
+    st.markdown('<div style="height: 2.4rem;"></div>', unsafe_allow_html=True)
+
+    render_centered_metric_rows(
         [
-            [
-                ("Saldo Bancario Atual", brl(total_balance)),
-                ("Caixa/Bancos", integer(len(work_banks))),
-            ],
+            [("Saldo Bancario Atual", brl(total_balance))],
             [
                 ("A Receber Futuro", brl(ar_total_future)),
-                ("A Pagar Futuro", brl(ap_total_future)),
+                ("A Pagar Futuro", brl(ap_total_future_combined)),
             ],
             [
-                ("Saldo Projetado 7d", brl(proj_7)),
-                ("Saldo Projetado 15d", brl(proj_15)),
+                (f"Saldo Projetado {current_month_label}", brl(proj_current)),
+                (f"Saldo Projetado {third_month_label}", brl(proj_3m)),
             ],
             [
-                ("Saldo Projetado 30d", brl(proj_30)),
+                (f"Saldo Projetado {sixth_month_label}", brl(proj_6m)),
                 ("Menor Saldo Projetado", brl(min_balance)),
             ],
-            [
-                ("Dias com Caixa Negativo", integer(risk_days)),
-                ("Base Bancaria", "Disponivel" if not work_banks.empty else "Indisponivel"),
-            ],
-        ]
+        ],
+        highlight_labels={"Saldo Bancario Atual"},
     )
+
+    if not horizon_projection.empty:
+        st.subheader("Fluxo Projetado por Horizonte")
+        horizon_map = {
+            str(row["janela"]): {
+                "banco_inicial": float(row.get("banco_inicial", total_balance)),
+                "a_receber": float(row["a_receber"]),
+                "a_pagar": float(row["a_pagar"]),
+                "duplicatas_garantia": float(row.get("duplicatas_garantia", 0.0)),
+                "caixa": float(row["caixa"]),
+                "banco_projetado": float(row["banco_projetado"]),
+            }
+            for _, row in horizon_projection.iterrows()
+        }
+        horizon_cols = [str(row["janela"]) for _, row in horizon_projection.iterrows()]
+        rows: list[dict[str, str]] = []
+        total_bancos_row = {"valor": "TOTAL BANCOS"}
+        ar_total_row = {"valor": "TOTAL A RECEBER"}
+        ap_total_row = {"valor": "TOTAL A PAGAR"}
+        saldo_row = {"valor": "SALDO LIQUIDO"}
+        for col in horizon_cols:
+            values = horizon_map.get(
+                col,
+                {
+                    "banco_inicial": total_balance,
+                    "a_receber": 0.0,
+                    "a_pagar": 0.0,
+                    "duplicatas_garantia": 0.0,
+                    "caixa": 0.0,
+                    "banco_projetado": total_balance,
+                },
+            )
+            total_bancos_row[col] = brl(values["banco_inicial"])
+            ar_total_row[col] = brl(values["a_receber"])
+            ap_total_row[col] = brl(-abs(values["a_pagar"] + values["duplicatas_garantia"]))
+            saldo_row[col] = brl(values["banco_projetado"])
+
+        rows.extend(
+            [
+                total_bancos_row,
+                ar_total_row,
+                ap_total_row,
+                saldo_row,
+            ]
+        )
+        show_horizon = pd.DataFrame(rows)
+        show_horizon.columns = [str(col).upper() for col in show_horizon.columns]
+
+        def _style_horizon_row(row: pd.Series) -> list[str]:
+            row_label = str(row.get("VALOR", ""))
+            is_liquid = row_label.upper() == "SALDO LIQUIDO"
+            styles: list[str] = []
+            for _, cell in row.items():
+                cell_text = str(cell or "").strip()
+                cell_styles: list[str] = []
+                if is_liquid:
+                    cell_styles.append("font-weight: 700")
+                if cell_text.startswith("R$ -"):
+                    cell_styles.append("color: #c62828")
+                styles.append("; ".join(cell_styles))
+            return styles
+
+        styled_horizon = bold_headers(show_horizon).apply(_style_horizon_row, axis=1)
+        st.dataframe(styled_horizon, use_container_width=True, hide_index=True)
+
+
+    if not horizon.empty:
+        st.subheader("Fluxo Projetado por Dia")
+        horizon_daily = horizon.copy()
+        horizon_daily["data"] = pd.to_datetime(horizon_daily["data"], errors="coerce")
+        horizon_daily = horizon_daily.dropna(subset=["data"]).sort_values("data").reset_index(drop=True)
+        if selected_year is not None:
+            horizon_daily = horizon_daily[horizon_daily["data"].dt.year == int(selected_year)].copy()
+        if selected_month is not None:
+            horizon_daily = horizon_daily[horizon_daily["data"].dt.month == int(selected_month)].copy()
+            daily_start = pd.Timestamp(year=int(selected_year), month=int(selected_month), day=1)
+        else:
+            horizon_daily = horizon_daily.head(31).copy()
+            daily_start = today
+
+        max_days = max(int(selected_weeks or 1), 1) * 7
+        horizon_daily = horizon_daily.head(max_days).copy()
+
+        if horizon_daily.empty:
+            st.info("Nao ha projecao diaria disponivel para o filtro selecionado.")
+            return
+
+        def _sum_on_day(frame: pd.DataFrame, target_day: pd.Timestamp) -> float:
+            if frame.empty or "data_vencimento" not in frame.columns:
+                return 0.0
+            work = frame.copy()
+            work["data_vencimento"] = pd.to_datetime(work["data_vencimento"], errors="coerce")
+            work["valor"] = pd.to_numeric(work["valor"], errors="coerce").fillna(0.0)
+            mask = work["data_vencimento"].dt.normalize() == target_day.normalize()
+            return float(work.loc[mask, "valor"].sum())
+
+        day_cols = [str(value) for value in horizon_daily["data_label"].tolist()]
+        total_bancos_day_row = {"VALOR": "TOTAL BANCOS"}
+        ar_day_row = {"VALOR": "TOTAL A RECEBER"}
+        ap_day_row = {"VALOR": "TOTAL A PAGAR"}
+        saldo_day_row = {"VALOR": "SALDO LIQUIDO"}
+        running_balance = total_balance
+        for _, day_row in horizon_daily.iterrows():
+            day_ts = pd.Timestamp(day_row["data"])
+            day_label = str(day_row["data_label"])
+            opening_balance = running_balance
+            ar_day = _sum_on_day(ar_future, day_ts)
+            ap_day = _sum_on_day(ap_future, day_ts)
+            dup_day = _sum_on_day(dup_future, day_ts)
+            running_balance = running_balance + ar_day - ap_day - dup_day
+            total_bancos_day_row[day_label] = brl(opening_balance)
+            ar_day_row[day_label] = brl(ar_day)
+            ap_day_row[day_label] = brl(-abs(ap_day + dup_day))
+            saldo_day_row[day_label] = brl(running_balance)
+
+        show_daily = pd.DataFrame(
+            [
+                total_bancos_day_row,
+                ar_day_row,
+                ap_day_row,
+                saldo_day_row,
+            ]
+        )
+        show_daily.columns = [str(col).upper() for col in show_daily.columns]
+
+        def _style_daily_row(row: pd.Series) -> list[str]:
+            row_label = str(row.get("VALOR", ""))
+            is_liquid = row_label.upper() == "SALDO LIQUIDO"
+            styles: list[str] = []
+            for _, cell in row.items():
+                cell_text = str(cell or "").strip()
+                cell_styles: list[str] = []
+                if is_liquid:
+                    cell_styles.append("font-weight: 700")
+                if cell_text.startswith("R$ -"):
+                    cell_styles.append("color: #c62828")
+                styles.append("; ".join(cell_styles))
+            return styles
+
+        styled_daily = bold_headers(show_daily).apply(_style_daily_row, axis=1)
+        st.dataframe(styled_daily, use_container_width=True, hide_index=True)
 
     if work_banks.empty:
         st.info(
@@ -1663,96 +2207,40 @@ def render_cash_management(
         )
     else:
         show_banks = work_banks.copy()
+        show_banks["balance"] = pd.to_numeric(show_banks["balance"], errors="coerce").fillna(0.0)
+        show_banks = show_banks.sort_values("balance", ascending=False).reset_index(drop=True)
         show_banks["balance"] = show_banks["balance"].map(brl)
-        display_cols = [c for c in ["company", "bank_name", "account_name", "balance", "balance_status", "as_of_label"] if c in show_banks.columns]
+        display_cols = [c for c in ["company", "bank_name", "balance"] if c in show_banks.columns]
         rename_map = {
-            "company": "empresa",
-            "bank_name": "banco",
-            "account_name": "conta",
-            "balance": "saldo_atual",
-            "balance_status": "status_saldo",
-            "as_of_label": "data_saldo",
+            "company": "EMPRESA",
+            "bank_name": "BANCO",
+            "balance": "SALDO_ATUAL",
         }
         st.subheader("Saldos por Banco")
-        st.dataframe(show_banks[display_cols].rename(columns=rename_map), use_container_width=True, hide_index=True)
+        show_banks_display = show_banks[display_cols].rename(columns=rename_map)
 
-    if not horizon_projection.empty:
-        st.subheader("Fluxo Projetado por Horizonte")
-        horizon_map = {
-            str(row["janela"]): {
-                "a_receber": float(row["a_receber"]),
-                "a_pagar": float(row["a_pagar"]),
-                "caixa": float(row["caixa"]),
-                "banco_projetado": float(row["banco_projetado"]),
-            }
-            for _, row in horizon_projection.iterrows()
-        }
-        horizon_cols = ["Hoje", "15d", "30d", "60d", "90d", "120d"]
-        rows: list[dict[str, str]] = []
-        if not work_banks.empty:
-            for _, bank_row in work_banks.sort_values(["bank_name", "account_name"]).iterrows():
-                label = str(bank_row.get("bank_name") or bank_row.get("account_name") or "BANCO").upper()
-                if bank_row.get("account_name") and str(bank_row.get("account_name")).strip() != str(bank_row.get("bank_name") or "").strip():
-                    label = f"{label} - {str(bank_row.get('account_name')).upper()}"
-                row = {"valor": label}
-                for col in horizon_cols:
-                    row[col] = brl(bank_row.get("balance"))
-                rows.append(row)
+        def _style_bank_balance(row: pd.Series) -> list[str]:
+            styles: list[str] = []
+            for col, cell in row.items():
+                cell_text = str(cell or "").strip()
+                if str(col).upper() == "SALDO_ATUAL" and cell_text.startswith("R$ -"):
+                    styles.append("color: #c62828; font-weight: 700")
+                else:
+                    styles.append("")
+            return styles
 
-        caixa_row = {"valor": "CAIXA"}
-        total_bancos_row = {"valor": "TOTAL BANCOS"}
-        ar_header_row = {"valor": "CONTAS A RECEBER"}
-        ar_total_row = {"valor": "TOTAL A RECEBER"}
-        ap_header_row = {"valor": "CONTAS A PAGAR"}
-        ap_total_row = {"valor": "TOTAL A PAGAR"}
-        saldo_row = {"valor": "SALDO LIQUIDO"}
-        for col in horizon_cols:
-            values = horizon_map.get(col, {"a_receber": 0.0, "a_pagar": 0.0, "caixa": 0.0, "banco_projetado": total_balance})
-            caixa_row[col] = brl(total_balance)
-            total_bancos_row[col] = brl(total_balance)
-            ar_header_row[col] = ""
-            ar_total_row[col] = brl(values["a_receber"])
-            ap_header_row[col] = ""
-            ap_total_row[col] = brl(values["a_pagar"])
-            saldo_row[col] = brl(values["banco_projetado"])
+        styled_banks = bold_headers(show_banks_display).apply(_style_bank_balance, axis=1)
+        st.dataframe(styled_banks, use_container_width=True, hide_index=True)
 
-        rows.extend(
-            [
-                caixa_row,
-                total_bancos_row,
-                ar_header_row,
-                ar_total_row,
-                ap_header_row,
-                ap_total_row,
-                saldo_row,
-            ]
-        )
-        show_horizon = pd.DataFrame(rows)
-        st.dataframe(show_horizon, use_container_width=True, hide_index=True)
-
-
-    if not horizon.empty:
-        st.subheader("Curva de Caixa Projetada")
-        st.line_chart(
-            horizon.set_index("data_label")[["projected_balance", "inflow", "outflow", "net"]],
-            use_container_width=True,
-        )
-
-        critical = horizon[horizon["projected_balance"] < 0].copy()
-        if not critical.empty:
-            critical["projected_balance"] = critical["projected_balance"].map(brl)
-            critical["net"] = critical["net"].map(brl)
-            st.subheader("Dias de Risco")
-            st.dataframe(
-                critical[["data_label", "net", "projected_balance"]].rename(
-                    columns={"data_label": "data", "net": "fluxo_liquido", "projected_balance": "saldo_projetado"}
-                ),
-                use_container_width=True,
-                hide_index=True,
-            )
-
-
-def render_accounts_page(frame: pd.DataFrame, page_title: str, entity_col: str, label: str) -> None:
+def render_accounts_page(
+    frame: pd.DataFrame,
+    page_title: str,
+    entity_col: str,
+    label: str,
+    selected_year: int | None,
+    selected_month: int | None,
+    selected_company: str,
+) -> None:
     st.header(page_title)
     if frame.empty:
         st.info("Nao ha detalhes disponiveis para este recorte no snapshot atual.")
@@ -1796,40 +2284,12 @@ def render_accounts_page(frame: pd.DataFrame, page_title: str, entity_col: str, 
         ]
     )
 
-    filter_left, filter_mid, filter_right = st.columns(3)
-    with filter_left:
-        status_choice = st.selectbox(
-            "Status do titulo",
-            options=["Todos", "A vencer", "Vencido"],
-            key=f"status_{page_title.lower().replace(' ', '_')}",
-        )
-    with filter_mid:
-        situacao_options = ["Todas"] + sorted(work["situacao_legivel"].fillna("").astype(str).replace("", pd.NA).dropna().unique().tolist())
-        situacao_choice = st.selectbox(
-            "Situacao operacional",
-            options=situacao_options,
-            key=f"situacao_{page_title.lower().replace(' ', '_')}",
-        )
-    with filter_right:
-        aging_options = ["Todas", "A vencer", "1-30", "31-60", "61-90", "91-180", ">180"]
-        aging_choice = st.selectbox(
-            "Faixa de atraso",
-            options=aging_options,
-            key=f"aging_{page_title.lower().replace(' ', '_')}",
-        )
-
     search_col, doc_col = st.columns(2)
     with search_col:
         search_name = st.text_input("Buscar por nome", key=f"nome_{page_title.lower().replace(' ', '_')}")
     with doc_col:
         search_doc = st.text_input("Buscar por documento", key=f"doc_{page_title.lower().replace(' ', '_')}")
 
-    if status_choice != "Todos":
-        work = work[work["status_titulo"] == status_choice].copy()
-    if situacao_choice != "Todas":
-        work = work[work["situacao_legivel"] == situacao_choice].copy()
-    if aging_choice != "Todas":
-        work = work[work["faixa_atraso"] == aging_choice].copy()
     if search_name.strip():
         work = work[work[entity_col].fillna("").astype(str).str.contains(search_name.strip(), case=False, na=False)].copy()
     if search_doc.strip():
@@ -1860,12 +2320,6 @@ def render_accounts_page(frame: pd.DataFrame, page_title: str, entity_col: str, 
         .reset_index()
         .sort_values("valor", ascending=False)
     )
-    aging = (
-        work.groupby("faixa_atraso", dropna=False)["valor"]
-        .sum()
-        .reset_index()
-    )
-
     left, right = st.columns(2)
     with left:
         st.subheader(f"Maiores {entity_col.replace('_', ' ').title()}")
@@ -1875,10 +2329,6 @@ def render_accounts_page(frame: pd.DataFrame, page_title: str, entity_col: str, 
         st.subheader("Status dos Titulos")
         if not status_value.empty:
             st.bar_chart(status_value.set_index("status_titulo")["valor"], use_container_width=True)
-
-    st.subheader("Aging por Faixa")
-    if not aging.empty:
-        st.bar_chart(aging.set_index("faixa_atraso")["valor"], use_container_width=True)
 
     st.subheader(f"Top 5 {'Fornecedores' if entity_col == 'fornecedor' else 'Clientes'} em Aberto")
     if not top_five.empty:
@@ -1959,6 +2409,28 @@ def render_accounts_page(frame: pd.DataFrame, page_title: str, entity_col: str, 
     }
     st.subheader("Detalhamento")
     st.dataframe(show[display_cols].rename(columns=rename_map), use_container_width=True, hide_index=True)
+
+    if page_title == "Contas a Pagar":
+        dup_detail = load_duplicatas_garantia()
+        if not dup_detail.empty:
+            if selected_company != "Todas" and "company" in dup_detail.columns:
+                dup_detail = dup_detail[
+                    dup_detail["company"].fillna("").astype(str).str.upper() == str(selected_company).upper()
+                ].copy()
+            if selected_year is not None:
+                dup_detail = dup_detail[dup_detail["data_vencimento"].dt.year == int(selected_year)].copy()
+            if selected_month is not None:
+                dup_detail = dup_detail[dup_detail["data_vencimento"].dt.month == int(selected_month)].copy()
+
+        if not dup_detail.empty:
+            st.subheader("Duplicatas en Garantia")
+            dup_detail = dup_detail.sort_values("data_vencimento").copy()
+            dup_detail["CLIENTE"] = dup_detail["pagador"]
+            dup_detail["VALOR"] = dup_detail["valor"].map(brl)
+            dup_detail["VENCIMENTO"] = dup_detail["data_vencimento"].dt.strftime("%d/%m/%Y")
+            dup_detail["BANCO"] = dup_detail["banco"]
+            show_dup_detail = dup_detail[["CLIENTE", "VALOR", "VENCIMENTO", "BANCO"]].copy()
+            st.dataframe(bold_headers(show_dup_detail), use_container_width=True, hide_index=True)
 
 
 def render_ap_governance(snapshot: dict[str, Any]) -> None:
@@ -2086,35 +2558,46 @@ def main() -> None:
     selected_year = current_year if current_year in years else (years[-1] if years else None)
     selected_month = None
     selected_company = "Todas"
+    selected_weeks = 1
+    selected_counterparty = "Todos"
+    page_groups = {
+        "Executivo": [
+            "Resumo Executivo",
+            "Painel Executivo Financeiro",
+            "DRE e EBITDA",
+        ],
+        "Caixa": [
+            "Gestao de Caixa",
+            "Caixa e Projecao",
+        ],
+        "Contas": [
+            "Contas a Pagar",
+            "Contas a Receber",
+        ],
+        "Governanca": [
+            "Governanca de AP",
+            "Qualidade e Reconciliacao",
+            "QA e Governanca",
+        ],
+    }
 
     with st.sidebar:
         if logo_path is not None:
             render_logo(logo_path, sidebar=True)
-        st.markdown("## Navegacao")
-        page = st.radio(
-            "Selecione a visao",
-            [
-                "Resumo Executivo",
-                "Painel Executivo Financeiro",
-                "DRE e EBITDA",
-                "FX de Caixa Proj.",
-                "Caixa e Projecao",
-                "Contas a Pagar",
-                "Contas a Receber",
-                "Governanca de AP",
-                "Qualidade e Reconciliacao",
-                "QA e Governanca",
-            ],
+        st.markdown("### **Secao**")
+        selected_section = st.selectbox(
+            "Secao",
+            options=list(page_groups.keys()),
+            index=0,
+            label_visibility="collapsed",
         )
-        year_filter_label = "Ano/Vencimento" if page in {"Contas a Pagar", "Contas a Receber"} else "Ano"
-        st.markdown('<div class="sidebar-box">', unsafe_allow_html=True)
-        st.markdown("### Filtros de Periodo")
-        if years:
-            default_year = current_year if current_year in years else years[-1]
-            selected_year = st.selectbox(year_filter_label, options=years, index=years.index(default_year))
-        month_label_selected = st.selectbox("Mes", options=list(month_map.keys()), index=0)
-        selected_month = month_map[month_label_selected]
-        st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown("### **Pagina**")
+        page = st.selectbox(
+            "Pagina",
+            options=page_groups[selected_section],
+            index=0,
+            label_visibility="collapsed",
+        )
         company_options = ["Todas"]
         company_values = sorted(
             {
@@ -2129,6 +2612,43 @@ def main() -> None:
         st.markdown('<div class="sidebar-box">', unsafe_allow_html=True)
         st.markdown("### Empresa")
         selected_company = st.selectbox("Empresa", options=company_options, index=0)
+        if page == "Contas a Pagar":
+            ap_filter_frame = filter_company(filter_dated(ap_details_all, selected_year, selected_month), selected_company)
+            supplier_options = ["Todos"]
+            if not ap_filter_frame.empty and "fornecedor" in ap_filter_frame.columns:
+                supplier_values = sorted(
+                    {
+                        str(value).strip()
+                        for value in ap_filter_frame["fornecedor"].fillna("").astype(str).tolist()
+                        if str(value).strip()
+                    }
+                )
+                supplier_options.extend(supplier_values)
+            selected_counterparty = st.selectbox("Fornecedores", options=supplier_options, index=0)
+        elif page == "Contas a Receber":
+            ar_filter_frame = filter_company(filter_dated(ar_details_all, selected_year, selected_month), selected_company)
+            customer_options = ["Todos"]
+            if not ar_filter_frame.empty and "cliente" in ar_filter_frame.columns:
+                customer_values = sorted(
+                    {
+                        str(value).strip()
+                        for value in ar_filter_frame["cliente"].fillna("").astype(str).tolist()
+                        if str(value).strip()
+                    }
+                )
+                customer_options.extend(customer_values)
+            selected_counterparty = st.selectbox("Clientes", options=customer_options, index=0)
+        st.markdown("</div>", unsafe_allow_html=True)
+        year_filter_label = "Ano/Vencimento" if page in {"Contas a Pagar", "Contas a Receber"} else "Ano"
+        st.markdown('<div class="sidebar-box">', unsafe_allow_html=True)
+        st.markdown("### Filtros de Periodo")
+        if years:
+            default_year = current_year if current_year in years else years[-1]
+            selected_year = st.selectbox(year_filter_label, options=years, index=years.index(default_year))
+        month_label_selected = st.selectbox("Mes", options=list(month_map.keys()), index=0)
+        selected_month = month_map[month_label_selected]
+        if page == "Gestao de Caixa":
+            selected_weeks = st.selectbox("Semanas", options=[1, 2, 3], index=0)
         st.markdown("</div>", unsafe_allow_html=True)
 
     current_label = period_label(selected_year, selected_month)
@@ -2137,10 +2657,18 @@ def main() -> None:
     cash_period = filter_company(filter_dated(cash_all, selected_year, selected_month), selected_company)
     ap_details_period = filter_company(filter_dated(ap_details_all, selected_year, selected_month), selected_company)
     ar_details_period = filter_company(filter_dated(ar_details_all, selected_year, selected_month), selected_company)
+    if page == "Contas a Pagar" and selected_counterparty != "Todos" and "fornecedor" in ap_details_period.columns:
+        ap_details_period = ap_details_period[
+            ap_details_period["fornecedor"].fillna("").astype(str).str.strip() == str(selected_counterparty).strip()
+        ].copy()
+    if page == "Contas a Receber" and selected_counterparty != "Todos" and "cliente" in ar_details_period.columns:
+        ar_details_period = ar_details_period[
+            ar_details_period["cliente"].fillna("").astype(str).str.strip() == str(selected_counterparty).strip()
+        ].copy()
 
     render_hero(
         snapshot,
-        "AGRO FINANCEIRO",
+        "FINANCEIRO",
         "",
         logo_path,
     )
@@ -2170,14 +2698,40 @@ def main() -> None:
             selected_year,
             selected_month,
         )
-    elif page == "FX de Caixa Proj.":
-        render_cash_management(snapshot, bank_balances_all, cash_all, ap_details_all, ar_details_all, selected_company)
+    elif page == "Gestao de Caixa":
+        render_cash_management(
+            snapshot,
+            bank_balances_all,
+            cash_all,
+            ap_details_all,
+            ar_details_all,
+            selected_company,
+            selected_year,
+            selected_month,
+            selected_weeks,
+        )
     elif page == "Caixa e Projecao":
         render_cash(snapshot, cash_period, selected_year, selected_month, current_label)
     elif page == "Contas a Pagar":
-        render_accounts_page(ap_details_period, "Contas a Pagar", "fornecedor", current_label)
+        render_accounts_page(
+            ap_details_period,
+            "Contas a Pagar",
+            "fornecedor",
+            current_label,
+            selected_year,
+            selected_month,
+            selected_company,
+        )
     elif page == "Contas a Receber":
-        render_accounts_page(ar_details_period, "Contas a Receber", "cliente", current_label)
+        render_accounts_page(
+            ar_details_period,
+            "Contas a Receber",
+            "cliente",
+            current_label,
+            selected_year,
+            selected_month,
+            selected_company,
+        )
     elif page == "Governanca de AP":
         render_ap_governance(snapshot)
     elif page == "Qualidade e Reconciliacao":

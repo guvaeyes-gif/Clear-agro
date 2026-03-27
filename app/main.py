@@ -22,6 +22,7 @@ from src.data import (
     load_vendor_links,
     load_bling_sales_detail,
     load_bling_nfe,
+    load_bling_nfe_detail,
     load_bling_contas,
     load_bling_estoque,
     load_sales_targets_view,
@@ -74,6 +75,79 @@ st.markdown(
     div[data-testid="stMetricLabel"] {font-size: 12px;}
     .crm-kpi-row div[data-testid="stMetricValue"] {font-size: 24px;}
     .crm-kpi-row div[data-testid="stMetricLabel"] {font-size: 13px;}
+    .sidebar-logo-shell {
+        display: flex;
+        justify-content: center;
+        margin: -1.1rem 0 1.35rem 0;
+    }
+    .sidebar-logo-badge {
+        display: inline-flex;
+        justify-content: center;
+        align-items: center;
+        width: 100%;
+        max-width: 230px;
+        padding: 0.85rem 0.7rem;
+        background: linear-gradient(135deg, rgba(255,255,255,0.94) 0%, rgba(240,245,252,0.98) 100%);
+        border: 1px solid rgba(31,42,68,0.12);
+        border-radius: 18px;
+        box-shadow: 0 10px 18px rgba(31,42,68,0.06), 0 22px 42px rgba(31,42,68,0.11);
+    }
+    .hero-card {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 28px;
+        margin: 2.8rem 0 1.6rem 0;
+        padding: 2.1rem 2.4rem;
+        background: linear-gradient(135deg, rgba(255,255,255,0.92) 0%, rgba(240,245,252,0.98) 100%);
+        border: 1px solid rgba(31,42,68,0.12);
+        border-radius: 28px;
+        box-shadow: 0 22px 44px rgba(31,42,68,0.10);
+        position: relative;
+        overflow: hidden;
+    }
+    .hero-card::before {
+        content: "";
+        position: absolute;
+        inset: 0 auto 0 0;
+        width: 8px;
+        background: linear-gradient(180deg, #b88b2f 0%, #1f2a44 100%);
+    }
+    .hero-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 28px;
+        width: 100%;
+    }
+    .hero-title-wrap {
+        padding-left: 1rem;
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+    .hero-title {
+        margin: 0;
+        color: #1f264d;
+        font-size: 9.6rem;
+        line-height: 0.88;
+        font-family: inherit;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-align: left;
+    }
+    .hero-logo-box {
+        flex: 0 0 24%;
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+    }
+    .hero-logo-box img {
+        width: 100%;
+        max-width: 320px;
+        height: auto;
+        object-fit: contain;
+        display: block;
+    }
     </style>
     """,
     unsafe_allow_html=True,
@@ -227,17 +301,209 @@ def render_header(title: str, logo_path: Path | None) -> None:
     img_b64 = base64.b64encode(logo_path.read_bytes()).decode("ascii")
     st.markdown(
         f"""
-        <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:24px; margin:1.1rem 0 0.5rem 0;">
-            <h1 style="margin:34px 0 0 0; color:#1f264d; flex:1 1 auto; font-size:5.2rem; line-height:0.92; font-family:inherit; font-weight:700; letter-spacing:0.02em; text-align:left;">{title}</h1>
-            <img
-                src="data:{mime};base64,{img_b64}"
-                alt="Logo"
-                style="width:380px; max-width:34vw; height:auto; object-fit:contain; display:block; margin-top:22px;"
-            />
+        <div class="hero-card">
+            <div class="hero-header">
+                <div class="hero-title-wrap">
+                    <h1 class="hero-title">{title}</h1>
+                </div>
+                <div class="hero-logo-box">
+                    <img
+                        src="data:{mime};base64,{img_b64}"
+                        alt="Logo"
+                    />
+                </div>
+            </div>
         </div>
         """,
         unsafe_allow_html=True,
     )
+
+
+def load_consignacao_prompt() -> str:
+    prompt_path = ROOT / "01_crm_comercial" / "Prompt Consignacao - Executivo.md"
+    if not prompt_path.exists():
+        return ""
+    try:
+        return prompt_path.read_text(encoding="utf-8")
+    except Exception:
+        try:
+            return prompt_path.read_text(encoding="latin-1")
+        except Exception:
+            return ""
+
+
+def render_consignacao_page(logo_path: Path | None) -> None:
+    consign_patterns = [
+        "REMESSA DE MERCADORIA EM CONSIGNACAO",
+        "REMESSA DE MERCADORIA EM CONSIGNACAO MERCANTIL OU INDUSTRIAL",
+        "CONSIGNACAO/SEM FATURAMENTO",
+    ]
+
+    detail = load_bling_nfe_detail(0)
+    if detail.empty:
+        st.warning("Nao foi possivel carregar detalhes de NF-e do Bling para consignacao.")
+        return
+
+    detail = filter_company_scope(detail, sel_company)
+    detail = filter_period_scope(detail, year, selected_month, effective_ytd, selected_quarter)
+    detail = filter_vendor_scope(detail, sel_vendor, ["vendedor", "vendedor_id"], selected_vendor_candidates)
+
+    natureza_base = detail["natureza_label"].fillna("").astype(str).str.upper()
+    consign_mask = pd.Series(False, index=detail.index)
+    for pattern in consign_patterns:
+        consign_mask = consign_mask | natureza_base.str.contains(pattern, regex=False)
+    detail = detail[consign_mask].copy()
+
+    if detail.empty:
+        st.info("Nao ha movimentacoes de consignacao no filtro atual.")
+        return
+
+    customer_options = ["TODOS"] + sorted(detail["cliente"].fillna("").astype(str).str.strip().replace("", pd.NA).dropna().unique().tolist())
+    sel_consign_customer = st.sidebar.selectbox("Cliente consignacao", options=customer_options, index=0)
+    if sel_consign_customer != "TODOS":
+        detail = filter_customer_scope(detail, sel_consign_customer, ["cliente"])
+        if detail.empty:
+            st.info("Nao ha movimentacoes de consignacao para o cliente selecionado.")
+            return
+
+    detail["lote"] = detail["lote"].fillna("S/N").replace("", "S/N")
+    detail["vencimento_lote"] = pd.to_datetime(detail["vencimento_lote"], errors="coerce")
+
+    nf_view = (
+        detail.groupby(["empresa", "nfe_id", "numero_nf", "data", "cliente", "vendedor", "vendedor_id"], dropna=False)
+        .agg(valor_nf=("valor_nf", "max"), itens=("produto", "count"), qtd_total=("quantidade", "sum"))
+        .reset_index()
+    )
+    nf_view["dias_em_aberto"] = (pd.Timestamp.today().normalize() - nf_view["data"].dt.normalize()).dt.days
+
+    aging_bins = [-1, 30, 60, 90, 10_000]
+    aging_labels = ["0-30 dias", "31-60 dias", "61-90 dias", "90+ dias"]
+    nf_view["aging"] = pd.cut(nf_view["dias_em_aberto"], bins=aging_bins, labels=aging_labels)
+    aging_df = (
+        nf_view.groupby("aging", dropna=False)["valor_nf"]
+        .sum()
+        .reset_index()
+        .rename(columns={"valor_nf": "valor"})
+    )
+    aging_df["aging"] = aging_df["aging"].astype(str)
+
+    mensal_df = (
+        nf_view.groupby("data", dropna=False)["valor_nf"]
+        .sum()
+        .reset_index()
+    )
+    mensal_df["mes"] = mensal_df["data"].dt.to_period("M").dt.to_timestamp()
+    mensal_df = mensal_df.groupby("mes", dropna=False)["valor_nf"].sum().reset_index()
+
+    consolidado_df = (
+        detail.groupby(["empresa", "vendedor", "cliente"], dropna=False)
+        .agg(
+            valor_remetido=("valor_total", "sum"),
+            quantidade_total=("quantidade", "sum"),
+            produtos_distintos=("produto", "nunique"),
+            nfs=("nfe_id", "nunique"),
+            primeiro_envio=("data", "min"),
+            ultimo_envio=("data", "max"),
+            dias_em_aberto_max=("dias_em_aberto", "max"),
+        )
+        .reset_index()
+        .sort_values("valor_remetido", ascending=False)
+    )
+    consolidado_df["lotes"] = "S/N"
+    consolidado_df["vencimento_lote"] = "S/N"
+    consolidado_df["saldo_lote"] = 0.0
+
+    resumo_vendedor_df = (
+        consolidado_df.groupby("vendedor", dropna=False)
+        .agg(
+            valor_remetido=("valor_remetido", "sum"),
+            quantidade_total=("quantidade_total", "sum"),
+            produtos_distintos=("produtos_distintos", "sum"),
+            clientes=("cliente", "nunique"),
+            nfs=("nfs", "sum"),
+            saldo_lote=("saldo_lote", "sum"),
+        )
+        .reset_index()
+        .sort_values("valor_remetido", ascending=False)
+        .head(10)
+    )
+
+    clientes_consignados_df = (
+        detail.groupby(["empresa", "cliente", "produto"], dropna=False)
+        .agg(
+            valor_remetido=("valor_total", "sum"),
+            quantidade=("quantidade", "sum"),
+            lotes=("lote", lambda s: ", ".join(sorted({str(x).strip() for x in s if str(x).strip() and str(x).strip() != 'S/N'})[:8])),
+            vencimento=("vencimento_lote", lambda s: ", ".join(sorted({d.strftime("%d/%m/%Y") for d in pd.to_datetime(s, errors="coerce").dropna()})[:8])),
+        )
+        .reset_index()
+        .sort_values(["cliente", "valor_remetido"], ascending=[True, False])
+    )
+
+    st.markdown("### Clientes Consignados")
+    clientes_display = clientes_consignados_df.copy()
+    clientes_display["lotes"] = clientes_display["lotes"].replace("", "S/N")
+    clientes_display["vencimento"] = clientes_display["vencimento"].replace("", "S/N")
+    ordered_cols = ["empresa", "cliente", "produto", "quantidade", "valor_remetido", "lotes", "vencimento"]
+    clientes_display = clientes_display[[col for col in ordered_cols if col in clientes_display.columns]]
+    clientes_display["valor_remetido"] = clientes_display["valor_remetido"].map(fmt_brl_table)
+    clientes_display["quantidade"] = clientes_display["quantidade"].map(fmt_int_br)
+    st.dataframe(clientes_display, use_container_width=True, hide_index=True)
+
+    st.markdown("### Carteira consolidada por vendedor / cliente")
+    consolidado_display = consolidado_df.copy()
+    consolidado_display["valor_remetido"] = consolidado_display["valor_remetido"].map(fmt_brl_table)
+    consolidado_display["quantidade_total"] = consolidado_display["quantidade_total"].map(fmt_int_br)
+    consolidado_display["produtos_distintos"] = consolidado_display["produtos_distintos"].map(fmt_int_br)
+    consolidado_display["nfs"] = consolidado_display["nfs"].map(fmt_int_br)
+    consolidado_display["primeiro_envio"] = pd.to_datetime(consolidado_display["primeiro_envio"], errors="coerce").dt.strftime("%d/%m/%Y")
+    consolidado_display["ultimo_envio"] = pd.to_datetime(consolidado_display["ultimo_envio"], errors="coerce").dt.strftime("%d/%m/%Y")
+    consolidado_display["dias_em_aberto_max"] = consolidado_display["dias_em_aberto_max"].map(fmt_int_br)
+    consolidado_display["saldo_lote"] = consolidado_display["saldo_lote"].map(fmt_int_br)
+    consolidado_display = consolidado_display.drop(
+        columns=["vendedor", "nfs", "dias_em_aberto_max", "produtos_distintos"],
+        errors="ignore",
+    )
+    ordered_consolidado_cols = [
+        "empresa",
+        "cliente",
+        "quantidade_total",
+        "valor_remetido",
+        "lotes",
+        "vencimento_lote",
+        "saldo_lote",
+        "primeiro_envio",
+        "ultimo_envio",
+    ]
+    consolidado_display = consolidado_display[[col for col in ordered_consolidado_cols if col in consolidado_display.columns]]
+    st.dataframe(consolidado_display, use_container_width=True, hide_index=True)
+
+    st.markdown("### Detalhamento da NF e itens")
+    det = detail[
+        [
+            "data",
+            "empresa",
+            "numero_nf",
+            "cliente",
+            "vendedor",
+            "natureza_label",
+            "cfop",
+            "produto_codigo",
+            "produto",
+            "quantidade",
+            "valor_unitario",
+            "valor_total",
+            "lote",
+            "vencimento_lote",
+            "dias_em_aberto",
+        ]
+    ].copy()
+    det["quantidade"] = det["quantidade"].map(fmt_int_br)
+    det["valor_unitario"] = det["valor_unitario"].map(fmt_brl_table)
+    det["valor_total"] = det["valor_total"].map(fmt_brl_table)
+    det["vencimento_lote"] = pd.to_datetime(det["vencimento_lote"], errors="coerce").dt.strftime("%d/%m/%Y").fillna("S/N")
+    det["lote"] = det["lote"].fillna("S/N")
+    st.dataframe(det.sort_values("data", ascending=False), use_container_width=True, hide_index=True)
 
 
 def should_default_to_bling_realizado() -> bool:
@@ -1307,12 +1573,14 @@ if sidebar_logo_path is not None and sidebar_logo_path.suffix.lower() in {".png"
     }[sidebar_logo_path.suffix.lower()]
     st.sidebar.markdown(
         f"""
-        <div style="display:flex; justify-content:center; margin:-1.45rem 0 1.35rem 0;">
-            <img
-                src="data:{sidebar_logo_mime};base64,{sidebar_logo_b64}"
-                alt="Logo"
-                style="width:205px; max-width:92%; height:auto; object-fit:contain; display:block;"
-            />
+        <div class="sidebar-logo-shell">
+            <div class="sidebar-logo-badge">
+                <img
+                    src="data:{sidebar_logo_mime};base64,{sidebar_logo_b64}"
+                    alt="Logo"
+                    style="width:205px; max-width:92%; height:auto; object-fit:contain; display:block;"
+                />
+            </div>
         </div>
         """,
         unsafe_allow_html=True,
@@ -1356,6 +1624,7 @@ for key in ["metas", "realizado", "oportunidades"]:
 # Sidebar controls
 page_options = [
     "Executive Cockpit",
+    "Consignacao",
     "Lab Comercial",
     "Comparativo de Vendas",
     "Finance Control Tower",
@@ -1747,6 +2016,9 @@ if page == "Executive Cockpit":
         bullets.append("Pendencia: dados insuficientes para este insight")
     for b in bullets[:5]:
         st.write(f"- {b}")
+
+if page == "Consignacao":
+    render_consignacao_page(logo_path)
 
 # Page A2 - Lab Comercial
 if page == "Lab Comercial":
