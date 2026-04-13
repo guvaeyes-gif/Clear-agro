@@ -9,7 +9,7 @@ services:
       - key: PYTHON_VERSION
         value: "3.11.11"
       - key: CRM_PUBLIC_REVIEW
-        value: "1"
+        value: "false"
       - key: CRM_PROFILE
         value: "director"
       - key: APP_BUILD
