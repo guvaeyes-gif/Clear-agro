@@ -183,7 +183,6 @@
 
       <div class="tabs" role="tablist" aria-label="Visoes do monitor">
         <button class="tab-button active" type="button" role="tab" aria-selected="true" aria-controls="tab-geral" id="btn-geral">Geral</button>
-        <button class="tab-button" type="button" role="tab" aria-selected="false" aria-controls="tab-projetos" id="btn-projetos">Projetos/Tarefas</button>
         <button class="tab-button" type="button" role="tab" aria-selected="false" aria-controls="tab-diario" id="btn-diario">Uso Diario</button>
       </div>
 
@@ -264,37 +263,6 @@
               <strong id="window-reset-legend">--:--</strong>
             </div>
           </div>
-        </div>
-      </section>
-
-      <section class="tab-panel" id="tab-projetos" role="tabpanel" aria-labelledby="btn-projetos" hidden>
-        <div class="hero">
-          <div class="hero-panel">
-            <p class="hero-kicker">Maior Consumo</p>
-            <p class="hero-value" id="top-project-name">--</p>
-            <p class="hero-note" id="top-project-note">Sem dados.</p>
-          </div>
-          <div class="hero-side">
-            <p class="hero-kicker">Tarefa Mais Pesada</p>
-            <div class="status" id="top-task-name">--</div>
-            <p class="hero-note" id="top-task-note">Sem dados.</p>
-          </div>
-        </div>
-
-        <p class="section-title">Consumo por Projeto</p>
-        <div class="table-card">
-          <table aria-label="Tabela de consumo por projeto">
-            <thead><tr><th>Projeto</th><th>Uso</th><th>Participacao</th><th>Status</th></tr></thead>
-            <tbody id="projects-table-body"></tbody>
-          </table>
-        </div>
-
-        <p class="section-title">Consumo por Tarefa</p>
-        <div class="table-card">
-          <table aria-label="Tabela de consumo por tarefa">
-            <thead><tr><th>Tarefa</th><th>Uso</th><th>Participacao</th><th>Status</th></tr></thead>
-            <tbody id="tasks-table-body"></tbody>
-          </table>
         </div>
       </section>
 
@@ -463,14 +431,6 @@
 
         const windowBar = document.getElementById("window-progress-bar");
         windowBar.style.width = `${windowUsed || 0}%`;
-
-        setText("top-project-name", "Nao configurado");
-        setText("top-project-note", "A aba de projetos pode ser preenchida depois, se voce quiser detalhar.");
-        setText("top-task-name", "Nao configurado");
-        setText("top-task-note", "A aba de tarefas pode ser preenchida depois, se necessario.");
-
-        renderRows("projects-table-body", [], used || 0, unit);
-        renderRows("tasks-table-body", [], used || 0, unit);
 
         monthFilter.innerHTML = monthKeys.map((key) => `<option value="${key}">${key}</option>`).join("");
         if (monthKeys.length > 0) {
