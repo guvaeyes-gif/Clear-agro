@@ -38,6 +38,32 @@ BLING_CONTAS_PAGAR = resolve_bling_file("contas_pagar_cache.jsonl", mode="app")
 BLING_ESTOQUE = resolve_bling_file("estoque_cache.jsonl", mode="app")
 NATURE_MAP_PATH = ROOT / "data" / "natureza_operacao_map.csv"
 VENDOR_LINKS_PATH = ROOT / "data" / "vendor_links.csv"
+CONSIGNACAO_LOTES_PATH = ROOT / "data" / "consignacao_lotes.csv"
+
+
+def _env_flag(name: str, default: bool = False) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _crm_read_source() -> str:
+    source = os.getenv("CRM_READ_SOURCE", "").strip().lower()
+    if source in {"legacy", "supabase", "auto"}:
+        return source
+    if _env_flag("USE_SUPABASE_CRM_READ"):
+        return "supabase"
+    return "auto"
+
+
+def _crm_read_enabled() -> bool:
+    source = _crm_read_source()
+    if source == "legacy":
+        return False
+    if source == "supabase":
+        return True
+    return metas_db._backend_mode() in {"postgres", "supabase-rest"}
 
 
 def _norm(col: str) -> str:
@@ -107,6 +133,12 @@ def _coerce_datetime(df: pd.DataFrame, columns: list[str]) -> pd.DataFrame:
 
 
 def _fetch_crm_view(view_name: str, params: dict[str, Any] | None = None) -> pd.DataFrame:
+    if not _crm_read_enabled():
+        _CRM_VIEW_ERRORS[view_name] = (
+            "Leitura CRM via Supabase desativada por configuracao "
+            "(CRM_READ_SOURCE=legacy ou backend indisponivel)."
+        )
+        return pd.DataFrame()
     mode = metas_db._backend_mode()
     try:
         if mode == "postgres":
@@ -238,6 +270,62 @@ def load_vendor_links() -> pd.DataFrame:
     return df[["vendedor_id", "nome_meta", "nome_exibicao", "empresa", "status"]].drop_duplicates(
         subset=["vendedor_id"], keep="first"
     )
+
+
+@st.cache_data(show_spinner=False)
+def load_consignacao_lotes() -> pd.DataFrame:
+    if not CONSIGNACAO_LOTES_PATH.exists():
+        return pd.DataFrame(
+            columns=[
+                "data_remessa",
+                "empresa",
+                "numero_nf",
+                "vendedor",
+                "cliente",
+                "produto_codigo",
+                "produto",
+                "lote",
+                "vencimento_lote",
+                "quantidade_remetida",
+                "quantidade_vendida",
+                "quantidade_devolvida",
+                "status",
+                "observacao",
+            ]
+        )
+    try:
+        df = pd.read_csv(CONSIGNACAO_LOTES_PATH, encoding="utf-8-sig")
+    except Exception:
+        return pd.DataFrame()
+    if df.empty:
+        return df
+    df = _normalize_columns(df)
+    for col in [
+        "empresa",
+        "numero_nf",
+        "vendedor",
+        "cliente",
+        "produto_codigo",
+        "produto",
+        "lote",
+        "status",
+        "observacao",
+    ]:
+        if col not in df.columns:
+            df[col] = ""
+        df[col] = df[col].fillna("").astype(str).str.strip()
+    if "data_remessa" not in df.columns:
+        df["data_remessa"] = pd.NaT
+    df["data_remessa"] = pd.to_datetime(df["data_remessa"], errors="coerce")
+    if "vencimento_lote" not in df.columns:
+        df["vencimento_lote"] = pd.NaT
+    df["vencimento_lote"] = pd.to_datetime(df["vencimento_lote"], errors="coerce")
+    for col in ["quantidade_remetida", "quantidade_vendida", "quantidade_devolvida"]:
+        if col not in df.columns:
+            df[col] = 0.0
+        df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
+    df["saldo_lote"] = df["quantidade_remetida"] - df["quantidade_vendida"] - df["quantidade_devolvida"]
+    return df
 
 
 @st.cache_data(show_spinner=False)
@@ -686,6 +774,141 @@ def load_bling_nfe(year: int) -> pd.DataFrame:
         if c in df.columns
     ]
     return df[keep_cols].dropna(subset=["data", "valor"])
+
+
+@st.cache_data(show_spinner=False)
+def load_bling_nfe_detail(year: int = 2026) -> pd.DataFrame:
+    years = [year] if year in {2025, 2026} else [2026, 2025]
+    df = _load_bling_nfe_rows(years)
+    if df.empty:
+        return pd.DataFrame()
+
+    if "dataEmissao" in df.columns:
+        df["data"] = pd.to_datetime(df["dataEmissao"], errors="coerce")
+    elif "dataOperacao" in df.columns:
+        df["data"] = pd.to_datetime(df["dataOperacao"], errors="coerce")
+    else:
+        df["data"] = pd.NaT
+
+    natureza_col = _pick_first_column(df, ["naturezaOperacao.id", "naturezaOperacao", "natureza_operacao_id"])
+    if natureza_col:
+        df["natureza"] = df[natureza_col].astype(str)
+    else:
+        df["natureza"] = ""
+
+    customer_col = _pick_first_column(
+        df,
+        ["contato.nome", "cliente.nome", "contato", "cliente", "destinatario.nome", "nomeContato"],
+    )
+    if customer_col:
+        df["cliente"] = df[customer_col].astype(str)
+    else:
+        df["cliente"] = "SEM_CLIENTE"
+
+    doc_col = _pick_first_column(
+        df,
+        ["contato.numeroDocumento", "cliente.numeroDocumento", "numeroDocumento", "destinatario.numeroDocumento"],
+    )
+    if doc_col:
+        df["numero_documento"] = df[doc_col].astype(str)
+    else:
+        df["numero_documento"] = ""
+
+    vendor_id_col = _pick_first_column(
+        df,
+        ["vendedor_id", "vendedor.id", "vendedorResponsavel.id", "responsavel.id", "representante.id"],
+    )
+    if vendor_id_col:
+        df["vendedor_id"] = df[vendor_id_col].fillna("").astype(str).str.strip()
+    else:
+        df["vendedor_id"] = ""
+
+    vendor_name_col = _pick_first_column(
+        df,
+        ["vendedor", "vendedor.nome", "vendedorResponsavel.nome", "responsavel.nome", "representante.nome"],
+    )
+    if vendor_name_col:
+        df["vendedor"] = df[vendor_name_col].fillna("").astype(str).str.strip()
+    else:
+        df["vendedor"] = ""
+
+    if "vendedor_id" in df.columns:
+        df = _apply_vendor_map(df)
+    df = _map_vendedor_from_local_history(df)
+    df = _append_nature_labels(df)
+
+    rows: list[dict[str, Any]] = []
+    for _, row in df.iterrows():
+        base = {
+            "data": row.get("data"),
+            "empresa": row.get("empresa", ""),
+            "nfe_id": row.get("id", ""),
+            "numero_nf": row.get("numero", ""),
+            "serie": row.get("serie", ""),
+            "chave_acesso": row.get("chaveAcesso", ""),
+            "cliente": row.get("cliente", "SEM_CLIENTE"),
+            "numero_documento": row.get("numero_documento", ""),
+            "vendedor": row.get("vendedor", "SEM_VENDEDOR"),
+            "vendedor_id": row.get("vendedor_id", ""),
+            "natureza": row.get("natureza", ""),
+            "natureza_label": row.get("natureza_label", ""),
+            "valor_nf": pd.to_numeric(row.get("valorNota"), errors="coerce"),
+        }
+        itens = row.get("itens")
+        if not isinstance(itens, list) or not itens:
+            rows.append(
+                {
+                    **base,
+                    "produto": "SEM_ITEM_DETALHADO",
+                    "produto_codigo": "",
+                    "quantidade": 0.0,
+                    "valor_unitario": pd.NA,
+                    "valor_total": pd.to_numeric(row.get("valorNota"), errors="coerce"),
+                    "cfop": "",
+                    "lote": pd.NA,
+                    "vencimento_lote": pd.NaT,
+                }
+            )
+            continue
+
+        for item in itens:
+            if not isinstance(item, dict):
+                continue
+            rows.append(
+                {
+                    **base,
+                    "produto": item.get("descricao") or item.get("nome") or "N/D",
+                    "produto_codigo": item.get("codigo") or "",
+                    "quantidade": pd.to_numeric(item.get("quantidade"), errors="coerce"),
+                    "valor_unitario": pd.to_numeric(item.get("valor"), errors="coerce"),
+                    "valor_total": pd.to_numeric(item.get("valorTotal"), errors="coerce"),
+                    "cfop": str(item.get("cfop") or "").strip(),
+                    "lote": item.get("lote"),
+                    "vencimento_lote": pd.to_datetime(item.get("vencimento") or item.get("validade"), errors="coerce"),
+                }
+            )
+
+    if not rows:
+        return pd.DataFrame()
+
+    out = pd.DataFrame(rows)
+    out["data"] = pd.to_datetime(out["data"], errors="coerce")
+    out["quantidade"] = pd.to_numeric(out["quantidade"], errors="coerce").fillna(0)
+    out["valor_unitario"] = pd.to_numeric(out["valor_unitario"], errors="coerce")
+    out["valor_total"] = pd.to_numeric(out["valor_total"], errors="coerce")
+    out["valor_nf"] = pd.to_numeric(out["valor_nf"], errors="coerce")
+    out["produto"] = out["produto"].fillna("N/D").astype(str)
+    out["produto_codigo"] = out["produto_codigo"].fillna("").astype(str)
+    out["cliente"] = out["cliente"].fillna("SEM_CLIENTE").astype(str)
+    out["vendedor"] = out["vendedor"].fillna("SEM_VENDEDOR").astype(str)
+    out["vendedor_id"] = out["vendedor_id"].fillna("").astype(str)
+    out["natureza"] = out["natureza"].fillna("").astype(str)
+    out["natureza_label"] = out["natureza_label"].fillna("").astype(str)
+    out["cfop"] = out["cfop"].fillna("").astype(str)
+    out["numero_nf"] = out["numero_nf"].fillna("").astype(str)
+    out["dias_em_aberto"] = (pd.Timestamp.today().normalize() - out["data"].dt.normalize()).dt.days
+    out["month_start"] = out["data"].dt.to_period("M").dt.to_timestamp()
+    return out.dropna(subset=["data"])
 
 
 def _load_jsonl(cache: Path) -> pd.DataFrame:
