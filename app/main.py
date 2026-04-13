@@ -27,6 +27,7 @@ from src.data import (
     load_bling_estoque,
     load_sales_targets_view,
     load_sales_pipeline_view,
+    load_sales_realized_view,
     load_crm_priority_queue,
     get_crm_view_error,
 )
@@ -860,6 +861,46 @@ def top_client_movement_table(
     return grouped[["cliente", "receita_fmt"]]
 
 
+def build_remote_realizado_sheet(view_df: pd.DataFrame) -> pd.DataFrame:
+    if view_df.empty:
+        return pd.DataFrame()
+    out = view_df.copy()
+    if "data" in out.columns:
+        out["data"] = pd.to_datetime(out["data"], errors="coerce")
+    if "receita" in out.columns:
+        out["receita"] = pd.to_numeric(out["receita"], errors="coerce").fillna(0)
+    for column in ["cliente", "vendedor", "vendedor_id", "empresa"]:
+        if column not in out.columns:
+            out[column] = ""
+        out[column] = out[column].fillna("").astype(str).str.strip()
+    return out
+
+
+def build_remote_metas_sheet(view_df: pd.DataFrame) -> pd.DataFrame:
+    if view_df.empty:
+        return pd.DataFrame()
+    out = view_df.copy()
+    if "period_type" not in out.columns:
+        return pd.DataFrame()
+    out = out[out["period_type"].astype(str).str.lower() == "month"].copy()
+    if out.empty:
+        return pd.DataFrame(columns=["data", "vendedor", "vendedor_id", "meta", "realizado"])
+    out["target_year"] = pd.to_numeric(out.get("target_year"), errors="coerce")
+    out["month_num"] = pd.to_numeric(out.get("month_num"), errors="coerce")
+    out = out[out["target_year"].notna() & out["month_num"].notna()].copy()
+    if out.empty:
+        return pd.DataFrame(columns=["data", "vendedor", "vendedor_id", "meta", "realizado"])
+    out["data"] = pd.to_datetime(
+        dict(year=out["target_year"].astype(int), month=out["month_num"].astype(int), day=1),
+        errors="coerce",
+    )
+    out["meta"] = pd.to_numeric(out.get("target_value"), errors="coerce").fillna(0)
+    out["realizado"] = pd.to_numeric(out.get("actual_value"), errors="coerce").fillna(0)
+    out["vendedor"] = out.get("sales_rep_name", pd.Series("", index=out.index)).fillna("").astype(str).str.strip()
+    out["vendedor_id"] = out.get("sales_rep_code", pd.Series("", index=out.index)).fillna("").astype(str).str.strip()
+    return out[["data", "vendedor", "vendedor_id", "meta", "realizado"]]
+
+
 def filter_sales_nature_scope(df: pd.DataFrame, selected_scope: str) -> pd.DataFrame:
     if df.empty or selected_scope == "Tudo":
         return df
@@ -1591,6 +1632,7 @@ if st.sidebar.button("Recarregar base"):
         load_sheets,
         load_sales_targets_view,
         load_sales_pipeline_view,
+        load_sales_realized_view,
         load_crm_priority_queue,
         load_bling_realizado,
         load_bling_nfe,
@@ -1807,8 +1849,32 @@ if page == "Executive Cockpit":
         crm_pipeline_view, sel_vendor, ["sales_rep_code", "sales_rep_name"], selected_vendor_candidates
     )
     crm_pipeline_view = filter_pipeline_period(crm_pipeline_view, year, selected_month, effective_ytd, selected_quarter)
+    cockpit_sheets = {key: value.copy() if isinstance(value, pd.DataFrame) else value for key, value in sheets.items()}
+    if sel_company == "TODOS":
+        remote_realizado = build_remote_realizado_sheet(load_sales_realized_view())
+        if not remote_realizado.empty:
+            remote_realizado = upper_dashboard_text(apply_acl(remote_realizado, vendor_col="vendedor"))
+            if sel_vendor != "TODOS":
+                mask = pd.Series(False, index=remote_realizado.index)
+                for column in ["vendedor", "vendedor_id"]:
+                    if column in remote_realizado.columns:
+                        mask = mask | remote_realizado[column].map(_vendor_key).isin(selected_vendor_candidates)
+                remote_realizado = remote_realizado[mask]
+            cockpit_sheets["realizado"] = filter_sales_nature_scope(remote_realizado, sales_scope)
+
+        remote_metas = build_remote_metas_sheet(load_sales_targets_view())
+        if not remote_metas.empty:
+            remote_metas = upper_dashboard_text(apply_acl(remote_metas, vendor_col="vendedor"))
+            if sel_vendor != "TODOS":
+                mask = pd.Series(False, index=remote_metas.index)
+                for column in ["vendedor", "vendedor_id"]:
+                    if column in remote_metas.columns:
+                        mask = mask | remote_metas[column].map(_vendor_key).isin(selected_vendor_candidates)
+                remote_metas = remote_metas[mask]
+            cockpit_sheets["metas"] = remote_metas
+
     kpis = compute_kpis(
-        sheets,
+        cockpit_sheets,
         year,
         selected_month,
         effective_ytd,
@@ -1911,7 +1977,7 @@ if page == "Executive Cockpit":
         st.metric("Run-rate", fmt_brl_abbrev(run_rate_display) if sales_scope == "Vendas efetivas" else "-")
         st.markdown("</div>", unsafe_allow_html=True)
 
-    series = meta_realizado_mensal(sheets, year)
+    series = meta_realizado_mensal(cockpit_sheets, year)
     if not series.empty:
         series = series.copy()
         if "data" in series.columns:
@@ -1950,7 +2016,7 @@ if page == "Executive Cockpit":
 
     if sales_scope == "Vendas efetivas":
         top_clients = top_client_movement_table(
-            sheets.get("realizado", pd.DataFrame()),
+            cockpit_sheets.get("realizado", pd.DataFrame()),
             year,
             selected_month,
             effective_ytd,
@@ -1962,7 +2028,7 @@ if page == "Executive Cockpit":
             st.dataframe(top_clients, hide_index=True, width="stretch")
     elif sales_scope in {"Devolucoes/Ajustes", "Nao vendas"}:
         top_clients = top_client_movement_table(
-            sheets.get("realizado", pd.DataFrame()),
+            cockpit_sheets.get("realizado", pd.DataFrame()),
             year,
             selected_month,
             effective_ytd,
@@ -1977,7 +2043,7 @@ if page == "Executive Cockpit":
     # So what
     st.subheader("So what?")
     bullets = []
-    perf = vendedor_performance_period(sheets, year, selected_month, effective_ytd, selected_quarter)
+    perf = vendedor_performance_period(cockpit_sheets, year, selected_month, effective_ytd, selected_quarter)
     if not perf.empty:
         perf = perf.sort_values("gap", ascending=False)
         top_gap = perf.head(3)
