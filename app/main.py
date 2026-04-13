@@ -1850,28 +1850,28 @@ if page == "Executive Cockpit":
     )
     crm_pipeline_view = filter_pipeline_period(crm_pipeline_view, year, selected_month, effective_ytd, selected_quarter)
     cockpit_sheets = {key: value.copy() if isinstance(value, pd.DataFrame) else value for key, value in sheets.items()}
-    if sel_company == "TODOS":
-        remote_realizado = build_remote_realizado_sheet(load_sales_realized_view())
-        if not remote_realizado.empty:
-            remote_realizado = upper_dashboard_text(apply_acl(remote_realizado, vendor_col="vendedor"))
-            if sel_vendor != "TODOS":
-                mask = pd.Series(False, index=remote_realizado.index)
-                for column in ["vendedor", "vendedor_id"]:
-                    if column in remote_realizado.columns:
-                        mask = mask | remote_realizado[column].map(_vendor_key).isin(selected_vendor_candidates)
-                remote_realizado = remote_realizado[mask]
-            cockpit_sheets["realizado"] = filter_sales_nature_scope(remote_realizado, sales_scope)
+    remote_realizado = build_remote_realizado_sheet(load_sales_realized_view())
+    if not remote_realizado.empty:
+        remote_realizado = upper_dashboard_text(apply_acl(remote_realizado, vendor_col="vendedor"))
+        remote_realizado = filter_company_scope(remote_realizado, sel_company)
+        if sel_vendor != "TODOS":
+            mask = pd.Series(False, index=remote_realizado.index)
+            for column in ["vendedor", "vendedor_id"]:
+                if column in remote_realizado.columns:
+                    mask = mask | remote_realizado[column].map(_vendor_key).isin(selected_vendor_candidates)
+            remote_realizado = remote_realizado[mask]
+        cockpit_sheets["realizado"] = filter_sales_nature_scope(remote_realizado, sales_scope)
 
-        remote_metas = build_remote_metas_sheet(load_sales_targets_view())
-        if not remote_metas.empty:
-            remote_metas = upper_dashboard_text(apply_acl(remote_metas, vendor_col="vendedor"))
-            if sel_vendor != "TODOS":
-                mask = pd.Series(False, index=remote_metas.index)
-                for column in ["vendedor", "vendedor_id"]:
-                    if column in remote_metas.columns:
-                        mask = mask | remote_metas[column].map(_vendor_key).isin(selected_vendor_candidates)
-                remote_metas = remote_metas[mask]
-            cockpit_sheets["metas"] = remote_metas
+    remote_metas = build_remote_metas_sheet(load_sales_targets_view())
+    if not remote_metas.empty:
+        remote_metas = upper_dashboard_text(apply_acl(remote_metas, vendor_col="vendedor"))
+        if sel_vendor != "TODOS":
+            mask = pd.Series(False, index=remote_metas.index)
+            for column in ["vendedor", "vendedor_id"]:
+                if column in remote_metas.columns:
+                    mask = mask | remote_metas[column].map(_vendor_key).isin(selected_vendor_candidates)
+            remote_metas = remote_metas[mask]
+        cockpit_sheets["metas"] = remote_metas
 
     kpis = compute_kpis(
         cockpit_sheets,

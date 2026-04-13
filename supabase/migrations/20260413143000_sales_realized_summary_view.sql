@@ -16,7 +16,7 @@ select
   c.trade_name as customer_trade_name,
   c.state as customer_state,
   c.country as customer_country,
-  coalesce(ar.metadata ->> 'empresa', c.metadata ->> 'empresa', '') as company,
+  coalesce(ar.metadata ->> 'company', c.metadata ->> 'company', '') as company,
   coalesce(sr.id, c.owner_sales_rep_id) as sales_rep_id,
   coalesce(sr.rep_code, 'SEM_REP') as sales_rep_code,
   coalesce(au.full_name, 'SEM_REP') as sales_rep_name
