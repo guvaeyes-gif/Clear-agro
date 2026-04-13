@@ -19,10 +19,7 @@
       --shadow: 0 12px 30px rgba(17, 24, 39, 0.08);
     }
 
-    * {
-      box-sizing: border-box;
-    }
-
+    * { box-sizing: border-box; }
     body {
       margin: 0;
       font-family: "Segoe UI", Tahoma, sans-serif;
@@ -30,399 +27,150 @@
       color: var(--text);
       padding: 32px 16px;
     }
-
-    .wrap {
-      max-width: 760px;
-      margin: 0 auto;
-    }
-
+    .wrap { max-width: 760px; margin: 0 auto; }
     .card {
       background: var(--card);
       border-radius: 20px;
       padding: 24px;
       box-shadow: var(--shadow);
     }
-
-    h1 {
-      margin: 0 0 8px;
-      font-size: 1.5rem;
-    }
-
-    .subtitle {
-      margin: 0 0 24px;
-      color: var(--muted);
-      font-size: 0.95rem;
-    }
-
+    h1 { margin: 0 0 8px; font-size: 1.5rem; }
+    .subtitle { margin: 0 0 24px; color: var(--muted); font-size: 0.95rem; }
     .tabs {
-      display: inline-flex;
-      gap: 8px;
-      padding: 6px;
-      background: #f3f4f6;
-      border-radius: 999px;
-      margin-bottom: 22px;
+      display: inline-flex; gap: 8px; padding: 6px; background: #f3f4f6;
+      border-radius: 999px; margin-bottom: 22px;
     }
-
     .tab-button {
-      border: 0;
-      background: transparent;
-      color: var(--muted);
-      padding: 10px 16px;
-      border-radius: 999px;
-      font: inherit;
-      font-weight: 600;
-      cursor: pointer;
+      border: 0; background: transparent; color: var(--muted);
+      padding: 10px 16px; border-radius: 999px; font: inherit;
+      font-weight: 600; cursor: pointer;
     }
-
     .tab-button.active {
-      background: white;
-      color: var(--text);
+      background: white; color: var(--text);
       box-shadow: 0 2px 8px rgba(17, 24, 39, 0.08);
     }
-
-    .tab-panel[hidden] {
-      display: none;
-    }
-
+    .tab-panel[hidden] { display: none; }
     .hero {
-      display: grid;
-      grid-template-columns: 1.2fr 0.8fr;
-      gap: 16px;
-      margin-bottom: 20px;
+      display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 16px; margin-bottom: 20px;
     }
-
-    .hero-panel,
-    .hero-side {
-      border: 1px solid var(--border);
-      border-radius: 18px;
-      padding: 18px;
+    .hero-panel, .hero-side {
+      border: 1px solid var(--border); border-radius: 18px; padding: 18px;
     }
-
-    .hero-panel {
-      background: linear-gradient(135deg, #f8fbff 0%, var(--soft-blue) 100%);
-    }
-
-    .hero-side {
-      background: #fafafa;
-    }
-
+    .hero-panel { background: linear-gradient(135deg, #f8fbff 0%, var(--soft-blue) 100%); }
+    .hero-side { background: #fafafa; }
     .hero-kicker {
-      margin: 0 0 8px;
-      color: var(--muted);
-      font-size: 0.82rem;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
+      margin: 0 0 8px; color: var(--muted); font-size: 0.82rem;
+      text-transform: uppercase; letter-spacing: 0.06em;
     }
-
-    .hero-value {
-      margin: 0;
-      font-size: 2.2rem;
-      font-weight: 800;
-      line-height: 1;
-    }
-
-    .hero-note {
-      margin: 10px 0 0;
-      color: var(--muted);
-      font-size: 0.92rem;
-    }
-
+    .hero-value { margin: 0; font-size: 2.2rem; font-weight: 800; line-height: 1; }
+    .hero-note { margin: 10px 0 0; color: var(--muted); font-size: 0.92rem; }
     .stats {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-      gap: 12px;
-      margin-bottom: 20px;
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px; margin-bottom: 20px;
     }
-
     .stat {
-      padding: 14px 16px;
-      border-radius: 14px;
-      background: #f9fafb;
-      border: 1px solid var(--border);
+      padding: 14px 16px; border-radius: 14px; background: #f9fafb; border: 1px solid var(--border);
     }
-
     .label {
-      display: block;
-      font-size: 0.82rem;
-      color: var(--muted);
-      margin-bottom: 4px;
+      display: block; font-size: 0.82rem; color: var(--muted); margin-bottom: 4px;
     }
-
-    .value {
-      font-size: 1.15rem;
-      font-weight: 700;
-    }
-
+    .value { font-size: 1.15rem; font-weight: 700; }
     .section-title {
-      margin: 24px 0 12px;
-      font-size: 0.95rem;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: var(--muted);
+      margin: 24px 0 12px; font-size: 0.95rem; text-transform: uppercase;
+      letter-spacing: 0.05em; color: var(--muted);
     }
-
     .chart-card {
-      display: grid;
-      grid-template-columns: 220px 1fr;
-      gap: 18px;
-      align-items: center;
-      padding: 18px;
-      border: 1px solid var(--border);
-      border-radius: 18px;
-      background: #fafafa;
-      margin-bottom: 20px;
+      display: grid; grid-template-columns: 220px 1fr; gap: 18px; align-items: center;
+      padding: 18px; border: 1px solid var(--border); border-radius: 18px;
+      background: #fafafa; margin-bottom: 20px;
     }
-
-    .donut-wrap {
-      position: relative;
-      width: 180px;
-      height: 180px;
-      margin: 0 auto;
-    }
-
+    .donut-wrap { position: relative; width: 180px; height: 180px; margin: 0 auto; }
     .donut {
-      width: 100%;
-      height: 100%;
-      border-radius: 50%;
-      background: conic-gradient(var(--bar-fill) 0 32%, #dbeafe 32% 100%);
-      display: grid;
-      place-items: center;
+      width: 100%; height: 100%; border-radius: 50%;
+      display: grid; place-items: center;
     }
-
     .donut::after {
-      content: "";
-      width: 112px;
-      height: 112px;
-      border-radius: 50%;
-      background: white;
-      box-shadow: inset 0 0 0 1px var(--border);
+      content: ""; width: 112px; height: 112px; border-radius: 50%;
+      background: white; box-shadow: inset 0 0 0 1px var(--border);
     }
-
     .donut-center {
-      position: absolute;
-      inset: 0;
-      display: grid;
-      place-items: center;
-      text-align: center;
-      pointer-events: none;
+      position: absolute; inset: 0; display: grid; place-items: center; text-align: center; pointer-events: none;
     }
-
-    .donut-center strong {
-      display: block;
-      font-size: 1.6rem;
-      line-height: 1;
-    }
-
-    .donut-center span {
-      color: var(--muted);
-      font-size: 0.85rem;
-      margin-top: 4px;
-    }
-
-    .chart-legend {
-      display: grid;
-      gap: 12px;
-    }
-
+    .donut-center strong { display: block; font-size: 1.6rem; line-height: 1; }
+    .donut-center span { color: var(--muted); font-size: 0.85rem; margin-top: 4px; }
+    .chart-legend { display: grid; gap: 12px; }
     .legend-item {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      padding: 10px 12px;
-      border-radius: 12px;
-      background: white;
-      border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      padding: 10px 12px; border-radius: 12px; background: white; border: 1px solid var(--border);
     }
-
-    .legend-label {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-size: 0.92rem;
-    }
-
-    .legend-dot {
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
-      display: inline-block;
-    }
-
+    .legend-label { display: flex; align-items: center; gap: 10px; font-size: 0.92rem; }
+    .legend-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
     .table-card {
-      border: 1px solid var(--border);
-      border-radius: 18px;
-      background: #fafafa;
-      overflow: hidden;
-      margin-bottom: 20px;
+      border: 1px solid var(--border); border-radius: 18px; background: #fafafa;
+      overflow: hidden; margin-bottom: 20px;
     }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
+    table { width: 100%; border-collapse: collapse; }
+    th, td {
+      padding: 14px 16px; text-align: left; border-bottom: 1px solid var(--border); font-size: 0.94rem;
     }
-
-    th,
-    td {
-      padding: 14px 16px;
-      text-align: left;
-      border-bottom: 1px solid var(--border);
-      font-size: 0.94rem;
-    }
-
     th {
-      color: var(--muted);
-      font-size: 0.82rem;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      background: #f9fafb;
+      color: var(--muted); font-size: 0.82rem; text-transform: uppercase;
+      letter-spacing: 0.05em; background: #f9fafb;
     }
-
-    tbody tr:last-child td {
-      border-bottom: 0;
-    }
-
+    tbody tr:last-child td { border-bottom: 0; }
     .mini-bar {
-      width: 100%;
-      height: 10px;
-      background: var(--bar-bg);
-      border-radius: 999px;
-      overflow: hidden;
+      width: 100%; height: 10px; background: var(--bar-bg); border-radius: 999px; overflow: hidden;
     }
-
     .mini-bar > span {
-      display: block;
-      height: 100%;
-      background: linear-gradient(90deg, #2563eb 0%, var(--bar-fill) 100%);
+      display: block; height: 100%; background: linear-gradient(90deg, #2563eb 0%, var(--bar-fill) 100%);
       border-radius: 999px;
     }
-
     .status-badge {
-      display: inline-block;
-      padding: 6px 10px;
-      border-radius: 999px;
-      background: #eff6ff;
-      color: #1d4ed8;
-      font-size: 0.82rem;
-      font-weight: 700;
+      display: inline-block; padding: 6px 10px; border-radius: 999px;
+      background: #eff6ff; color: #1d4ed8; font-size: 0.82rem; font-weight: 700;
     }
-
     .toolbar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 14px;
-      flex-wrap: wrap;
+      display: flex; justify-content: space-between; align-items: center; gap: 12px;
+      margin-bottom: 14px; flex-wrap: wrap;
     }
-
     .toolbar select {
-      border: 1px solid var(--border);
-      background: white;
-      border-radius: 10px;
-      padding: 10px 12px;
-      font: inherit;
-      color: var(--text);
+      border: 1px solid var(--border); background: white; border-radius: 10px;
+      padding: 10px 12px; font: inherit; color: var(--text);
     }
-
     .bar-chart-card {
-      border: 1px solid var(--border);
-      border-radius: 18px;
-      background: #fafafa;
-      padding: 18px;
-      margin-bottom: 20px;
+      border: 1px solid var(--border); border-radius: 18px; background: #fafafa;
+      padding: 18px; margin-bottom: 20px;
     }
-
-    .bar-chart {
-      display: grid;
-      gap: 12px;
-    }
-
-    .bar-row {
-      display: grid;
-      grid-template-columns: 44px 1fr 56px;
-      gap: 12px;
-      align-items: center;
-    }
-
-    .bar-day {
-      font-size: 0.88rem;
-      color: var(--muted);
-      font-weight: 600;
-    }
-
-    .bar-track {
-      height: 18px;
-      border-radius: 999px;
-      background: var(--bar-bg);
-      overflow: hidden;
-    }
-
+    .bar-chart { display: grid; gap: 12px; }
+    .bar-row { display: grid; grid-template-columns: 44px 1fr 56px; gap: 12px; align-items: center; }
+    .bar-day { font-size: 0.88rem; color: var(--muted); font-weight: 600; }
+    .bar-track { height: 18px; border-radius: 999px; background: var(--bar-bg); overflow: hidden; }
     .bar-fill {
-      display: block;
-      height: 100%;
-      border-radius: 999px;
+      display: block; height: 100%; border-radius: 999px;
       background: linear-gradient(90deg, #0f62fe 0%, #60a5fa 100%);
     }
-
-    .bar-value {
-      text-align: right;
-      font-size: 0.88rem;
-      font-weight: 700;
-    }
-
+    .bar-value { text-align: right; font-size: 0.88rem; font-weight: 700; }
     .progress-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 8px;
-      font-size: 0.92rem;
+      display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 0.92rem;
     }
-
     .progress {
-      width: 100%;
-      height: 16px;
-      background: var(--bar-bg);
-      border-radius: 999px;
-      overflow: hidden;
-      margin-bottom: 16px;
+      width: 100%; height: 16px; background: var(--bar-bg); border-radius: 999px; overflow: hidden; margin-bottom: 16px;
     }
-
     .progress-bar {
-      width: 32%;
-      height: 100%;
-      background: linear-gradient(90deg, #2563eb 0%, var(--bar-fill) 100%);
+      width: 0%; height: 100%; background: linear-gradient(90deg, #2563eb 0%, var(--bar-fill) 100%);
     }
-
     .status {
-      display: inline-block;
-      padding: 10px 14px;
-      border-radius: 999px;
-      background: var(--ok-bg);
-      color: var(--ok-text);
-      font-weight: 700;
-      font-size: 0.92rem;
+      display: inline-block; padding: 10px 14px; border-radius: 999px; background: var(--ok-bg);
+      color: var(--ok-text); font-weight: 700; font-size: 0.92rem;
     }
-
-    .foot {
-      margin-top: 14px;
-      color: var(--muted);
-      font-size: 0.82rem;
+    .foot { margin-top: 14px; color: var(--muted); font-size: 0.82rem; }
+    .error-box {
+      display: none; margin-bottom: 18px; padding: 14px 16px; border-radius: 14px;
+      background: #fef2f2; border: 1px solid #fecaca; color: #991b1b;
     }
-
     @media (max-width: 640px) {
-      .hero {
-        grid-template-columns: 1fr;
-      }
-
-      .chart-card {
-        grid-template-columns: 1fr;
-      }
-
-      th,
-      td {
-        padding: 12px;
-      }
+      .hero, .chart-card { grid-template-columns: 1fr; }
+      th, td { padding: 12px; }
     }
   </style>
 </head>
@@ -431,6 +179,7 @@
     <section class="card">
       <h1>Monitor de Uso do Codex</h1>
       <p class="subtitle">Visualizacao simples do consumo atual do plano.</p>
+      <div class="error-box" id="error-box"></div>
 
       <div class="tabs" role="tablist" aria-label="Visoes do monitor">
         <button class="tab-button active" type="button" role="tab" aria-selected="true" aria-controls="tab-geral" id="btn-geral">Geral</button>
@@ -442,85 +191,49 @@
         <div class="hero">
           <div class="hero-panel">
             <p class="hero-kicker">Consumo Atual</p>
-            <p class="hero-value">32%</p>
-            <p class="hero-note">320 tokens usados de um total de 1000 tokens.</p>
+            <p class="hero-value" id="hero-consumption">0%</p>
+            <p class="hero-note" id="hero-note">0 usados de 0.</p>
           </div>
           <div class="hero-side">
             <p class="hero-kicker">Status</p>
-            <div class="status">Uso normal</div>
-            <p class="hero-note">Ritmo atual abaixo do limite ideal semanal.</p>
+            <div class="status" id="hero-status">Carregando</div>
+            <p class="hero-note" id="hero-status-note">Aguardando dados.</p>
           </div>
         </div>
 
         <p class="section-title">Resumo do Plano</p>
         <div class="stats">
-          <div class="stat">
-            <span class="label">Janela atual de 5h</span>
-            <span class="value">78% usado</span>
-          </div>
-          <div class="stat">
-            <span class="label">Restante na janela</span>
-            <span class="value">22%</span>
-          </div>
-          <div class="stat">
-            <span class="label">Reset estimado</span>
-            <span class="value">19:40</span>
-          </div>
-          <div class="stat">
-            <span class="label">Limite total</span>
-            <span class="value">1000 tokens</span>
-          </div>
-          <div class="stat">
-            <span class="label">Valor do plano</span>
-            <span class="value">R$ 99,00</span>
-          </div>
-          <div class="stat">
-            <span class="label">Uso atual</span>
-            <span class="value">320 tokens</span>
-          </div>
-          <div class="stat">
-            <span class="label">Saldo restante</span>
-            <span class="value">680 tokens</span>
-          </div>
-          <div class="stat">
-            <span class="label">Custo medio por token</span>
-            <span class="value">R$ 0,099</span>
-          </div>
-          <div class="stat">
-            <span class="label">Data de renovacao</span>
-            <span class="value">30/04/2026</span>
-          </div>
-          <div class="stat">
-            <span class="label">Estimativa restante em valor</span>
-            <span class="value">R$ 67,32</span>
-          </div>
+          <div class="stat"><span class="label">Janela atual de 5h</span><span class="value" id="window-used">0%</span></div>
+          <div class="stat"><span class="label">Restante na janela</span><span class="value" id="window-remaining">0%</span></div>
+          <div class="stat"><span class="label">Reset estimado</span><span class="value" id="window-reset">--:--</span></div>
+          <div class="stat"><span class="label">Limite total</span><span class="value" id="plan-limit">0</span></div>
+          <div class="stat"><span class="label">Valor do plano</span><span class="value" id="plan-price">R$ 0,00</span></div>
+          <div class="stat"><span class="label">Uso atual</span><span class="value" id="plan-used">0</span></div>
+          <div class="stat"><span class="label">Saldo restante</span><span class="value" id="plan-remaining">0</span></div>
+          <div class="stat"><span class="label">Custo medio por unidade</span><span class="value" id="plan-cost-per-unit">R$ 0,00</span></div>
+          <div class="stat"><span class="label">Data de renovacao</span><span class="value" id="plan-renewal">--/--/----</span></div>
+          <div class="stat"><span class="label">Estimativa restante em valor</span><span class="value" id="plan-remaining-value">R$ 0,00</span></div>
         </div>
 
         <p class="section-title">Distribuicao do Uso</p>
         <div class="chart-card">
           <div class="donut-wrap" aria-label="Grafico circular de uso do plano">
-            <div class="donut"></div>
+            <div class="donut" id="donut-chart"></div>
             <div class="donut-center">
               <div>
-                <strong>32%</strong>
+                <strong id="donut-percent">0%</strong>
                 <span>Consumido</span>
               </div>
             </div>
           </div>
           <div class="chart-legend">
             <div class="legend-item">
-              <div class="legend-label">
-                <span class="legend-dot" style="background:#1f6feb;"></span>
-                <span>Usado</span>
-              </div>
-              <strong>320 tokens</strong>
+              <div class="legend-label"><span class="legend-dot" style="background:#1f6feb;"></span><span>Usado</span></div>
+              <strong id="legend-used">0</strong>
             </div>
             <div class="legend-item">
-              <div class="legend-label">
-                <span class="legend-dot" style="background:#dbeafe;"></span>
-                <span>Disponivel</span>
-              </div>
-              <strong>680 tokens</strong>
+              <div class="legend-label"><span class="legend-dot" style="background:#dbeafe;"></span><span>Disponivel</span></div>
+              <strong id="legend-remaining">0</strong>
             </div>
           </div>
         </div>
@@ -530,55 +243,26 @@
           <div>
             <div class="progress-header">
               <span>Uso da janela atual</span>
-              <strong>78%</strong>
+              <strong id="window-progress-label">0%</strong>
             </div>
             <div class="progress" aria-label="Uso da janela atual de 5 horas">
-              <div class="progress-bar" style="width: 78%;"></div>
+              <div class="progress-bar" id="window-progress-bar"></div>
             </div>
-            <p class="hero-note">Voce esta com menos de 25% disponivel nesta janela, o que explica o alerta do Codex.</p>
+            <p class="hero-note" id="window-note">Aguardando dados da janela atual.</p>
           </div>
           <div class="chart-legend">
             <div class="legend-item">
-              <div class="legend-label">
-                <span class="legend-dot" style="background:#1f6feb;"></span>
-                <span>Consumido na janela</span>
-              </div>
-              <strong>78%</strong>
+              <div class="legend-label"><span class="legend-dot" style="background:#1f6feb;"></span><span>Consumido na janela</span></div>
+              <strong id="window-consumed-legend">0%</strong>
             </div>
             <div class="legend-item">
-              <div class="legend-label">
-                <span class="legend-dot" style="background:#dbeafe;"></span>
-                <span>Disponivel na janela</span>
-              </div>
-              <strong>22%</strong>
+              <div class="legend-label"><span class="legend-dot" style="background:#dbeafe;"></span><span>Disponivel na janela</span></div>
+              <strong id="window-available-legend">0%</strong>
             </div>
             <div class="legend-item">
-              <div class="legend-label">
-                <span class="legend-dot" style="background:#e5e7eb;"></span>
-                <span>Reset estimado</span>
-              </div>
-              <strong>19:40</strong>
+              <div class="legend-label"><span class="legend-dot" style="background:#e5e7eb;"></span><span>Reset estimado</span></div>
+              <strong id="window-reset-legend">--:--</strong>
             </div>
-          </div>
-        </div>
-
-        <p class="section-title">Ritmo de Uso</p>
-        <div class="stats">
-          <div class="stat">
-            <span class="label">Limite ideal por dia</span>
-            <span class="value">33 tokens</span>
-          </div>
-          <div class="stat">
-            <span class="label">Limite ideal por semana</span>
-            <span class="value">233 tokens</span>
-          </div>
-          <div class="stat">
-            <span class="label">Uso medio por dia</span>
-            <span class="value">21 tokens</span>
-          </div>
-          <div class="stat">
-            <span class="label">Uso medio por semana</span>
-            <span class="value">147 tokens</span>
           </div>
         </div>
       </section>
@@ -587,101 +271,29 @@
         <div class="hero">
           <div class="hero-panel">
             <p class="hero-kicker">Maior Consumo</p>
-            <p class="hero-value">CRM</p>
-            <p class="hero-note">120 tokens consumidos, equivalente a 37,5% do uso atual.</p>
+            <p class="hero-value" id="top-project-name">--</p>
+            <p class="hero-note" id="top-project-note">Sem dados.</p>
           </div>
           <div class="hero-side">
             <p class="hero-kicker">Tarefa Mais Pesada</p>
-            <div class="status">Importacao Bling</div>
-            <p class="hero-note">65 tokens usados nesta tarefa no periodo atual.</p>
+            <div class="status" id="top-task-name">--</div>
+            <p class="hero-note" id="top-task-note">Sem dados.</p>
           </div>
         </div>
 
         <p class="section-title">Consumo por Projeto</p>
         <div class="table-card">
           <table aria-label="Tabela de consumo por projeto">
-            <thead>
-              <tr>
-                <th>Projeto</th>
-                <th>Uso</th>
-                <th>Participacao</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>CRM</td>
-                <td>120 tokens</td>
-                <td>
-                  <div class="mini-bar" aria-hidden="true"><span style="width:37.5%;"></span></div>
-                </td>
-                <td><span class="status-badge">Maior uso</span></td>
-              </tr>
-              <tr>
-                <td>Financeiro</td>
-                <td>95 tokens</td>
-                <td>
-                  <div class="mini-bar" aria-hidden="true"><span style="width:29.7%;"></span></div>
-                </td>
-                <td><span class="status-badge">Estavel</span></td>
-              </tr>
-              <tr>
-                <td>Dashboard</td>
-                <td>60 tokens</td>
-                <td>
-                  <div class="mini-bar" aria-hidden="true"><span style="width:18.8%;"></span></div>
-                </td>
-                <td><span class="status-badge">Moderado</span></td>
-              </tr>
-              <tr>
-                <td>Automacoes</td>
-                <td>45 tokens</td>
-                <td>
-                  <div class="mini-bar" aria-hidden="true"><span style="width:14.1%;"></span></div>
-                </td>
-                <td><span class="status-badge">Baixo</span></td>
-              </tr>
-            </tbody>
+            <thead><tr><th>Projeto</th><th>Uso</th><th>Participacao</th><th>Status</th></tr></thead>
+            <tbody id="projects-table-body"></tbody>
           </table>
         </div>
 
         <p class="section-title">Consumo por Tarefa</p>
         <div class="table-card">
           <table aria-label="Tabela de consumo por tarefa">
-            <thead>
-              <tr>
-                <th>Tarefa</th>
-                <th>Uso</th>
-                <th>Participacao</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>Importacao Bling</td>
-                <td>65 tokens</td>
-                <td>
-                  <div class="mini-bar" aria-hidden="true"><span style="width:20.3%;"></span></div>
-                </td>
-                <td><span class="status-badge">Alta</span></td>
-              </tr>
-              <tr>
-                <td>Ajuste HTML</td>
-                <td>40 tokens</td>
-                <td>
-                  <div class="mini-bar" aria-hidden="true"><span style="width:12.5%;"></span></div>
-                </td>
-                <td><span class="status-badge">Normal</span></td>
-              </tr>
-              <tr>
-                <td>Revisao de codigo</td>
-                <td>35 tokens</td>
-                <td>
-                  <div class="mini-bar" aria-hidden="true"><span style="width:10.9%;"></span></div>
-                </td>
-                <td><span class="status-badge">Normal</span></td>
-              </tr>
-            </tbody>
+            <thead><tr><th>Tarefa</th><th>Uso</th><th>Participacao</th><th>Status</th></tr></thead>
+            <tbody id="tasks-table-body"></tbody>
           </table>
         </div>
       </section>
@@ -690,24 +302,19 @@
         <div class="hero">
           <div class="hero-panel">
             <p class="hero-kicker">Media do Mes</p>
-            <p class="hero-value" id="daily-average">21</p>
-            <p class="hero-note">Tokens por dia no mes selecionado.</p>
+            <p class="hero-value" id="daily-average">0</p>
+            <p class="hero-note">Unidades por dia no mes selecionado.</p>
           </div>
           <div class="hero-side">
             <p class="hero-kicker">Pico Diario</p>
-            <div class="status" id="daily-peak">34 tokens</div>
-            <p class="hero-note" id="daily-peak-note">Maior uso diario no periodo filtrado.</p>
+            <div class="status" id="daily-peak">0</div>
+            <p class="hero-note" id="daily-peak-note">Sem dados para o periodo.</p>
           </div>
         </div>
 
         <div class="toolbar">
           <p class="section-title" style="margin:0;">Consumo por Dia</p>
-          <label>
-            <select id="month-filter" aria-label="Filtrar por mes">
-              <option value="2026-04">Abril 2026</option>
-              <option value="2026-03">Marco 2026</option>
-            </select>
-          </label>
+          <label><select id="month-filter" aria-label="Filtrar por mes"></select></label>
         </div>
 
         <div class="bar-chart-card">
@@ -715,15 +322,7 @@
         </div>
       </section>
 
-      <div class="progress-header">
-        <span>Percentual consumido</span>
-        <strong>32%</strong>
-      </div>
-      <div class="progress" aria-label="Percentual consumido">
-        <div class="progress-bar"></div>
-      </div>
-
-      <p class="foot">Edite os valores no arquivo para atualizar o painel. O layout agora separa resumo e ritmo para facilitar a leitura.</p>
+      <p class="foot">Atualize somente o arquivo <code>usage.json</code> para trocar os valores do monitor.</p>
     </section>
   </main>
   <script>
@@ -734,88 +333,156 @@
     const averageEl = document.getElementById("daily-average");
     const peakEl = document.getElementById("daily-peak");
     const peakNoteEl = document.getElementById("daily-peak-note");
+    const errorBox = document.getElementById("error-box");
 
-    const monthlyUsage = {
-      "2026-04": [
-        { day: "01", value: 12 },
-        { day: "02", value: 18 },
-        { day: "03", value: 9 },
-        { day: "04", value: 24 },
-        { day: "05", value: 15 },
-        { day: "06", value: 28 },
-        { day: "07", value: 20 },
-        { day: "08", value: 14 },
-        { day: "09", value: 26 },
-        { day: "10", value: 17 },
-        { day: "11", value: 22 },
-        { day: "12", value: 34 }
-      ],
-      "2026-03": [
-        { day: "20", value: 8 },
-        { day: "21", value: 11 },
-        { day: "22", value: 16 },
-        { day: "23", value: 13 },
-        { day: "24", value: 19 },
-        { day: "25", value: 21 },
-        { day: "26", value: 14 },
-        { day: "27", value: 25 },
-        { day: "28", value: 18 },
-        { day: "29", value: 20 },
-        { day: "30", value: 23 },
-        { day: "31", value: 15 }
-      ]
-    };
+    function setText(id, value) {
+      const element = document.getElementById(id);
+      if (element) element.textContent = value;
+    }
 
-    function renderDailyChart(monthKey) {
-      const data = monthlyUsage[monthKey] || [];
+    function formatCurrency(value, currency = "BRL") {
+      return new Intl.NumberFormat("pt-BR", { style: "currency", currency }).format(Number(value || 0));
+    }
+
+    function formatNumber(value) {
+      return new Intl.NumberFormat("pt-BR").format(Number(value || 0));
+    }
+
+    function formatPercent(value) {
+      return `${Number(value || 0).toFixed(1).replace(".", ",")}%`;
+    }
+
+    function buildStatusLabel(percent) {
+      if (percent >= 90) return "Critico";
+      if (percent >= 75) return "Alto";
+      if (percent >= 50) return "Moderado";
+      return "Normal";
+    }
+
+    function renderRows(targetId, items, total, unit) {
+      const body = document.getElementById(targetId);
+      if (!body) return;
+      body.innerHTML = items.map((item) => {
+        const share = total > 0 ? (item.value / total) * 100 : 0;
+        const status = item.status || buildStatusLabel(share);
+        return `
+          <tr>
+            <td>${item.name}</td>
+            <td>${formatNumber(item.value)} ${unit}</td>
+            <td><div class="mini-bar" aria-hidden="true"><span style="width:${share}%;"></span></div></td>
+            <td><span class="status-badge">${status}</span></td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    function renderDailyChart(monthKey, monthsData, unit) {
+      const data = monthsData[monthKey] || [];
       const maxValue = Math.max(...data.map((item) => item.value), 1);
       const total = data.reduce((sum, item) => sum + item.value, 0);
-      const average = data.length ? (total / data.length).toFixed(1) : "0";
+      const average = data.length ? total / data.length : 0;
       const peak = data.reduce((best, item) => (item.value > best.value ? item : best), { day: "--", value: 0 });
 
-      averageEl.textContent = average;
-      peakEl.textContent = `${peak.value} tokens`;
+      averageEl.textContent = formatNumber(average.toFixed ? Number(average.toFixed(1)) : average);
+      peakEl.textContent = `${formatNumber(peak.value)} ${unit}`;
       peakNoteEl.textContent = `Maior uso no dia ${peak.day} do mes selecionado.`;
 
-      chartRoot.innerHTML = data
-        .map(
-          (item) => `
-            <div class="bar-row">
-              <div class="bar-day">${item.day}</div>
-              <div class="bar-track">
-                <span class="bar-fill" style="width:${(item.value / maxValue) * 100}%;"></span>
-              </div>
-              <div class="bar-value">${item.value}</div>
-            </div>
-          `
-        )
-        .join("");
+      chartRoot.innerHTML = data.map((item) => `
+        <div class="bar-row">
+          <div class="bar-day">${item.day}</div>
+          <div class="bar-track"><span class="bar-fill" style="width:${(item.value / maxValue) * 100}%;"></span></div>
+          <div class="bar-value">${formatNumber(item.value)}</div>
+        </div>
+      `).join("");
     }
 
-    tabs.forEach((tab) => {
-      tab.addEventListener("click", () => {
-        const targetId = tab.getAttribute("aria-controls");
-
-        tabs.forEach((item) => {
-          item.classList.remove("active");
-          item.setAttribute("aria-selected", "false");
+    function loadTabs() {
+      tabs.forEach((tab) => {
+        tab.addEventListener("click", () => {
+          const targetId = tab.getAttribute("aria-controls");
+          tabs.forEach((item) => {
+            item.classList.remove("active");
+            item.setAttribute("aria-selected", "false");
+          });
+          panels.forEach((panel) => {
+            panel.hidden = panel.id !== targetId;
+          });
+          tab.classList.add("active");
+          tab.setAttribute("aria-selected", "true");
         });
-
-        panels.forEach((panel) => {
-          panel.hidden = panel.id !== targetId;
-        });
-
-        tab.classList.add("active");
-        tab.setAttribute("aria-selected", "true");
       });
-    });
-
-    if (monthFilter) {
-      monthFilter.addEventListener("change", (event) => {
-        renderDailyChart(event.target.value);
-      });
-      renderDailyChart(monthFilter.value);
     }
+
+    async function loadUsage() {
+      try {
+        const response = await fetch("./usage.json", { cache: "no-store" });
+        if (!response.ok) throw new Error("Nao foi possivel carregar usage.json");
+        const data = await response.json();
+        const plan = data.plan || {};
+        const windowData = data.window5h || {};
+        const projects = data.projects || [];
+        const tasks = data.tasks || [];
+        const daily = data.dailyUsage || {};
+        const months = daily.months || {};
+        const monthKeys = Object.keys(months);
+        const usedPercent = plan.limit ? (plan.used / plan.limit) * 100 : 0;
+        const remaining = Math.max((plan.limit || 0) - (plan.used || 0), 0);
+        const remainingPercent = 100 - usedPercent;
+
+        setText("hero-consumption", formatPercent(usedPercent));
+        setText("hero-note", `${formatNumber(plan.used)} ${plan.unit} usados de ${formatNumber(plan.limit)} ${plan.unit}.`);
+        setText("hero-status", data.status || buildStatusLabel(usedPercent));
+        setText("hero-status-note", data.statusNote || "Status calculado a partir do consumo atual.");
+        setText("window-used", formatPercent(windowData.usedPercent));
+        setText("window-remaining", formatPercent(windowData.remainingPercent));
+        setText("window-reset", windowData.resetAt || "--:--");
+        setText("plan-limit", `${formatNumber(plan.limit)} ${plan.unit}`);
+        setText("plan-price", formatCurrency(plan.price, plan.currency));
+        setText("plan-used", `${formatNumber(plan.used)} ${plan.unit}`);
+        setText("plan-remaining", `${formatNumber(remaining)} ${plan.unit}`);
+        setText("plan-cost-per-unit", formatCurrency(plan.costPerUnit, plan.currency));
+        setText("plan-renewal", plan.renewalDate || "--/--/----");
+        setText("plan-remaining-value", formatCurrency(plan.remainingValue, plan.currency));
+        setText("donut-percent", formatPercent(usedPercent));
+        setText("legend-used", `${formatNumber(plan.used)} ${plan.unit}`);
+        setText("legend-remaining", `${formatNumber(remaining)} ${plan.unit}`);
+        setText("window-progress-label", formatPercent(windowData.usedPercent));
+        setText("window-consumed-legend", formatPercent(windowData.usedPercent));
+        setText("window-available-legend", formatPercent(windowData.remainingPercent));
+        setText("window-reset-legend", windowData.resetAt || "--:--");
+        setText("window-note", windowData.note || "Sem observacao para a janela atual.");
+
+        const donutChart = document.getElementById("donut-chart");
+        donutChart.style.background = `conic-gradient(var(--bar-fill) 0 ${usedPercent}%, #dbeafe ${usedPercent}% 100%)`;
+
+        const windowBar = document.getElementById("window-progress-bar");
+        windowBar.style.width = `${windowData.usedPercent || 0}%`;
+
+        const topProject = projects.reduce((best, item) => (item.value > (best.value || 0) ? item : best), {});
+        const topTask = tasks.reduce((best, item) => (item.value > (best.value || 0) ? item : best), {});
+        setText("top-project-name", topProject.name || "--");
+        setText("top-project-note", topProject.name ? `${formatNumber(topProject.value)} ${plan.unit} consumidos neste projeto.` : "Sem dados.");
+        setText("top-task-name", topTask.name || "--");
+        setText("top-task-note", topTask.name ? `${formatNumber(topTask.value)} ${plan.unit} usados nesta tarefa.` : "Sem dados.");
+
+        renderRows("projects-table-body", projects, plan.used || 0, plan.unit);
+        renderRows("tasks-table-body", tasks, plan.used || 0, plan.unit);
+
+        monthFilter.innerHTML = monthKeys.map((key) => `<option value="${key}">${months[key].label}</option>`).join("");
+        if (monthKeys.length > 0) {
+          renderDailyChart(monthKeys[0], Object.fromEntries(monthKeys.map((key) => [key, months[key].days])), plan.unit);
+          monthFilter.addEventListener("change", (event) => {
+            renderDailyChart(event.target.value, Object.fromEntries(monthKeys.map((key) => [key, months[key].days])), plan.unit);
+          });
+        }
+      } catch (error) {
+        errorBox.style.display = "block";
+        errorBox.textContent = `Erro ao carregar os dados do monitor: ${error.message}`;
+      }
+    }
+
+    loadTabs();
+    loadUsage();
   </script>
 </body>
 </html>

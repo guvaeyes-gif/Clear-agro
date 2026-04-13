@@ -1,0 +1,69 @@
+{
+  "status": "Uso normal",
+  "statusNote": "Consumo geral controlado e janela de 5 horas ainda utilizavel.",
+  "plan": {
+    "limit": 1000,
+    "used": 320,
+    "unit": "tokens",
+    "price": 99,
+    "currency": "BRL",
+    "costPerUnit": 0.099,
+    "remainingValue": 67.32,
+    "renewalDate": "30/04/2026"
+  },
+  "window5h": {
+    "usedPercent": 78,
+    "remainingPercent": 22,
+    "resetAt": "19:40",
+    "note": "Voce esta com menos de 25% disponivel nesta janela, o que explica o alerta do Codex."
+  },
+  "projects": [
+    { "name": "CRM", "value": 120, "status": "Maior uso" },
+    { "name": "Financeiro", "value": 95, "status": "Estavel" },
+    { "name": "Dashboard", "value": 60, "status": "Moderado" },
+    { "name": "Automacoes", "value": 45, "status": "Baixo" }
+  ],
+  "tasks": [
+    { "name": "Importacao Bling", "value": 65, "status": "Alta" },
+    { "name": "Ajuste HTML", "value": 40, "status": "Normal" },
+    { "name": "Revisao de codigo", "value": 35, "status": "Normal" }
+  ],
+  "dailyUsage": {
+    "months": {
+      "2026-04": {
+        "label": "Abril 2026",
+        "days": [
+          { "day": "01", "value": 12 },
+          { "day": "02", "value": 18 },
+          { "day": "03", "value": 9 },
+          { "day": "04", "value": 24 },
+          { "day": "05", "value": 15 },
+          { "day": "06", "value": 28 },
+          { "day": "07", "value": 20 },
+          { "day": "08", "value": 14 },
+          { "day": "09", "value": 26 },
+          { "day": "10", "value": 17 },
+          { "day": "11", "value": 22 },
+          { "day": "12", "value": 34 }
+        ]
+      },
+      "2026-03": {
+        "label": "Marco 2026",
+        "days": [
+          { "day": "20", "value": 8 },
+          { "day": "21", "value": 11 },
+          { "day": "22", "value": 16 },
+          { "day": "23", "value": 13 },
+          { "day": "24", "value": 19 },
+          { "day": "25", "value": 21 },
+          { "day": "26", "value": 14 },
+          { "day": "27", "value": 25 },
+          { "day": "28", "value": 18 },
+          { "day": "29", "value": 20 },
+          { "day": "30", "value": 23 },
+          { "day": "31", "value": 15 }
+        ]
+      }
+    }
+  }
+}
