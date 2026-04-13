@@ -2741,7 +2741,9 @@ if page == "Pipeline Manager":
 
             if "last_opportunity_update" in df.columns:
                 age_df = df.copy()
-                age_df["last_opportunity_update"] = pd.to_datetime(age_df["last_opportunity_update"], errors="coerce")
+                age_df["last_opportunity_update"] = pd.to_datetime(
+                    age_df["last_opportunity_update"], errors="coerce", utc=True
+                ).dt.tz_localize(None)
                 age_df["dias_sem_update"] = (
                     pd.Timestamp.today().normalize() - age_df["last_opportunity_update"].dt.normalize()
                 ).dt.days
