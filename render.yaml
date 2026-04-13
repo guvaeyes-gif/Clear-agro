@@ -52,7 +52,6 @@ services:
   - type: web
     name: codex-usage-monitor
     runtime: static
-    plan: free
     rootDir: docs/codex-monitor
     buildCommand: ""
     staticPublishPath: .
