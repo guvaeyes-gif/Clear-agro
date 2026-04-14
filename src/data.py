@@ -600,7 +600,7 @@ def load_bling_sales_realized_view() -> pd.DataFrame:
     for column in ["cliente", "vendedor", "vendedor_id", "empresa", "customer_state", "invoice_number", "natureza", "natureza_label", "cfop"]:
         if column in df.columns:
             df[column] = df[column].fillna("").astype(str).str.strip()
-    return df
+    return _apply_vendor_map(df, vendor_id_col="vendedor_id", vendor_col="vendedor")
 
 
 @st.cache_data(show_spinner=False)

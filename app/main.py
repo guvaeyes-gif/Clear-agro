@@ -993,14 +993,9 @@ def overlay_targets_actuals_from_realizado(
     sales["mes"] = sales["data"].dt.month.astype(int)
     sales["quarter"] = ((sales["mes"] - 1) // 3 + 1).astype(int)
     sales["empresa_norm"] = sales.get("empresa", pd.Series("", index=sales.index)).fillna("").astype(str).str.strip().str.upper()
-    sales["vendedor_norm"] = sales.get("vendedor_id", sales.get("vendedor", pd.Series("", index=sales.index))).fillna("").astype(str).str.strip().map(_vendor_key)
+    sales["vendedor_id_norm"] = sales.get("vendedor_id", pd.Series("", index=sales.index)).fillna("").astype(str).str.strip().map(_vendor_key)
+    sales["vendedor_name_norm"] = sales.get("vendedor", pd.Series("", index=sales.index)).fillna("").astype(str).str.strip().map(_vendor_key)
     sales["estado_norm"] = sales.get("customer_state", sales.get("estado", pd.Series("", index=sales.index))).fillna("").astype(str).str.strip().str.upper()
-
-    grouped = (
-        sales.groupby(["ano", "mes", "quarter", "empresa_norm", "vendedor_norm", "estado_norm"], dropna=False)["receita"]
-        .sum()
-        .reset_index()
-    )
 
     def _row_realizado(row: pd.Series) -> float:
         try:
@@ -1014,7 +1009,7 @@ def overlay_targets_actuals_from_realizado(
         vendor_value = _vendor_key(row.get(vendor_col, "")) if vendor_col else ""
         company_value = str(row.get(company_col, "") or "").strip().upper() if company_col else ""
 
-        match = grouped[grouped["ano"] == ano]
+        match = sales[sales["ano"] == ano]
         if period_type == "MONTH" and month_value is not None:
             match = match[match["mes"] == month_value]
         elif period_type == "QUARTER" and quarter_value is not None:
@@ -1022,7 +1017,10 @@ def overlay_targets_actuals_from_realizado(
         if company_value:
             match = match[match["empresa_norm"] == company_value]
         if vendor_value:
-            match = match[match["vendedor_norm"] == vendor_value]
+            match = match[
+                (match["vendedor_id_norm"] == vendor_value)
+                | (match["vendedor_name_norm"] == vendor_value)
+            ]
         if state_value:
             match = match[match["estado_norm"] == state_value]
         if match.empty:
@@ -2515,7 +2513,7 @@ if page == "Comparativo de Vendas":
     st.subheader("Comparativo de Vendas")
     st.caption("Analitico comparativo de vendas entre anos, com cortes por mes, produto e cliente.")
 
-    detail_all = load_bling_sales_detail(0)
+    detail_all = load_bling_nfe_detail(0)
     if detail_all.empty or "data" not in detail_all.columns:
         st.info("Sem base detalhada de vendas para montar o comparativo.")
     else:
@@ -2737,7 +2735,7 @@ if page == "Comparativo de Vendas":
                         compare_base = comp_detail.copy()
                         value_col = "valor_total"
                         if view_mode == "Cliente":
-                            client_group_cols = [dimension_col, "ano_label", "pedido_id"]
+                            client_group_cols = [dimension_col, "ano_label", "nfe_id"]
                             if "empresa" in compare_base.columns:
                                 client_group_cols.append("empresa")
                             compare_base = (
