@@ -3630,6 +3630,11 @@ if page == "Metas Comerciais":
 
             if not res["series"].empty:
                 ser = res["series"].rename(columns={"meta_valor": "meta", "realizado_valor": "receita"}).copy()
+                if "periodo" not in ser.columns:
+                    if periodo_tipo == "QUARTER" and "quarter" in ser.columns:
+                        ser["periodo"] = ser["quarter"]
+                    elif "mes" in ser.columns:
+                        ser["periodo"] = ser["mes"]
                 if not realized_summary["series"].empty:
                     ser = ser.drop(columns=["receita"], errors="ignore").merge(
                         realized_summary["series"].rename(columns={"realizado_valor": "receita"}),
