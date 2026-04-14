@@ -1421,7 +1421,7 @@ def prepare_sales_comparison_actual(
 
     missing_years = sorted(set(selected_years) - set(frames[0]["ano"].unique().tolist()) if frames else set(selected_years))
     if missing_years:
-        detail = load_bling_sales_detail(0)
+        detail = load_bling_nfe_detail(0)
         if not detail.empty and {"data", "valor_total"}.issubset(detail.columns):
             hist = detail.copy()
             hist["data"] = pd.to_datetime(hist["data"], errors="coerce")
@@ -1439,7 +1439,7 @@ def prepare_sales_comparison_actual(
                 hist["mes"] = hist["data"].dt.month.astype(int)
                 hist = hist[hist["ano"].isin(missing_years) & hist["mes"].isin(period_months)].copy()
                 if not hist.empty:
-                    group_cols = ["pedido_id", "data", "ano", "mes"]
+                    group_cols = ["nfe_id", "data", "ano", "mes"]
                     if "empresa" in hist.columns:
                         group_cols.append("empresa")
                     hist = hist.groupby(group_cols, dropna=False)["receita"].max().reset_index()
@@ -1472,7 +1472,7 @@ def prepare_sales_comparison_detail(
     effective_ytd: bool,
     selected_quarter: int | None,
 ) -> tuple[pd.DataFrame, str]:
-    detail = load_bling_sales_detail(0)
+    detail = load_bling_nfe_detail(0)
     if detail.empty:
         return pd.DataFrame(), ""
 
@@ -1520,6 +1520,8 @@ def prepare_sales_comparison_detail(
         lambda month_item: pd.Timestamp(year=2000, month=int(month_item), day=1).strftime("%b").upper()
     )
     out["produto"] = out["produto"].fillna("N/D").astype(str).str.strip().str.upper().replace("", "N/D")
+    if "tipo_produto" not in out.columns:
+        out["tipo_produto"] = "NF-E"
     out["tipo_produto"] = out["tipo_produto"].fillna("N/D").astype(str).str.strip().replace("", "N/D")
     out["cliente"] = out["cliente"].fillna("SEM_CLIENTE").astype(str).str.strip().str.upper().replace("", "SEM_CLIENTE")
     out["empresa"] = out["empresa"].fillna("").astype(str).str.upper()
