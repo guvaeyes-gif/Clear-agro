@@ -43,3 +43,4 @@ Scripts produtivos atuais continuam ativos em:
 - Estrategia de branches: `docs/governanca/branching_strategy.md`
 - Runbook dashboard financeiro: `docs/runbooks/dashboard_financeiro_v1_runbook.md`
 - Deploy publico CRM review: `docs/runbooks/render_crm_public_review.md`
+- Runbook metas comerciais Google Sheets: `docs/runbooks/metas_comerciais_google_sheets_runbook.md`

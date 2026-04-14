@@ -39,6 +39,53 @@ STATUS_FROM_DB = {value: key for key, value in STATUS_TO_DB.items()}
 PERIOD_TO_DB = {'MONTH': 'month', 'QUARTER': 'quarter'}
 PERIOD_FROM_DB = {value: key for key, value in PERIOD_TO_DB.items()}
 CUSTODY_TYPE_TO_DB = {'CONTA': 'account', 'OPORTUNIDADE': 'opportunity', 'CLIENTE': 'customer', 'OUTRO': 'other'}
+TARGET_IMPORT_COLUMNS = [
+    'ano',
+    'periodo_tipo',
+    'mes',
+    'quarter',
+    'estado',
+    'vendedor_id',
+    'empresa',
+    'canal',
+    'cultura',
+    'meta_valor',
+    'meta_volume',
+    'realizado_valor',
+    'realizado_volume',
+    'status',
+    'observacoes',
+]
+TARGET_IMPORT_STATUSES = {'ATIVO', 'PAUSADO', 'DESLIGADO', 'TRANSFERIDO'}
+TARGET_IMPORT_ALIASES = {
+    'year': 'ano',
+    'target_year': 'ano',
+    'period_type': 'periodo_tipo',
+    'periodo': 'periodo_tipo',
+    'period': 'periodo_tipo',
+    'month': 'mes',
+    'month_num': 'mes',
+    'quarter_num': 'quarter',
+    'trimestre': 'quarter',
+    'uf': 'estado',
+    'state': 'estado',
+    'sales_rep_code': 'vendedor_id',
+    'sales_rep_id': 'vendedor_id',
+    'vendedor': 'vendedor_id',
+    'company': 'empresa',
+    'channel': 'canal',
+    'crop': 'cultura',
+    'target_value': 'meta_valor',
+    'meta': 'meta_valor',
+    'value': 'meta_valor',
+    'target_volume': 'meta_volume',
+    'actual_value': 'realizado_valor',
+    'realizado': 'realizado_valor',
+    'actual_volume': 'realizado_volume',
+    'notes': 'observacoes',
+    'observacao': 'observacoes',
+    'observacoes': 'observacoes',
+}
 
 
 def _env(name: str) -> str:
@@ -240,6 +287,305 @@ def _prepare_metas_df(df: pd.DataFrame) -> pd.DataFrame:
     return out
 
 
+def _normalize_import_columns(df: pd.DataFrame) -> pd.DataFrame:
+    out = df.copy()
+    out.columns = [str(col).replace('\ufeff', '').strip().lower().replace(' ', '_') for col in out.columns]
+    rename: dict[str, str] = {}
+    for source, target in TARGET_IMPORT_ALIASES.items():
+        if source in out.columns and target not in out.columns:
+            rename[source] = target
+    if rename:
+        out = out.rename(columns=rename)
+    return out
+
+
+def _safe_text(value: Any) -> str:
+    return str(_clean_value(value) or '').strip()
+
+
+def prepare_sales_targets_import(
+    df: pd.DataFrame,
+    default_empresa: str | None = None,
+) -> tuple[pd.DataFrame, pd.DataFrame, list[str]]:
+    warnings: list[str] = []
+    if df.empty:
+        return pd.DataFrame(columns=TARGET_IMPORT_COLUMNS), pd.DataFrame(columns=['row_number', 'errors']), warnings
+
+    out = _normalize_import_columns(df)
+    if 'data' in out.columns:
+        out['data'] = pd.to_datetime(out['data'], errors='coerce')
+
+    if 'ano' in out.columns:
+        out['ano'] = pd.to_numeric(out['ano'], errors='coerce')
+    elif 'data' in out.columns:
+        out['ano'] = out['data'].dt.year
+
+    if 'mes' in out.columns:
+        out['mes'] = pd.to_numeric(out['mes'], errors='coerce')
+    elif 'data' in out.columns:
+        out['mes'] = out['data'].dt.month
+    else:
+        out['mes'] = pd.NA
+
+    if 'quarter' in out.columns:
+        out['quarter'] = pd.to_numeric(out['quarter'], errors='coerce')
+    elif 'data' in out.columns:
+        out['quarter'] = ((out['data'].dt.month - 1) // 3 + 1)
+    else:
+        out['quarter'] = pd.NA
+
+    for column in ['meta_valor', 'meta_volume', 'realizado_valor', 'realizado_volume']:
+        if column in out.columns:
+            out[column] = pd.to_numeric(out[column], errors='coerce')
+
+    if 'status' in out.columns:
+        out['status'] = out['status'].fillna('').astype(str).str.strip().str.upper()
+    else:
+        out['status'] = 'ATIVO'
+    out['status'] = out['status'].replace('', 'ATIVO')
+
+    if 'periodo_tipo' in out.columns:
+        out['periodo_tipo'] = out['periodo_tipo'].fillna('').astype(str).str.strip().str.upper()
+    else:
+        out['periodo_tipo'] = ''
+    out['periodo_tipo'] = out['periodo_tipo'].replace({'MONTHLY': 'MONTH', 'TRIMESTRE': 'QUARTER'})
+    inferred_month = out['mes'].notna()
+    inferred_quarter = out['quarter'].notna()
+    out.loc[out['periodo_tipo'].eq('') & inferred_quarter, 'periodo_tipo'] = 'QUARTER'
+    out.loc[out['periodo_tipo'].eq('') & inferred_month & ~inferred_quarter, 'periodo_tipo'] = 'MONTH'
+    out['periodo_tipo'] = out['periodo_tipo'].replace('', 'MONTH')
+
+    if 'empresa' in out.columns:
+        out['empresa'] = out['empresa'].fillna('').astype(str).str.strip().str.upper()
+    else:
+        out['empresa'] = ''
+    if default_empresa:
+        default_empresa_txt = str(default_empresa).strip().upper()
+        if default_empresa_txt and default_empresa_txt != 'AUTO':
+            out.loc[out['empresa'].eq(''), 'empresa'] = default_empresa_txt
+    if out['empresa'].eq('').any():
+        out.loc[out['empresa'].eq(''), 'empresa'] = 'CZ'
+        warnings.append('Algumas linhas estavam sem empresa; foi aplicado o fallback CZ.')
+
+    for column in ['estado', 'canal', 'cultura', 'vendedor_id']:
+        if column in out.columns:
+            out[column] = out[column].fillna('').astype(str).str.strip()
+    out['estado'] = out.get('estado', pd.Series('', index=out.index)).fillna('').astype(str).str.strip().str.upper()
+    out['canal'] = out.get('canal', pd.Series('', index=out.index)).fillna('').astype(str).str.strip().str.upper()
+    out['cultura'] = out.get('cultura', pd.Series('', index=out.index)).fillna('').astype(str).str.strip().str.upper()
+    out['vendedor_id'] = out.get('vendedor_id', pd.Series('', index=out.index)).fillna('').astype(str).str.strip()
+    out['observacoes'] = out.get('observacoes', pd.Series('', index=out.index)).fillna('').astype(str).str.strip()
+
+    valid_rows: list[dict[str, Any]] = []
+    invalid_rows: list[dict[str, Any]] = []
+
+    for idx, row in out.iterrows():
+        errors: list[str] = []
+        ano = row.get('ano')
+        estado = _safe_text(row.get('estado')).upper()
+        periodo_tipo = _safe_text(row.get('periodo_tipo')).upper() or 'MONTH'
+        mes = row.get('mes')
+        quarter = row.get('quarter')
+        meta_valor = row.get('meta_valor')
+
+        if pd.isna(ano):
+            errors.append('ano ausente')
+        else:
+            ano = int(ano)
+            if ano < 2000:
+                errors.append('ano invalido')
+
+        if not estado or len(estado) != 2:
+            errors.append('estado ausente ou invalido')
+
+        if periodo_tipo not in {'MONTH', 'QUARTER'}:
+            errors.append('periodo_tipo deve ser MONTH ou QUARTER')
+        elif periodo_tipo == 'MONTH':
+            if pd.isna(mes):
+                errors.append('mes obrigatorio para MONTH')
+            else:
+                mes = int(mes)
+                if mes < 1 or mes > 12:
+                    errors.append('mes fora do intervalo 1-12')
+            quarter = None
+        else:
+            if pd.isna(quarter):
+                errors.append('quarter obrigatorio para QUARTER')
+            else:
+                quarter = int(quarter)
+                if quarter < 1 or quarter > 4:
+                    errors.append('quarter fora do intervalo 1-4')
+            mes = None
+
+        if pd.isna(meta_valor):
+            errors.append('meta_valor obrigatorio')
+        else:
+            meta_valor = float(meta_valor)
+            if meta_valor < 0:
+                errors.append('meta_valor nao pode ser negativo')
+
+        status = _safe_text(row.get('status')).upper() or 'ATIVO'
+        if status not in TARGET_IMPORT_STATUSES:
+            errors.append('status invalido')
+
+        if errors:
+            invalid_rows.append(
+                {
+                    'row_number': idx + 2,
+                    'errors': '; '.join(errors),
+                    **row.to_dict(),
+                }
+            )
+            continue
+
+        valid_rows.append(
+            {
+                'ano': int(ano),
+                'periodo_tipo': periodo_tipo,
+                'mes': mes,
+                'quarter': quarter,
+                'estado': estado,
+                'vendedor_id': _safe_text(row.get('vendedor_id')),
+                'empresa': _safe_text(row.get('empresa')).upper(),
+                'canal': _safe_text(row.get('canal')).upper() or None,
+                'cultura': _safe_text(row.get('cultura')).upper() or None,
+                'meta_valor': float(meta_valor),
+                'meta_volume': _clean_value(row.get('meta_volume')),
+                'realizado_valor': _clean_value(row.get('realizado_valor')),
+                'realizado_volume': _clean_value(row.get('realizado_volume')),
+                'status': status,
+                'observacoes': _safe_text(row.get('observacoes')) or None,
+            }
+        )
+
+    return pd.DataFrame(valid_rows), pd.DataFrame(invalid_rows), warnings
+
+
+def _spreadsheet_external_ref(row: Dict[str, Any]) -> str:
+    parts = [
+        str(row.get('ano', '') or ''),
+        str(row.get('periodo_tipo', '') or ''),
+        str(row.get('mes', '') or ''),
+        str(row.get('quarter', '') or ''),
+        str(row.get('estado', '') or ''),
+        str(row.get('vendedor_id', '') or ''),
+        str(row.get('empresa', '') or ''),
+        str(row.get('canal', '') or ''),
+        str(row.get('cultura', '') or ''),
+    ]
+    return 'spreadsheet:' + '|'.join(parts)
+
+
+def build_quarter_rollups_from_monthly(valid_rows: pd.DataFrame) -> pd.DataFrame:
+    if valid_rows.empty or 'periodo_tipo' not in valid_rows.columns:
+        return pd.DataFrame(columns=TARGET_IMPORT_COLUMNS)
+    monthly = valid_rows[valid_rows['periodo_tipo'].astype(str).str.upper() == 'MONTH'].copy()
+    if monthly.empty:
+        return pd.DataFrame(columns=TARGET_IMPORT_COLUMNS)
+
+    monthly['mes'] = pd.to_numeric(monthly.get('mes'), errors='coerce')
+    monthly = monthly[monthly['mes'].notna()].copy()
+    if monthly.empty:
+        return pd.DataFrame(columns=TARGET_IMPORT_COLUMNS)
+
+    monthly['quarter'] = ((monthly['mes'].astype(int) - 1) // 3 + 1).astype(int)
+    monthly['meta_valor'] = pd.to_numeric(monthly.get('meta_valor'), errors='coerce').fillna(0)
+    for column in ['meta_volume', 'realizado_valor', 'realizado_volume']:
+        if column in monthly.columns:
+            monthly[column] = pd.to_numeric(monthly[column], errors='coerce').fillna(0)
+        else:
+            monthly[column] = 0
+    monthly['empresa'] = monthly.get('empresa', pd.Series('', index=monthly.index)).fillna('').astype(str).str.upper()
+    monthly['estado'] = monthly.get('estado', pd.Series('', index=monthly.index)).fillna('').astype(str).str.upper()
+    monthly['vendedor_id'] = monthly.get('vendedor_id', pd.Series('', index=monthly.index)).fillna('').astype(str).str.strip()
+    monthly['canal'] = monthly.get('canal', pd.Series('', index=monthly.index)).fillna('').astype(str).str.upper()
+    monthly['cultura'] = monthly.get('cultura', pd.Series('', index=monthly.index)).fillna('').astype(str).str.upper()
+    monthly['status'] = monthly.get('status', pd.Series('ATIVO', index=monthly.index)).fillna('ATIVO').astype(str).str.upper()
+
+    group_cols = ['ano', 'quarter', 'estado', 'vendedor_id', 'empresa', 'canal', 'cultura']
+    sums = (
+        monthly.groupby(group_cols, dropna=False)[['meta_valor', 'meta_volume', 'realizado_valor', 'realizado_volume']]
+        .sum()
+        .reset_index()
+    )
+    sums['periodo_tipo'] = 'QUARTER'
+    sums['mes'] = pd.NA
+    sums['status'] = 'ATIVO'
+    sums['observacoes'] = None
+    ordered_cols = [col for col in TARGET_IMPORT_COLUMNS if col in sums.columns]
+    return sums[ordered_cols]
+
+
+def import_sales_targets_dataframe(
+    df: pd.DataFrame,
+    *,
+    actor_id: str = 'system',
+    default_empresa: str | None = None,
+    include_quarter_rollup: bool = True,
+) -> dict[str, Any]:
+    valid_rows, invalid_rows, warnings = prepare_sales_targets_import(df, default_empresa=default_empresa)
+    quarter_rows = build_quarter_rollups_from_monthly(valid_rows) if include_quarter_rollup else pd.DataFrame(columns=TARGET_IMPORT_COLUMNS)
+    if not quarter_rows.empty:
+        valid_rows = pd.concat([valid_rows, quarter_rows], ignore_index=True)
+    result: dict[str, Any] = {
+        'created': 0,
+        'updated': 0,
+        'skipped': int(len(invalid_rows)),
+        'rollup_rows': int(len(quarter_rows)),
+        'warnings': warnings,
+        'invalid_rows': invalid_rows,
+    }
+    if valid_rows.empty:
+        result['message'] = 'Nenhuma linha valida para importar.'
+        return result
+
+    for _, row in valid_rows.iterrows():
+        payload = row.to_dict()
+        payload['source_system'] = 'spreadsheet'
+        payload['external_ref'] = _spreadsheet_external_ref(payload)
+        update_payload = {key: value for key, value in payload.items() if key not in {'source_system', 'external_ref'}}
+        filters = {
+            'ano': payload['ano'],
+            'periodo_tipo': payload['periodo_tipo'],
+            'estado': payload['estado'],
+            'empresa': payload['empresa'],
+        }
+        if payload.get('mes') is not None:
+            filters['mes'] = payload['mes']
+        if payload.get('quarter') is not None:
+            filters['quarter'] = payload['quarter']
+        if payload.get('vendedor_id'):
+            filters['vendedor_id'] = payload['vendedor_id']
+        if payload.get('canal'):
+            filters['canal'] = payload['canal']
+        if payload.get('cultura'):
+            filters['cultura'] = payload['cultura']
+
+        existing = list_metas(filters)
+        if not existing.empty:
+            match = existing.copy()
+            for column in ['vendedor_id', 'canal', 'cultura']:
+                value = _safe_text(payload.get(column)).upper()
+                series = match.get(column, pd.Series('', index=match.index)).fillna('').astype(str).str.strip().str.upper()
+                if value:
+                    match = match[series.eq(value)]
+                else:
+                    match = match[series.eq('')]
+            existing = match
+        if existing.empty:
+            create_meta(payload, actor_id=actor_id, source_system='spreadsheet', external_ref=payload['external_ref'])
+            result['created'] += 1
+        else:
+            update_meta(existing.iloc[0]['id'], update_payload, actor_id=actor_id)
+            result['updated'] += 1
+
+    result['message'] = (
+        f"Importação concluída: {result['created']} criadas, {result['updated']} atualizadas, "
+        f"{result['skipped']} rejeitadas."
+    )
+    return result
+
+
 def _build_rest_filters(filters: Dict[str, Any] | None = None) -> dict[str, str]:
     filters = filters or {}
     params: dict[str, str] = {
@@ -406,7 +752,12 @@ def list_metas(filters: Dict[str, Any] | None = None) -> pd.DataFrame:
     return sqlite_legacy.list_metas(filters)
 
 
-def create_meta(data: Dict[str, Any], actor_id: str = 'system') -> str | int:
+def create_meta(
+    data: Dict[str, Any],
+    actor_id: str = 'system',
+    source_system: str = 'manual',
+    external_ref: str | None = None,
+) -> str | int:
     mode = _backend_mode()
     if mode == 'sqlite':
         return sqlite_legacy.create_meta(data, actor_id=actor_id)
@@ -425,7 +776,8 @@ def create_meta(data: Dict[str, Any], actor_id: str = 'system') -> str | int:
         'actual_value': _clean_value(data.get('realizado_valor')),
         'actual_volume': _clean_value(data.get('realizado_volume')),
         'status': _map_status_to_db(data.get('status')),
-        'source_system': 'manual',
+        'source_system': source_system,
+        'external_ref': _clean_value(external_ref),
         'notes': _clean_value(data.get('observacoes')),
         'metadata': {'actor_id': actor_id},
     }
@@ -438,16 +790,17 @@ def create_meta(data: Dict[str, Any], actor_id: str = 'system') -> str | int:
                     insert into public.sales_targets (
                       target_year, period_type, month_num, quarter_num, state, sales_rep_code,
                       channel, crop, target_value, target_volume, actual_value, actual_volume,
-                      status, source_system, notes, metadata
+                      status, source_system, external_ref, notes, metadata
                     )
-                    values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     returning id::text
                     ''',
                     (
                         payload['target_year'], payload['period_type'], payload['month_num'], payload['quarter_num'],
                         payload['state'], payload['sales_rep_code'], payload['channel'], payload['crop'],
                         payload['target_value'], payload['target_volume'], payload['actual_value'], payload['actual_volume'],
-                        payload['status'], payload['source_system'], payload['notes'], json.dumps(payload['metadata'])
+                        payload['status'], payload['source_system'], payload['external_ref'], payload['notes'],
+                        json.dumps(payload['metadata'])
                     ),
                 )
                 row = cur.fetchone()

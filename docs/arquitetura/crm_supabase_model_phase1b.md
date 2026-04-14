@@ -42,3 +42,11 @@ Fechar o modelo de dados CRM no Supabase para substituir as dependencias locais 
 2. Substituir `src/metas_db.py` por um repositorio Supabase/Postgres.
 3. Migrar a pagina `Metas Comerciais` do app para ler e gravar em `sales_targets`.
 4. Migrar a aba de `Transferencia` para `sales_rep_asset_custody`.
+
+## Fonte compartilhada de metas
+- Fonte recomendada: Google Sheets compartilhada com a aba `metas`.
+- Fluxo operacional:
+  1. editar a planilha compartilhada;
+  2. clicar no botao `Validar planilha compartilhada` no dashboard;
+  3. clicar em `Sincronizar agora`.
+- O importador normaliza colunas, grava as metas mensais e cria automaticamente o fechamento trimestral somando os 3 meses.

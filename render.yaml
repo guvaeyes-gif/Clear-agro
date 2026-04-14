@@ -28,6 +28,16 @@ services:
         value: "true"
       - key: STREAMLIT_BROWSER_GATHER_USAGE_STATS
         value: "false"
+      - key: GOOGLE_SERVICE_ACCOUNT_JSON
+        sync: false
+      - key: GOOGLE_SERVICE_ACCOUNT_JSON_B64
+        sync: false
+      - key: GOOGLE_SHEETS_SPREADSHEET_ID
+        sync: false
+      - key: GOOGLE_SHEETS_TARGETS_SHEET
+        value: "metas"
+      - key: GOOGLE_SHEETS_TARGETS_RANGE
+        value: "A:O"
     buildCommand: python -m pip install --upgrade pip && pip install -r requirements.txt
     startCommand: streamlit run app/main.py --server.address 0.0.0.0 --server.port $PORT --server.headless true
     autoDeploy: true

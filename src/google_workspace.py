@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import base64
+import json
 import os
 from pathlib import Path
 from typing import Any
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
+from google.oauth2 import service_account
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 
@@ -15,6 +18,11 @@ CLIENT_SECRET_FILE = Path(
     os.getenv("GOOGLE_OAUTH_CLIENT_SECRET_FILE", str(GOOGLE_DIR / "client_secret.json"))
 )
 TOKEN_FILE = Path(os.getenv("GOOGLE_OAUTH_TOKEN_FILE", str(GOOGLE_DIR / "token.json")))
+SERVICE_ACCOUNT_FILE = Path(
+    os.getenv("GOOGLE_SERVICE_ACCOUNT_FILE", str(GOOGLE_DIR / "service_account.json"))
+)
+SERVICE_ACCOUNT_JSON = os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON", "").strip()
+SERVICE_ACCOUNT_JSON_B64 = os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON_B64", "").strip()
 
 DEFAULT_SCOPES = [
     "https://www.googleapis.com/auth/gmail.readonly",
@@ -26,9 +34,33 @@ DEFAULT_SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
 ]
 
+SHEETS_SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
+
 
 def _ensure_google_dir() -> None:
     GOOGLE_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def _load_service_account_info() -> dict[str, Any] | None:
+    payload = SERVICE_ACCOUNT_JSON
+    if not payload and SERVICE_ACCOUNT_JSON_B64:
+        payload = base64.b64decode(SERVICE_ACCOUNT_JSON_B64).decode("utf-8")
+    if not payload and SERVICE_ACCOUNT_FILE.exists():
+        payload = SERVICE_ACCOUNT_FILE.read_text(encoding="utf-8")
+    if not payload:
+        return None
+    return json.loads(payload)
+
+
+def get_google_sheets_credentials(scopes: list[str] | None = None) -> Credentials:
+    use_scopes = scopes or SHEETS_SCOPES
+    service_account_info = _load_service_account_info()
+    if service_account_info:
+        return service_account.Credentials.from_service_account_info(
+            service_account_info,
+            scopes=use_scopes,
+        )
+    return get_google_credentials(scopes=use_scopes)
 
 
 def get_google_credentials(
@@ -62,6 +94,13 @@ def build_google_service(service_name: str, version: str, scopes: list[str] | No
     return build(service_name, version, credentials=creds)
 
 
+def build_google_sheets_service(
+    service_name: str = "sheets", version: str = "v4", scopes: list[str] | None = None
+) -> Any:
+    creds = get_google_sheets_credentials(scopes=scopes)
+    return build(service_name, version, credentials=creds)
+
+
 def gmail_profile() -> dict[str, Any]:
     svc = build_google_service("gmail", "v1")
     return svc.users().getProfile(userId="me").execute()
@@ -87,7 +126,7 @@ def list_drive_files(page_size: int = 10) -> list[dict[str, Any]]:
 
 
 def read_sheet_range(spreadsheet_id: str, range_name: str) -> list[list[Any]]:
-    svc = build_google_service("sheets", "v4")
+    svc = build_google_sheets_service()
     data = (
         svc.spreadsheets()
         .values()
@@ -103,7 +142,7 @@ def write_sheet_range(
     values: list[list[Any]],
     value_input_option: str = "USER_ENTERED",
 ) -> dict[str, Any]:
-    svc = build_google_service("sheets", "v4")
+    svc = build_google_sheets_service()
     body = {"values": values}
     data = (
         svc.spreadsheets()

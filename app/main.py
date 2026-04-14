@@ -1,6 +1,7 @@
 import os
 import json
 import base64
+import subprocess
 import unicodedata
 import streamlit as st
 import pandas as pd
@@ -34,7 +35,18 @@ from src.data import (
 )
 from src.metrics import compute_kpis, vendedor_performance_period, meta_realizado_mensal, sparkline_last_months, period_label
 from src.viz import fmt_brl_abbrev, fmt_pct, bar_meta_realizado, bar_meta_realizado_single, sparkline
-from src.metas_db import init_db, list_metas, create_meta, update_meta, pause_metas, summary_targets, transfer_assets, transfer_metas_futuras, seed_demo
+from src.metas_db import (
+    init_db,
+    list_metas,
+    create_meta,
+    update_meta,
+    pause_metas,
+    summary_targets,
+    transfer_assets,
+    transfer_metas_futuras,
+    seed_demo,
+    prepare_sales_targets_import,
+)
 from src.telegram import build_alerts_message, send_telegram_message, telegram_enabled
 
 PROFILE = os.getenv("CRM_PROFILE", "director").strip().lower()
@@ -1173,13 +1185,11 @@ def format_targets_listing(df: pd.DataFrame) -> pd.DataFrame:
     if "realizado_valor" in out.columns:
         out["realizado_valor"] = pd.to_numeric(out["realizado_valor"], errors="coerce").fillna(0)
     if {"meta_valor", "realizado_valor"}.issubset(out.columns):
-        if "atingimento_pct" not in out.columns:
-            out["atingimento_pct"] = out.apply(
-                lambda row: (row["realizado_valor"] / row["meta_valor"] * 100) if row["meta_valor"] else 0.0,
-                axis=1,
-            )
-        if "gap_valor" not in out.columns:
-            out["gap_valor"] = out["realizado_valor"] - out["meta_valor"]
+        out["atingimento_pct"] = out.apply(
+            lambda row: (row["realizado_valor"] / row["meta_valor"] * 100) if row["meta_valor"] else 0.0,
+            axis=1,
+        )
+        out["gap_valor"] = out["realizado_valor"] - out["meta_valor"]
     if "status" in out.columns:
         out["status"] = out["status"].apply(status_chip)
     if "meta_valor" in out.columns:
@@ -1300,13 +1310,11 @@ def render_targets_executive_rankings(
             vendor_rank = vendedor_df.copy()
             vendor_rank["meta_valor"] = pd.to_numeric(vendor_rank["meta_valor"], errors="coerce").fillna(0)
             vendor_rank["realizado_valor"] = pd.to_numeric(vendor_rank["realizado_valor"], errors="coerce").fillna(0)
-            if "gap_valor" not in vendor_rank.columns:
-                vendor_rank["gap_valor"] = vendor_rank["realizado_valor"] - vendor_rank["meta_valor"]
-            if "atingimento_pct" not in vendor_rank.columns:
-                vendor_rank["atingimento_pct"] = vendor_rank.apply(
-                    lambda row: (row["realizado_valor"] / row["meta_valor"] * 100) if row["meta_valor"] else 0.0,
-                    axis=1,
-                )
+            vendor_rank["gap_valor"] = vendor_rank["realizado_valor"] - vendor_rank["meta_valor"]
+            vendor_rank["atingimento_pct"] = vendor_rank.apply(
+                lambda row: (row["realizado_valor"] / row["meta_valor"] * 100) if row["meta_valor"] else 0.0,
+                axis=1,
+            )
             if vendedor_name_col in vendor_rank.columns:
                 vendor_rank["vendedor_label"] = vendor_rank[vendedor_name_col].fillna("").astype(str).str.strip()
             else:
@@ -1789,16 +1797,105 @@ def format_targets_table(df: pd.DataFrame) -> pd.DataFrame:
         out["meta_valor"] = pd.to_numeric(out["meta_valor"], errors="coerce").fillna(0)
     if "realizado_valor" in out.columns:
         out["realizado_valor"] = pd.to_numeric(out["realizado_valor"], errors="coerce").fillna(0)
-    if "atingimento_pct" not in out.columns and {"meta_valor", "realizado_valor"}.issubset(out.columns):
+    if {"meta_valor", "realizado_valor"}.issubset(out.columns):
         out["atingimento_pct"] = out.apply(
             lambda row: (row["realizado_valor"] / row["meta_valor"] * 100) if row["meta_valor"] else 0.0,
             axis=1,
         )
-    if "gap_valor" not in out.columns and {"meta_valor", "realizado_valor"}.issubset(out.columns):
         out["gap_valor"] = out["realizado_valor"] - out["meta_valor"]
     if "status" in out.columns:
         out["status"] = out["status"].apply(status_chip)
     return out
+
+
+def build_sales_targets_template() -> pd.DataFrame:
+    return pd.DataFrame(
+        columns=[
+            "ano",
+            "periodo_tipo",
+            "mes",
+            "quarter",
+            "estado",
+            "vendedor_id",
+            "empresa",
+            "canal",
+            "cultura",
+            "meta_valor",
+            "meta_volume",
+            "realizado_valor",
+            "realizado_volume",
+            "status",
+            "observacoes",
+        ]
+    )
+
+
+def read_uploaded_targets_file(uploaded_file) -> pd.DataFrame:
+    file_name = getattr(uploaded_file, "name", "planilha")
+    suffix = Path(file_name).suffix.lower()
+    raw = uploaded_file.getvalue()
+    if suffix in {".xlsx", ".xls", ".xlsm"}:
+        xls = pd.ExcelFile(BytesIO(raw))
+        sheet_name = "metas" if "metas" in xls.sheet_names else xls.sheet_names[0]
+        return pd.read_excel(BytesIO(raw), sheet_name=sheet_name)
+    if suffix in {".csv", ".txt"}:
+        return pd.read_csv(BytesIO(raw), sep=None, engine="python", encoding="utf-8-sig")
+    raise ValueError("Formato nao suportado. Use CSV ou XLSX.")
+
+
+def save_uploaded_targets_file(uploaded_file, target_path: Path) -> Path:
+    target_path.parent.mkdir(parents=True, exist_ok=True)
+    target_path.write_bytes(uploaded_file.getvalue())
+    return target_path
+
+
+def run_sales_targets_import_script(input_path: Path, default_empresa: str, dry_run: bool = False) -> tuple[bool, str]:
+    script_path = ROOT / "scripts" / "import_sales_targets.py"
+    if not script_path.exists():
+        return False, f"Script nao encontrado: {script_path}"
+    args = [
+        sys.executable,
+        str(script_path),
+        "--input",
+        str(input_path),
+        "--default-company",
+        default_empresa,
+    ]
+    if dry_run:
+        args.append("--dry-run")
+    proc = subprocess.run(args, cwd=ROOT, capture_output=True, text=True, check=False)
+    output = (proc.stdout or "") + ("\n" + proc.stderr if proc.stderr else "")
+    return proc.returncode == 0, output.strip()
+
+
+def run_shared_targets_sync_script(default_empresa: str, dry_run: bool = False) -> tuple[bool, str]:
+    script_path = ROOT / "scripts" / "import_sales_targets.py"
+    if not script_path.exists():
+        return False, f"Script nao encontrado: {script_path}"
+    spreadsheet_id = os.getenv("GOOGLE_SHEETS_SPREADSHEET_ID", "").strip()
+    sheet_name = os.getenv("GOOGLE_SHEETS_TARGETS_SHEET", "metas").strip()
+    sheet_range = os.getenv("GOOGLE_SHEETS_TARGETS_RANGE", "A:O").strip()
+    if not spreadsheet_id:
+        return False, "GOOGLE_SHEETS_SPREADSHEET_ID nao configurado."
+    args = [
+        sys.executable,
+        str(script_path),
+        "--source",
+        "google-sheet",
+        "--spreadsheet-id",
+        spreadsheet_id,
+        "--sheet",
+        sheet_name,
+        "--range",
+        sheet_range,
+        "--default-company",
+        default_empresa,
+    ]
+    if dry_run:
+        args.append("--dry-run")
+    proc = subprocess.run(args, cwd=ROOT, capture_output=True, text=True, check=False)
+    output = (proc.stdout or "") + ("\n" + proc.stderr if proc.stderr else "")
+    return proc.returncode == 0, output.strip()
 
 
 init_db()
@@ -3530,7 +3627,7 @@ if page == "Auditoria":
 # Page E - Metas Comerciais
 if page == "Metas Comerciais":
     st.subheader("Metas Comerciais")
-    tabs = st.tabs(["Executive Summary", "Metas", "Cadastro", "Transferencia"])
+    tabs = st.tabs(["Executive Summary", "Metas", "Cadastro", "Importação", "Transferencia"])
     targets_view_all = apply_acl_codes(load_sales_targets_view(), vendor_col="sales_rep_code")
     targets_view_all = filter_targets_company_scope(targets_view_all, sel_company)
     targets_view_all = filter_vendor_scope(
@@ -3932,6 +4029,139 @@ if page == "Metas Comerciais":
                     st.success("Meta criada.")
 
     with tabs[3]:
+        st.write("Importar metas por planilha")
+        spreadsheet_id = os.getenv("GOOGLE_SHEETS_SPREADSHEET_ID", "").strip()
+        sheet_name = os.getenv("GOOGLE_SHEETS_TARGETS_SHEET", "metas").strip()
+        sheet_range = os.getenv("GOOGLE_SHEETS_TARGETS_RANGE", "A:O").strip()
+        if spreadsheet_id:
+            st.success(f"Fonte compartilhada: {sheet_name}!{sheet_range}")
+        else:
+            st.warning("GOOGLE_SHEETS_SPREADSHEET_ID nao configurado. O sync compartilhado nao vai funcionar ainda.")
+
+        default_company_sync = st.selectbox(
+            "Empresa padrao do sync",
+            ["AUTO", "CZ", "CR"],
+            index=0 if sel_company == "TODOS" else (1 if sel_company == "CZ" else 2),
+            key="sync_metas_empresa",
+        )
+        default_empresa_sync = sel_company if sel_company in {"CZ", "CR"} else "CZ"
+        if default_company_sync != "AUTO":
+            default_empresa_sync = default_company_sync
+
+        col_sync_1, col_sync_2 = st.columns(2)
+        with col_sync_1:
+            if st.button("Validar planilha compartilhada", key="validar_sheet_compartilhada"):
+                ok, output = run_shared_targets_sync_script(default_empresa_sync, dry_run=True)
+                if ok:
+                    st.success("Validacao concluida.")
+                else:
+                    st.error("Validacao com erro.")
+                if output:
+                    st.code(output, language="text")
+        with col_sync_2:
+            if st.button("Sincronizar agora", key="sync_sheet_compartilhada"):
+                ok, output = run_shared_targets_sync_script(default_empresa_sync, dry_run=False)
+                if ok:
+                    load_sales_targets_view.clear()
+                    try:
+                        load_sheets.clear()
+                    except Exception:
+                        pass
+                    st.success("Sincronizacao concluida.")
+                    if output:
+                        st.code(output, language="text")
+                    st.rerun()
+                else:
+                    st.error("Sincronizacao com erro.")
+                    if output:
+                        st.code(output, language="text")
+
+        st.caption("Fallback manual: subir arquivo local e usar os botoes para validar ou importar pelo comando.")
+        template_df = build_sales_targets_template()
+        template_bytes = template_df.to_csv(index=False).encode("utf-8")
+        st.download_button(
+            "Baixar template CSV",
+            data=template_bytes,
+            file_name="template_metas_comerciais.csv",
+            mime="text/csv",
+        )
+        uploaded_targets = st.file_uploader(
+            "Carregar planilha de metas",
+            type=["csv", "xlsx", "xls", "xlsm"],
+            key="upload_metas_comerciais",
+        )
+        default_company = st.selectbox(
+            "Empresa padrao",
+            ["AUTO", "CZ", "CR"],
+            index=0 if sel_company == "TODOS" else (1 if sel_company == "CZ" else 2),
+            key="upload_metas_empresa",
+        )
+        staging_file = ROOT / "data" / "staging" / "metas_comerciais_import.xlsx"
+        if uploaded_targets is not None:
+            try:
+                uploaded_df = read_uploaded_targets_file(uploaded_targets)
+            except Exception as exc:
+                st.error(f"Falha ao ler a planilha: {exc}")
+            else:
+                default_empresa = sel_company if sel_company in {"CZ", "CR"} else "CZ"
+                if default_company != "AUTO":
+                    default_empresa = default_company
+                preview_valid, preview_invalid, preview_warnings = prepare_sales_targets_import(
+                    uploaded_df,
+                    default_empresa=default_empresa,
+                )
+                st.write("Prévia da importação")
+                if preview_warnings:
+                    for warning in preview_warnings:
+                        st.info(warning)
+                st.caption(f"{len(preview_valid)} linhas válidas | {len(preview_invalid)} linhas inválidas")
+                if not preview_valid.empty:
+                    st.dataframe(
+                        format_targets_listing(preview_valid.head(200)),
+                        height=260,
+                        width="stretch",
+                    )
+                if not preview_invalid.empty:
+                    st.warning("Algumas linhas foram rejeitadas. Revise antes de importar.")
+                    st.dataframe(preview_invalid.head(200), height=220, width="stretch")
+                colv1, colv2 = st.columns(2)
+                with colv1:
+                    if st.button("Validar planilha (comando)", key="validar_metas_planilha"):
+                        try:
+                            saved_path = save_uploaded_targets_file(uploaded_targets, staging_file)
+                            ok, output = run_sales_targets_import_script(saved_path, default_empresa, dry_run=True)
+                        except Exception as exc:
+                            st.error(f"Falha ao validar metas: {exc}")
+                        else:
+                            if ok:
+                                st.success("Validacao concluida.")
+                            else:
+                                st.error("Validacao com erro.")
+                            if output:
+                                st.code(output, language="text")
+                with colv2:
+                    if st.button("Subir planilha (comando)", key="importar_metas_planilha"):
+                        try:
+                            saved_path = save_uploaded_targets_file(uploaded_targets, staging_file)
+                            ok, output = run_sales_targets_import_script(saved_path, default_empresa, dry_run=False)
+                        except Exception as exc:
+                            st.error(f"Falha ao importar metas: {exc}")
+                        else:
+                            if ok:
+                                load_sales_targets_view.clear()
+                                try:
+                                    load_sheets.clear()
+                                except Exception:
+                                    pass
+                                st.success("Importacao concluida.")
+                                st.code(output or "OK", language="text")
+                                st.rerun()
+                            else:
+                                st.error("Importacao com erro.")
+                                if output:
+                                    st.code(output, language="text")
+
+    with tabs[4]:
         st.write("Transferencia de ativos/metas")
         col1, col2 = st.columns(2)
         with col1:
