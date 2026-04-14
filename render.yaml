@@ -41,7 +41,7 @@ services:
       - key: PYTHON_VERSION
         value: "3.11.11"
       - key: APP_BUILD
-        value: "render-finance-review-2026-04-13"
+        value: "render-finance-review-2026-04-14-incremental"
       - key: STREAMLIT_SERVER_HEADLESS
         value: "true"
       - key: STREAMLIT_BROWSER_GATHER_USAGE_STATS
