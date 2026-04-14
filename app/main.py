@@ -929,7 +929,7 @@ def build_targets_realizado_summary(
 ) -> dict:
     empty_series = pd.DataFrame(columns=["periodo", "realizado_valor"])
     empty_uf = pd.DataFrame(columns=["estado", "realizado_valor"])
-    empty_vendor = pd.DataFrame(columns=["sales_rep_code", "sales_rep_name", "realizado_valor"])
+    empty_vendor = pd.DataFrame(columns=["vendedor_id", "vendedor", "realizado_valor"])
     empty_heatmap = pd.DataFrame(columns=["estado", "periodo", "realizado"])
     if realized_df.empty or "data" not in realized_df.columns or "receita" not in realized_df.columns:
         return {
@@ -1000,6 +1000,13 @@ def build_targets_realizado_summary(
         if vendor_cols
         else empty_vendor
     )
+    if not vendedor.empty:
+        vendedor = vendedor.rename(
+            columns={
+                "sales_rep_code": "vendedor_id",
+                "sales_rep_name": "vendedor",
+            }
+        )
     heatmap = (
         out.assign(
             estado=out.get("customer_state", out.get("estado", pd.Series("", index=out.index))).fillna("").astype(str).str.strip().str.upper(),
@@ -1297,12 +1304,87 @@ def filter_local_targets_scope(
     return out
 
 
+def collapse_targets_rows(df: pd.DataFrame) -> pd.DataFrame:
+    if df.empty:
+        return df
+    out = df.copy()
+    rename_map = {}
+    for source, target in [
+        ("target_year", "ano"),
+        ("period_type", "periodo_tipo"),
+        ("month_num", "mes"),
+        ("quarter_num", "quarter"),
+        ("state", "estado"),
+        ("sales_rep_code", "vendedor_id"),
+        ("sales_rep_name", "vendedor"),
+        ("company", "empresa"),
+        ("target_value", "meta_valor"),
+        ("target_volume", "meta_volume"),
+        ("actual_value", "realizado_valor"),
+        ("actual_volume", "realizado_volume"),
+        ("notes", "observacoes"),
+    ]:
+        if source in out.columns and target not in out.columns:
+            rename_map[source] = target
+    if rename_map:
+        out = out.rename(columns=rename_map)
+
+    if "empresa" in out.columns:
+        out["empresa"] = out["empresa"].fillna("").astype(str).str.strip().str.upper()
+    if "estado" in out.columns:
+        out["estado"] = out["estado"].fillna("").astype(str).str.strip().str.upper()
+    if "periodo_tipo" in out.columns:
+        out["periodo_tipo"] = out["periodo_tipo"].fillna("").astype(str).str.strip().str.upper()
+    if "vendedor_id" in out.columns:
+        out["vendedor_id"] = out["vendedor_id"].fillna("").astype(str).str.strip()
+    if "vendedor" in out.columns:
+        out["vendedor"] = out["vendedor"].fillna("").astype(str).str.strip()
+    if "mes" in out.columns:
+        out["mes"] = pd.to_numeric(out["mes"], errors="coerce")
+    if "quarter" in out.columns:
+        out["quarter"] = pd.to_numeric(out["quarter"], errors="coerce")
+    if "ano" in out.columns:
+        out["ano"] = pd.to_numeric(out["ano"], errors="coerce")
+
+    key_cols = [c for c in ["ano", "periodo_tipo", "mes", "quarter", "estado", "empresa"] if c in out.columns]
+    if "vendedor_id" in out.columns:
+        out["vendedor_key"] = out["vendedor_id"].where(out["vendedor_id"].astype(str).str.strip() != "", out.get("vendedor", ""))
+    elif "vendedor" in out.columns:
+        out["vendedor_key"] = out["vendedor"]
+    else:
+        out["vendedor_key"] = ""
+    key_cols.append("vendedor_key")
+
+    if not key_cols:
+        return out
+
+    agg: dict[str, str] = {}
+    for column in out.columns:
+        if column in key_cols:
+            continue
+        if column in {"meta_valor", "meta_volume"}:
+            agg[column] = "sum"
+        elif column in {"realizado_valor", "realizado_volume"}:
+            agg[column] = "max"
+        else:
+            agg[column] = "first"
+
+    grouped = out.groupby(key_cols, dropna=False).agg(agg).reset_index()
+    if "vendedor" not in grouped.columns:
+        grouped["vendedor"] = grouped["vendedor_key"]
+    else:
+        grouped["vendedor"] = grouped["vendedor"].where(grouped["vendedor"].astype(str).str.strip() != "", grouped["vendedor_key"])
+    grouped = grouped.drop(columns=["vendedor_key"], errors="ignore")
+    return grouped
+
+
 def build_local_targets_summary(
     df: pd.DataFrame,
     period_type: str,
     realized_summary: dict | None = None,
 ) -> dict:
     empty_series = pd.DataFrame(columns=["meta_valor", "realizado_valor"])
+    df = collapse_targets_rows(df)
     if df.empty:
         return {
             "kpis": {"meta": 0.0, "realizado": 0.0, "atingimento_pct": 0.0, "delta": 0.0},
@@ -1757,25 +1839,30 @@ def build_targets_summary(
     realized_summary: dict | None = None,
 ) -> dict:
     empty_series = pd.DataFrame(columns=["meta_valor", "realizado_valor"])
+    view_df = collapse_targets_rows(view_df)
     if view_df.empty:
         return {
             "kpis": {"meta": 0.0, "realizado": 0.0, "atingimento_pct": 0.0, "delta": 0.0},
             "series": empty_series,
-            "uf": pd.DataFrame(columns=["state", "meta_valor", "realizado_valor"]),
-            "vendedor": pd.DataFrame(columns=["sales_rep_code", "sales_rep_name", "meta_valor", "realizado_valor"]),
+            "uf": pd.DataFrame(columns=["estado", "meta_valor", "realizado_valor"]),
+            "vendedor": pd.DataFrame(columns=["vendedor_id", "vendedor", "meta_valor", "realizado_valor"]),
         }
 
     df = view_df.copy()
-    meta_total = float(numeric_column(df, "target_value").sum())
-    period_col = "quarter_num" if str(period_type).upper() == "QUARTER" else "month_num"
+    if "meta_valor" in df.columns:
+        df["meta_valor"] = pd.to_numeric(df["meta_valor"], errors="coerce").fillna(0)
+    if "realizado_valor" in df.columns:
+        df["realizado_valor"] = pd.to_numeric(df["realizado_valor"], errors="coerce").fillna(0)
+    meta_total = float(numeric_column(df, "meta_valor").sum())
+    period_col = "quarter" if str(period_type).upper() == "QUARTER" else "mes"
 
     series = pd.DataFrame()
-    if period_col in df.columns and "target_value" in df.columns:
+    if period_col in df.columns and "meta_valor" in df.columns:
         series = (
-            df.groupby(period_col, dropna=False)[["target_value"]]
+            df.groupby(period_col, dropna=False)[["meta_valor"]]
             .sum()
             .reset_index()
-            .rename(columns={period_col: "periodo", "target_value": "meta_valor"})
+            .rename(columns={period_col: "periodo"})
             .sort_values("periodo")
         )
         if str(period_type).upper() == "QUARTER":
@@ -1784,23 +1871,21 @@ def build_targets_summary(
             series = series.rename(columns={"periodo": "mes"})
 
     uf = pd.DataFrame()
-    if "state" in df.columns and "target_value" in df.columns:
+    if "estado" in df.columns and "meta_valor" in df.columns:
         uf = (
-            df.groupby("state", dropna=False)[["target_value"]]
+            df.groupby("estado", dropna=False)[["meta_valor"]]
             .sum()
             .reset_index()
-            .rename(columns={"state": "estado", "target_value": "meta_valor"})
             .sort_values("estado")
         )
 
     vendedor = pd.DataFrame()
-    vendor_cols = [c for c in ["sales_rep_code", "sales_rep_name"] if c in df.columns]
-    if vendor_cols and "target_value" in df.columns:
+    vendor_cols = [c for c in ["vendedor_id", "vendedor"] if c in df.columns]
+    if vendor_cols and "meta_valor" in df.columns:
         vendedor = (
-            df.groupby(vendor_cols, dropna=False)[["target_value"]]
+            df.groupby(vendor_cols, dropna=False)[["meta_valor"]]
             .sum()
             .reset_index()
-            .rename(columns={"target_value": "meta_valor"})
             .sort_values(vendor_cols)
         )
 
@@ -1821,7 +1906,7 @@ def build_targets_summary(
     realizado_total = (
         float(realized_summary["realizado"])
         if realized_summary and "realizado" in realized_summary
-        else float(numeric_column(df, "actual_value").sum())
+        else float(numeric_column(df, "realizado_valor").sum())
     )
     atingimento = (realizado_total / meta_total * 100) if meta_total else 0.0
     return {
@@ -3980,6 +4065,7 @@ if page == "Metas Comerciais":
                     actual_col="actual_value",
                     gap_col="gap_value",
                 )
+                df = collapse_targets_rows(df)
                 df = df.rename(
                     columns={
                         "target_year": "ano",
@@ -4023,6 +4109,7 @@ if page == "Metas Comerciais":
                 actual_col="realizado_valor",
                 gap_col="gap_valor",
             )
+            df = collapse_targets_rows(df)
             if PROFILE == "gestor" and not df.empty:
                 acl = load_acl().get("gestor", {})
                 allow = _clean_list(acl.get("allow_vendedores", []))
