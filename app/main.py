@@ -902,6 +902,69 @@ def build_remote_metas_sheet(view_df: pd.DataFrame) -> pd.DataFrame:
     return out[["data", "vendedor", "vendedor_id", "meta", "realizado"]]
 
 
+def build_targets_realizado_summary(
+    realized_df: pd.DataFrame,
+    *,
+    target_year: int,
+    period_type: str,
+    month_num: int | None,
+    quarter_num: int | None,
+    ytd: bool,
+    state: str | None,
+    selected_company: str,
+    selected_vendor: str,
+    selected_vendor_candidates: set[str],
+) -> dict:
+    empty_series = pd.DataFrame(columns=["periodo", "realizado_valor"])
+    empty_uf = pd.DataFrame(columns=["estado", "realizado_valor"])
+    if realized_df.empty or "data" not in realized_df.columns or "receita" not in realized_df.columns:
+        return {"realizado": 0.0, "series": empty_series, "uf": empty_uf}
+
+    out = realized_df.copy()
+    out["data"] = pd.to_datetime(out["data"], errors="coerce")
+    out["receita"] = pd.to_numeric(out["receita"], errors="coerce").fillna(0)
+    out = out[out["data"].notna()].copy()
+    if out.empty:
+        return {"realizado": 0.0, "series": empty_series, "uf": empty_uf}
+
+    if selected_company != "TODOS":
+        out = filter_company_scope(out, selected_company)
+    if selected_vendor != "TODOS":
+        out = filter_vendor_scope(out, selected_vendor, ["vendedor", "vendedor_id"], selected_vendor_candidates)
+    if state:
+        state_value = str(state).strip().upper()
+        state_series = out.get("customer_state", out.get("estado", pd.Series("", index=out.index)))
+        out = out[state_series.fillna("").astype(str).str.strip().str.upper() == state_value]
+    out = filter_period_scope(out, target_year, month_num, ytd, quarter_num)
+    if out.empty:
+        return {"realizado": 0.0, "series": empty_series, "uf": empty_uf}
+
+    if str(period_type).upper() == "QUARTER":
+        series = (
+            out.assign(periodo=((out["data"].dt.month - 1) // 3 + 1))
+            .groupby("periodo", dropna=False)["receita"]
+            .sum()
+            .reset_index()
+            .rename(columns={"receita": "realizado_valor"})
+        )
+    else:
+        series = (
+            out.assign(periodo=out["data"].dt.month)
+            .groupby("periodo", dropna=False)["receita"]
+            .sum()
+            .reset_index()
+            .rename(columns={"receita": "realizado_valor"})
+        )
+    uf = (
+        out.assign(estado=out.get("customer_state", out.get("estado", pd.Series("", index=out.index))).fillna("").astype(str).str.strip().str.upper())
+        .groupby("estado", dropna=False)["receita"]
+        .sum()
+        .reset_index()
+        .rename(columns={"receita": "realizado_valor"})
+    )
+    return {"realizado": float(out["receita"].sum()), "series": series, "uf": uf}
+
+
 def resolve_realizado_sheet(sales_scope: str, use_bling_source: bool) -> tuple[pd.DataFrame, str]:
     if use_bling_source:
         remote_bling = build_remote_realizado_sheet(load_bling_sales_realized_view())
@@ -3543,7 +3606,22 @@ if page == "Metas Comerciais":
                 gap_col="gap_value",
             )
             res = build_targets_summary(filtered_view, periodo_tipo)
+            realized_summary = build_targets_realizado_summary(
+                metas_realizado_base,
+                target_year=year,
+                period_type=periodo_tipo,
+                month_num=mes,
+                quarter_num=quarter,
+                ytd=effective_ytd,
+                state=uf or None,
+                selected_company=sel_company,
+                selected_vendor=sel_vendor,
+                selected_vendor_candidates=selected_vendor_candidates,
+            )
             k = res["kpis"]
+            k["realizado"] = realized_summary["realizado"]
+            k["atingimento_pct"] = (k["realizado"] / k.get("meta", 0) * 100) if k.get("meta", 0) else 0.0
+            k["delta"] = k["realizado"] - k.get("meta", 0)
             c1, c2, c3, c4 = st.columns(4)
             c1.metric("Meta", fmt_brl_abbrev(k.get("meta", 0)))
             c2.metric("Realizado", fmt_brl_abbrev(k.get("realizado", 0)))
@@ -3552,10 +3630,13 @@ if page == "Metas Comerciais":
 
             if not res["series"].empty:
                 ser = res["series"].rename(columns={"meta_valor": "meta", "realizado_valor": "receita"}).copy()
-                if periodo_tipo == "QUARTER":
-                    ser["periodo"] = ser.get("quarter")
-                else:
-                    ser["periodo"] = ser.get("mes")
+                if not realized_summary["series"].empty:
+                    ser = ser.drop(columns=["receita"], errors="ignore").merge(
+                        realized_summary["series"].rename(columns={"realizado_valor": "receita"}),
+                        on="periodo",
+                        how="left",
+                    )
+                    ser["receita"] = pd.to_numeric(ser["receita"], errors="coerce").fillna(0)
                 line = alt.Chart(ser).transform_fold(
                     ["meta", "receita"], as_=["tipo", "valor"]
                 ).mark_line(point=True).encode(
@@ -3568,6 +3649,13 @@ if page == "Metas Comerciais":
 
             if not res["uf"].empty:
                 uf_df = res["uf"].copy()
+                if not realized_summary["uf"].empty:
+                    uf_df = uf_df.drop(columns=["realizado_valor"], errors="ignore").merge(
+                        realized_summary["uf"],
+                        on="estado",
+                        how="left",
+                    )
+                    uf_df["realizado_valor"] = pd.to_numeric(uf_df["realizado_valor"], errors="coerce").fillna(0)
                 uf_df["ating"] = (uf_df["realizado_valor"] / uf_df["meta_valor"] * 100).fillna(0)
                 st.write("Atingimento por UF")
                 st.bar_chart(uf_df.set_index("estado")[["meta_valor", "realizado_valor"]])

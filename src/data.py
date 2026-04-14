@@ -198,6 +198,50 @@ def _load_bling_nfe_rows(years: list[int] | None = None) -> pd.DataFrame:
     return pd.json_normalize(rows)
 
 
+def _load_remote_bling_nfe_rows(years: list[int] | None = None) -> pd.DataFrame:
+    years = years or [2026, 2025]
+    df = _fetch_crm_view("bling_nfe_documents", params={"select": "*", "limit": "5000"})
+    if df.empty:
+        return pd.DataFrame()
+    df = _normalize_columns(df)
+    rows: list[dict[str, Any]] = []
+    import json
+    for _, row in df.iterrows():
+        payload = row.get("payload")
+        if isinstance(payload, str):
+            try:
+                payload = json.loads(payload)
+            except Exception:
+                payload = {}
+        if not isinstance(payload, dict):
+            payload = {}
+        issue_value = payload.get("dataEmissao") or row.get("issue_datetime")
+        issue_dt = pd.to_datetime(issue_value, errors="coerce")
+        if pd.isna(issue_dt) or int(issue_dt.year) not in years:
+            continue
+        obj = dict(payload)
+        obj.setdefault("id", row.get("bling_nfe_id"))
+        obj.setdefault("empresa", row.get("company"))
+        obj.setdefault("dataEmissao", str(issue_dt))
+        obj.setdefault("numero", row.get("invoice_number"))
+        obj.setdefault("chaveAcesso", row.get("access_key"))
+        obj.setdefault("serie", row.get("series"))
+        obj.setdefault("valorNota", row.get("total_amount"))
+        obj.setdefault("valorFrete", row.get("freight_amount"))
+        if not obj.get("contato"):
+            obj["contato"] = {
+                "nome": row.get("customer_name"),
+                "numeroDocumento": row.get("customer_tax_id"),
+                "endereco": {"uf": row.get("customer_state")},
+            }
+        if not obj.get("vendedor"):
+            obj["vendedor"] = {"id": row.get("salesperson_bling_id")}
+        rows.append(obj)
+    if not rows:
+        return pd.DataFrame()
+    return pd.json_normalize(rows)
+
+
 def _map_vendedor_from_local_history(df: pd.DataFrame) -> pd.DataFrame:
     if df.empty or "cliente" not in df.columns:
         out = df.copy()
@@ -764,6 +808,8 @@ def load_bling_realizado() -> pd.DataFrame:
 def load_bling_nfe(year: int) -> pd.DataFrame:
     df = _load_bling_nfe_rows([year])
     if df.empty:
+        df = _load_remote_bling_nfe_rows([year])
+    if df.empty:
         return pd.DataFrame()
     if "dataEmissao" in df.columns:
         df["data"] = pd.to_datetime(df["dataEmissao"], errors="coerce")
@@ -832,6 +878,8 @@ def load_bling_nfe(year: int) -> pd.DataFrame:
 def load_bling_nfe_detail(year: int = 2026) -> pd.DataFrame:
     years = [year] if year in {2025, 2026} else [2026, 2025]
     df = _load_bling_nfe_rows(years)
+    if df.empty:
+        df = _load_remote_bling_nfe_rows(years)
     if df.empty:
         return pd.DataFrame()
 
