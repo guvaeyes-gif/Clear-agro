@@ -902,6 +902,30 @@ def build_remote_metas_sheet(view_df: pd.DataFrame) -> pd.DataFrame:
     return out[["data", "vendedor", "vendedor_id", "meta", "realizado"]]
 
 
+def resolve_realizado_sheet(sales_scope: str, use_bling_source: bool) -> tuple[pd.DataFrame, str]:
+    if use_bling_source:
+        remote_bling = build_remote_realizado_sheet(load_bling_sales_realized_view())
+        if not remote_bling.empty:
+            return upper_dashboard_text(filter_sales_nature_scope(remote_bling, sales_scope)), "vw_bling_sales_realized"
+
+        remote_finance = build_remote_realizado_sheet(load_sales_realized_view())
+        if not remote_finance.empty:
+            return upper_dashboard_text(filter_sales_nature_scope(remote_finance, sales_scope)), "vw_sales_realized_summary"
+
+        local_bling = load_bling_realizado()
+        if not local_bling.empty:
+            return upper_dashboard_text(filter_sales_nature_scope(local_bling, sales_scope)), "bling_cache_local"
+
+    return pd.DataFrame(), ""
+
+
+def resolve_metas_sheet() -> tuple[pd.DataFrame, str]:
+    remote_metas = build_remote_metas_sheet(load_sales_targets_view())
+    if remote_metas.empty:
+        return pd.DataFrame(), ""
+    return upper_dashboard_text(remote_metas), "vw_sales_targets_summary"
+
+
 def filter_sales_nature_scope(df: pd.DataFrame, selected_scope: str) -> pd.DataFrame:
     if df.empty or selected_scope == "Tudo":
         return df
@@ -1734,12 +1758,20 @@ sales_scope = st.sidebar.selectbox(
     options=["Vendas efetivas", "Tudo", "Devolucoes/Ajustes", "Nao vendas"],
     index=0,
 )
-if use_bling:
-    br = load_bling_realizado()
-    if not br.empty:
-        sheets["realizado"] = upper_dashboard_text(filter_sales_nature_scope(br, sales_scope))
-        if "origem" in br.columns and not br["origem"].astype(str).eq("bling_nfe").any():
-            st.sidebar.warning("NF-e nao encontrada no cache local. Realizado ainda em fallback por pedido.")
+realizado_override, realizado_source = resolve_realizado_sheet(sales_scope, use_bling)
+if not realizado_override.empty:
+    sheets["realizado"] = realizado_override
+    if use_bling and realizado_source == "bling_cache_local":
+        st.sidebar.warning("Fonte remota indisponivel. Realizado em fallback pelo cache local do Bling.")
+
+metas_override, metas_source = resolve_metas_sheet()
+if not metas_override.empty:
+    sheets["metas"] = metas_override
+
+if use_bling and realizado_source:
+    st.sidebar.caption(f"Realizado: {realizado_source}")
+if metas_source:
+    st.sidebar.caption(f"Metas: {metas_source}")
 
 st.sidebar.markdown("### Filtros")
 company_options = ["TODOS", "CZ", "CR"]
@@ -1852,31 +1884,6 @@ if page == "Executive Cockpit":
     )
     crm_pipeline_view = filter_pipeline_period(crm_pipeline_view, year, selected_month, effective_ytd, selected_quarter)
     cockpit_sheets = {key: value.copy() if isinstance(value, pd.DataFrame) else value for key, value in sheets.items()}
-    remote_realizado = build_remote_realizado_sheet(load_bling_sales_realized_view())
-    if remote_realizado.empty:
-        remote_realizado = build_remote_realizado_sheet(load_sales_realized_view())
-    if not remote_realizado.empty:
-        remote_realizado = upper_dashboard_text(apply_acl(remote_realizado, vendor_col="vendedor"))
-        remote_realizado = filter_company_scope(remote_realizado, sel_company)
-        if sel_vendor != "TODOS":
-            mask = pd.Series(False, index=remote_realizado.index)
-            for column in ["vendedor", "vendedor_id"]:
-                if column in remote_realizado.columns:
-                    mask = mask | remote_realizado[column].map(_vendor_key).isin(selected_vendor_candidates)
-            remote_realizado = remote_realizado[mask]
-        cockpit_sheets["realizado"] = filter_sales_nature_scope(remote_realizado, sales_scope)
-
-    remote_metas = build_remote_metas_sheet(load_sales_targets_view())
-    if not remote_metas.empty:
-        remote_metas = upper_dashboard_text(apply_acl(remote_metas, vendor_col="vendedor"))
-        if sel_vendor != "TODOS":
-            mask = pd.Series(False, index=remote_metas.index)
-            for column in ["vendedor", "vendedor_id"]:
-                if column in remote_metas.columns:
-                    mask = mask | remote_metas[column].map(_vendor_key).isin(selected_vendor_candidates)
-            remote_metas = remote_metas[mask]
-        cockpit_sheets["metas"] = remote_metas
-
     kpis = compute_kpis(
         cockpit_sheets,
         year,
