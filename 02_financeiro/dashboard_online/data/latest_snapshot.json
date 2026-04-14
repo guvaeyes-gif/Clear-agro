@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-04-14T13:16:37.258547",
+  "generated_at": "2026-04-14T14:48:02.233163",
   "run_id": "local_scope_fix_20260320_v7",
   "source_run_dir": "C:\\Users\\cesar.zarovski\\Documents\\Clear_OS\\02_financeiro\\dre\\finance-recon-hub\\out\\aios\\monthly-fin-close\\local_scope_fix_20260320_v7",
   "health": {
@@ -57,7 +57,7 @@
   },
   "classic_kpis": {
     "ap_aberto": 29723773.5,
-    "ar_aberto": 17239166.9,
+    "ar_aberto": 17243870.9,
     "ap_vencido": 7584033.26,
     "ar_vencido": 737893.86,
     "fluxo_liquido_previsto_30d": 3389912.5,
@@ -106,7 +106,7 @@
       },
       {
         "bucket": "A vencer 31-60",
-        "valor": 5001445.64
+        "valor": 5006149.64
       },
       {
         "bucket": "A vencer >60",
@@ -95127,6 +95127,27 @@
     },
     {
       "tipo": "receber",
+      "valor": 4704.0,
+      "valor_original": 4704.0,
+      "saldo": 4704.0,
+      "data_emissao": "2026-04-02",
+      "competencia": "2026-04-02",
+      "vencimento": "2026-06-01",
+      "situacao": "1",
+      "contato": "AGRO COMERCIAL PENTEADO LTDA",
+      "documento": "000742/01",
+      "company": "CR",
+      "cliente_fornecedor": "AGRO COMERCIAL PENTEADO LTDA",
+      "fornecedor": "",
+      "cliente": "AGRO COMERCIAL PENTEADO LTDA",
+      "cultura": "",
+      "zafra": "",
+      "juros": 0.0,
+      "dias_atraso": 0,
+      "vencido": false
+    },
+    {
+      "tipo": "receber",
       "valor": 2124.0,
       "valor_original": 2124.0,
       "saldo": 2124.0,
@@ -107320,15 +107341,15 @@
     {
       "mes": "2026-03",
       "mes_num": 3,
-      "receita_liquida": 2688558.0,
+      "receita_liquida": 3061639.6,
       "custos_variaveis_total": 73406.21,
       "cmv_proxy": 73406.21,
       "cmv_sales_cost": 73406.21,
       "cmv_purchase_fallback": 0.0,
       "cmv_method": "sales_cost",
       "custo_fixo_base": 2519441.24,
-      "margem_contribuicao": 2615151.79,
-      "ebitda": 95710.55,
+      "margem_contribuicao": 2988233.39,
+      "ebitda": 468792.15,
       "dre_model": "bling_erp",
       "dre_source": "nfe_emitida + vendas_itens_custo + contas_pagar_total",
       "despesas_ap_proxy": 2519441.24
@@ -107336,15 +107357,15 @@
     {
       "mes": "2026-04",
       "mes_num": 4,
-      "receita_liquida": 0.0,
+      "receita_liquida": 320162.76,
       "custos_variaveis_total": 0.0,
       "cmv_proxy": 0.0,
       "cmv_sales_cost": 0.0,
       "cmv_purchase_fallback": 0.0,
       "cmv_method": "sales_cost",
       "custo_fixo_base": 780145.38,
-      "margem_contribuicao": 0.0,
-      "ebitda": -780145.38,
+      "margem_contribuicao": 320162.76,
+      "ebitda": -459982.62,
       "dre_model": "bling_erp",
       "dre_source": "nfe_emitida + vendas_itens_custo + contas_pagar_total",
       "despesas_ap_proxy": 780145.38
