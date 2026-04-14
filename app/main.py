@@ -926,6 +926,43 @@ def resolve_metas_sheet() -> tuple[pd.DataFrame, str]:
     return upper_dashboard_text(remote_metas), "vw_sales_targets_summary"
 
 
+def build_nfe_monthly_audit_base(
+    target_year: int,
+    selected_company: str,
+    selected_vendor: str,
+    selected_vendor_candidates: set[str],
+    selected_month: int | None,
+    effective_ytd: bool,
+    selected_quarter: int | None,
+) -> pd.DataFrame:
+    detail = load_bling_nfe_detail(0)
+    if detail.empty:
+        return pd.DataFrame(columns=["data", "valor"])
+
+    out = detail.copy()
+    out["data"] = pd.to_datetime(out["data"], errors="coerce")
+    out["valor_nf"] = pd.to_numeric(out["valor_nf"], errors="coerce")
+    out = out[out["data"].notna()].copy()
+    out = out[out["data"].dt.year == int(target_year)]
+    if selected_company != "TODOS":
+        out = filter_company_scope(out, selected_company)
+    if selected_vendor != "TODOS":
+        out = filter_vendor_scope(out, selected_vendor, ["vendedor", "vendedor_id"], selected_vendor_candidates)
+    out = filter_period_scope(out, target_year, selected_month, effective_ytd, selected_quarter)
+    if out.empty:
+        return pd.DataFrame(columns=["data", "valor"])
+
+    nf_view = (
+        out.groupby(["nfe_id", "data"], dropna=False)["valor_nf"]
+        .max()
+        .reset_index()
+        .rename(columns={"valor_nf": "valor"})
+    )
+    monthly = nf_view.groupby(nf_view["data"].dt.to_period("M"))["valor"].sum().reset_index()
+    monthly["data"] = monthly["data"].dt.to_timestamp()
+    return monthly
+
+
 def overlay_targets_actuals_from_realizado(
     targets_df: pd.DataFrame,
     realized_df: pd.DataFrame,
@@ -3328,8 +3365,8 @@ if page == "Finance Control Tower":
 
 # Page F - Auditoria
 if page == "Auditoria":
-    st.subheader("Auditoria: Planilha vs Bling (NFe)")
-    st.write("Comparativo mensal entre realizado da planilha e faturamento NFe do Bling.")
+    st.subheader("Auditoria: Dashboard vs Bling (NF-e)")
+    st.write("Comparativo mensal entre o realizado exibido no dashboard e o faturamento fiscal do Bling.")
 
     # Planilha (realizado)
     real = sheets.get("realizado", pd.DataFrame()).copy()
@@ -3346,19 +3383,21 @@ if page == "Auditoria":
     real_m = real.groupby(real["data"].dt.to_period("M"))["receita"].sum().reset_index()
     real_m["data"] = real_m["data"].dt.to_timestamp()
 
-    # Bling NFe
-    nfe = load_bling_nfe(year)
-    if nfe.empty:
+    # Bling NF-e fiscal
+    nfe_m = build_nfe_monthly_audit_base(
+        year,
+        sel_company,
+        sel_vendor,
+        selected_vendor_candidates,
+        selected_month,
+        effective_ytd,
+        selected_quarter,
+    )
+    if nfe_m.empty:
         if not PUBLIC_REVIEW:
             st.warning("Cache NFe do Bling nao encontrado. Exibindo valores do Bling como zero para revisao.")
         nfe_m = real_m[["data"]].copy() if not real_m.empty else pd.DataFrame(columns=["data"])
         nfe_m["valor"] = 0.0
-    else:
-        nfe = nfe.copy()
-        nfe = filter_company_scope(nfe, sel_company)
-        nfe = filter_period_scope(nfe, year, selected_month, effective_ytd, selected_quarter)
-        nfe_m = nfe.groupby(nfe["data"].dt.to_period("M"))["valor"].sum().reset_index()
-        nfe_m["data"] = nfe_m["data"].dt.to_timestamp()
 
     # Merge
     df = pd.merge(real_m, nfe_m, on="data", how="outer").fillna(0)
