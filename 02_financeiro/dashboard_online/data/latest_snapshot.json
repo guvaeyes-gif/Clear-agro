@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-04-15T10:24:36.750391",
+  "generated_at": "2026-04-15T10:48:01.207431",
   "run_id": "local_scope_fix_20260320_v7",
   "source_run_dir": "C:\\Users\\cesar.zarovski\\Documents\\Clear_OS\\02_financeiro\\dre\\finance-recon-hub\\out\\aios\\monthly-fin-close\\local_scope_fix_20260320_v7",
   "health": {
@@ -56,23 +56,23 @@
     "generated_at": "2026-03-20T21:47:56Z"
   },
   "classic_kpis": {
-    "ap_aberto": 15047335.05,
-    "ar_aberto": 8746070.45,
-    "ap_vencido": 3987834.66,
+    "ap_aberto": 14823325.23,
+    "ar_aberto": 8535150.45,
+    "ap_vencido": 3763824.84,
     "ar_vencido": 368946.93,
-    "fluxo_liquido_previsto_30d": 1708956.84,
+    "fluxo_liquido_previsto_30d": 1685236.84,
     "aging_ap": [
       {
         "bucket": "Vencido >60",
-        "valor": 1996581.9
+        "valor": 1781154.7
       },
       {
         "bucket": "Vencido 31-60",
-        "valor": 863057.51
+        "valor": 862838.95
       },
       {
         "bucket": "Vencido 1-30",
-        "valor": 1128195.25
+        "valor": 1119831.19
       },
       {
         "bucket": "A vencer 0-30",
@@ -102,11 +102,11 @@
       },
       {
         "bucket": "A vencer 0-30",
-        "valor": 2901107.4
+        "valor": 2877387.4
       },
       {
         "bucket": "A vencer 31-60",
-        "valor": 2600073.22
+        "valor": 2412873.22
       },
       {
         "bucket": "A vencer >60",
@@ -881,120 +881,120 @@
       },
       {
         "data": "2026-04-30",
-        "inflow": 2388263.11,
+        "inflow": 2364543.11,
         "outflow": 406104.38,
-        "net": 1982158.73,
-        "cumulative_net": 1832130.73
+        "net": 1958438.73,
+        "cumulative_net": 1808410.73
       },
       {
         "data": "2026-05-01",
         "inflow": 15100.0,
         "outflow": 35633.1,
         "net": -20533.1,
-        "cumulative_net": 1811597.63
+        "cumulative_net": 1787877.63
       },
       {
         "data": "2026-05-02",
         "inflow": 0.0,
         "outflow": 19277.94,
         "net": -19277.94,
-        "cumulative_net": 1792319.69
+        "cumulative_net": 1768599.69
       },
       {
         "data": "2026-05-03",
         "inflow": 4134.04,
         "outflow": 16307.43,
         "net": -12173.39,
-        "cumulative_net": 1780146.3
+        "cumulative_net": 1756426.3
       },
       {
         "data": "2026-05-04",
         "inflow": 46489.6,
         "outflow": 2075.08,
         "net": 44414.52,
-        "cumulative_net": 1824560.82
+        "cumulative_net": 1800840.82
       },
       {
         "data": "2026-05-05",
         "inflow": 232480.0,
         "outflow": 189542.0,
         "net": 42938.0,
-        "cumulative_net": 1867498.82
+        "cumulative_net": 1843778.82
       },
       {
         "data": "2026-05-06",
         "inflow": 0.0,
         "outflow": 8467.06,
         "net": -8467.06,
-        "cumulative_net": 1859031.76
+        "cumulative_net": 1835311.76
       },
       {
         "data": "2026-05-07",
         "inflow": 2412.96,
         "outflow": 38322.96,
         "net": -35910.0,
-        "cumulative_net": 1823121.76
+        "cumulative_net": 1799401.76
       },
       {
         "data": "2026-05-08",
         "inflow": 7680.0,
         "outflow": 0.0,
         "net": 7680.0,
-        "cumulative_net": 1830801.76
+        "cumulative_net": 1807081.76
       },
       {
         "data": "2026-05-09",
         "inflow": 0.0,
         "outflow": 517.75,
         "net": -517.75,
-        "cumulative_net": 1830284.01
+        "cumulative_net": 1806564.01
       },
       {
         "data": "2026-05-10",
         "inflow": 21166.32,
         "outflow": 68093.18,
         "net": -46926.86,
-        "cumulative_net": 1783357.15
+        "cumulative_net": 1759637.15
       },
       {
         "data": "2026-05-11",
         "inflow": 0.0,
         "outflow": 31896.61,
         "net": -31896.61,
-        "cumulative_net": 1751460.54
+        "cumulative_net": 1727740.54
       },
       {
         "data": "2026-05-12",
         "inflow": 0.0,
         "outflow": 16095.22,
         "net": -16095.22,
-        "cumulative_net": 1735365.32
+        "cumulative_net": 1711645.32
       },
       {
         "data": "2026-05-13",
         "inflow": 0.0,
         "outflow": 3730.28,
         "net": -3730.28,
-        "cumulative_net": 1731635.04
+        "cumulative_net": 1707915.04
       },
       {
         "data": "2026-05-14",
         "inflow": 0.0,
         "outflow": 12574.06,
         "net": -12574.06,
-        "cumulative_net": 1719060.98
+        "cumulative_net": 1695340.98
       },
       {
         "data": "2026-05-15",
         "inflow": 13401.6,
         "outflow": 23505.74,
         "net": -10104.14,
-        "cumulative_net": 1708956.84
+        "cumulative_net": 1685236.84
       }
     ],
-    "inflow_30d": 2901107.4,
+    "inflow_30d": 2877387.4,
     "outflow_30d": 1192150.56,
-    "net_30d": 1708956.84,
+    "net_30d": 1685236.84,
     "min_cumulative_30d": -150028.0,
     "negative_cumulative_days": 15,
     "top_inflows": [
@@ -1148,69 +1148,6 @@
     "opening_balance_available": false
   },
   "ap_details": [
-    {
-      "tipo": "pagar",
-      "valor": 3482.93,
-      "valor_original": 3482.93,
-      "saldo": 3482.93,
-      "data_emissao": "",
-      "competencia": "",
-      "vencimento": "2026-03-26",
-      "situacao": "3",
-      "contato": "IAT",
-      "documento": "24169325175",
-      "company": "CZ",
-      "cliente_fornecedor": "IAT",
-      "fornecedor": "IAT",
-      "cliente": "",
-      "cultura": "",
-      "zafra": "",
-      "juros": 0.0,
-      "dias_atraso": 20,
-      "vencido": true
-    },
-    {
-      "tipo": "pagar",
-      "valor": 184.28,
-      "valor_original": 184.28,
-      "saldo": 184.28,
-      "data_emissao": "",
-      "competencia": "",
-      "vencimento": "2026-03-03",
-      "situacao": "3",
-      "contato": "OSCAR ANTUNES FERREIRA",
-      "documento": "25217920001",
-      "company": "CZ",
-      "cliente_fornecedor": "OSCAR ANTUNES FERREIRA",
-      "fornecedor": "OSCAR ANTUNES FERREIRA",
-      "cliente": "",
-      "cultura": "",
-      "zafra": "",
-      "juros": 0.0,
-      "dias_atraso": 43,
-      "vencido": true
-    },
-    {
-      "tipo": "pagar",
-      "valor": 4881.09,
-      "valor_original": 4881.09,
-      "saldo": 4881.09,
-      "data_emissao": "",
-      "competencia": "",
-      "vencimento": "2026-03-26",
-      "situacao": "3",
-      "contato": "Brenntag Quimica Brasil Ltda",
-      "documento": "25279055303",
-      "company": "CZ",
-      "cliente_fornecedor": "Brenntag Quimica Brasil Ltda",
-      "fornecedor": "Brenntag Quimica Brasil Ltda",
-      "cliente": "",
-      "cultura": "",
-      "zafra": "",
-      "juros": 0.0,
-      "dias_atraso": 20,
-      "vencido": true
-    },
     {
       "tipo": "pagar",
       "valor": 1774.34,
@@ -6253,27 +6190,6 @@
     },
     {
       "tipo": "pagar",
-      "valor": 0.01,
-      "valor_original": 4881.09,
-      "saldo": 0.01,
-      "data_emissao": "2026-03-10",
-      "competencia": "2026-02-12",
-      "vencimento": "2026-03-26",
-      "situacao": "3",
-      "contato": "Brenntag Quimica Brasil Ltda",
-      "documento": "898550/03",
-      "company": "CZ",
-      "cliente_fornecedor": "Brenntag Quimica Brasil Ltda",
-      "fornecedor": "Brenntag Quimica Brasil Ltda",
-      "cliente": "",
-      "cultura": "",
-      "zafra": "",
-      "juros": 0.0,
-      "dias_atraso": 20,
-      "vencido": true
-    },
-    {
-      "tipo": "pagar",
       "valor": 5441.6,
       "valor_original": 5441.6,
       "saldo": 5441.6,
@@ -7252,27 +7168,6 @@
       "company": "CZ",
       "cliente_fornecedor": "GABRIEL YOMAR GRANADO MAESTRE",
       "fornecedor": "GABRIEL YOMAR GRANADO MAESTRE",
-      "cliente": "",
-      "cultura": "",
-      "zafra": "",
-      "juros": 0.0,
-      "dias_atraso": 43,
-      "vencido": true
-    },
-    {
-      "tipo": "pagar",
-      "valor": 34.28,
-      "valor_original": 184.28,
-      "saldo": 34.28,
-      "data_emissao": "2026-03-03",
-      "competencia": "2026-03-03",
-      "vencimento": "2026-03-03",
-      "situacao": "3",
-      "contato": "OSCAR ANTUNES FERREIRA",
-      "documento": "25217920001",
-      "company": "CZ",
-      "cliente_fornecedor": "OSCAR ANTUNES FERREIRA",
-      "fornecedor": "OSCAR ANTUNES FERREIRA",
       "cliente": "",
       "cultura": "",
       "zafra": "",
@@ -26035,27 +25930,6 @@
     },
     {
       "tipo": "pagar",
-      "valor": 0.03,
-      "valor_original": 3482.93,
-      "saldo": 0.03,
-      "data_emissao": "2025-10-27",
-      "competencia": "2026-02-27",
-      "vencimento": "2026-03-26",
-      "situacao": "3",
-      "contato": "IAT",
-      "documento": "5460/5",
-      "company": "CZ",
-      "cliente_fornecedor": "IAT",
-      "fornecedor": "IAT",
-      "cliente": "",
-      "cultura": "",
-      "zafra": "",
-      "juros": 0.0,
-      "dias_atraso": 20,
-      "vencido": true
-    },
-    {
-      "tipo": "pagar",
       "valor": 3482.93,
       "valor_original": 3482.93,
       "saldo": 3482.93,
@@ -34981,27 +34855,6 @@
     },
     {
       "tipo": "pagar",
-      "valor": 176900.0,
-      "valor_original": 176900.0,
-      "saldo": 176900.0,
-      "data_emissao": "",
-      "competencia": "",
-      "vencimento": "2024-08-30",
-      "situacao": "3",
-      "contato": "GENETICA TECNOLOGIAS AMBIENTAIS LTDAMAPA EPSC 33278",
-      "documento": "19879615823",
-      "company": "CR",
-      "cliente_fornecedor": "GENETICA TECNOLOGIAS AMBIENTAIS LTDAMAPA EPSC 33278",
-      "fornecedor": "GENETICA TECNOLOGIAS AMBIENTAIS LTDAMAPA EPSC 33278",
-      "cliente": "",
-      "cultura": "",
-      "zafra": "",
-      "juros": 0.0,
-      "dias_atraso": 593,
-      "vencido": true
-    },
-    {
-      "tipo": "pagar",
       "valor": 92.5,
       "valor_original": 92.5,
       "saldo": 92.5,
@@ -39664,27 +39517,6 @@
     },
     {
       "tipo": "pagar",
-      "valor": 38527.2,
-      "valor_original": 176900.0,
-      "saldo": 38527.2,
-      "data_emissao": "2024-03-08",
-      "competencia": "2024-02-22",
-      "vencimento": "2024-08-30",
-      "situacao": "3",
-      "contato": "GENETICA TECNOLOGIAS AMBIENTAIS LTDAMAPA EPSC 33278",
-      "documento": "045743/01",
-      "company": "CR",
-      "cliente_fornecedor": "GENETICA TECNOLOGIAS AMBIENTAIS LTDAMAPA EPSC 33278",
-      "fornecedor": "GENETICA TECNOLOGIAS AMBIENTAIS LTDAMAPA EPSC 33278",
-      "cliente": "",
-      "cultura": "",
-      "zafra": "",
-      "juros": 0.0,
-      "dias_atraso": 593,
-      "vencido": true
-    },
-    {
-      "tipo": "pagar",
       "valor": 180969.86,
       "valor_original": 180969.86,
       "saldo": 180969.86,
@@ -40170,48 +40002,6 @@
   "ar_details": [
     {
       "tipo": "receber",
-      "valor": 13735.0,
-      "valor_original": 13735.0,
-      "saldo": 13735.0,
-      "data_emissao": "2025-04-24",
-      "competencia": "",
-      "vencimento": "2026-04-30",
-      "situacao": "3",
-      "contato": "DLM COMÉRCIO DE INSUMOS AGRICOLAS LTDA",
-      "documento": "22736345371",
-      "company": "CZ",
-      "cliente_fornecedor": "DLM COMÉRCIO DE INSUMOS AGRICOLAS LTDA",
-      "fornecedor": "",
-      "cliente": "DLM COMÉRCIO DE INSUMOS AGRICOLAS LTDA",
-      "cultura": "",
-      "zafra": "",
-      "juros": 0.0,
-      "dias_atraso": 0,
-      "vencido": false
-    },
-    {
-      "tipo": "receber",
-      "valor": 110400.0,
-      "valor_original": 110400.0,
-      "saldo": 110400.0,
-      "data_emissao": "2025-09-19",
-      "competencia": "",
-      "vencimento": "2026-05-20",
-      "situacao": "3",
-      "contato": "AGRO COMMODITIES DISTRIBUIDORA DE INSUMOS",
-      "documento": "23881558380",
-      "company": "CZ",
-      "cliente_fornecedor": "AGRO COMMODITIES DISTRIBUIDORA DE INSUMOS",
-      "fornecedor": "",
-      "cliente": "AGRO COMMODITIES DISTRIBUIDORA DE INSUMOS",
-      "cultura": "",
-      "zafra": "",
-      "juros": 0.0,
-      "dias_atraso": 0,
-      "vencido": false
-    },
-    {
-      "tipo": "receber",
       "valor": 20703.68,
       "valor_original": 20703.68,
       "saldo": 20703.68,
@@ -40225,27 +40015,6 @@
       "cliente_fornecedor": "SOLUCAO PRODUTOS AGROPECUARIOS LTDA",
       "fornecedor": "",
       "cliente": "SOLUCAO PRODUTOS AGROPECUARIOS LTDA",
-      "cultura": "",
-      "zafra": "",
-      "juros": 0.0,
-      "dias_atraso": 0,
-      "vencido": false
-    },
-    {
-      "tipo": "receber",
-      "valor": 9985.0,
-      "valor_original": 13735.0,
-      "saldo": 9985.0,
-      "data_emissao": "2025-04-24",
-      "competencia": "2025-04-24",
-      "vencimento": "2026-04-30",
-      "situacao": "3",
-      "contato": "DLM COMÉRCIO DE INSUMOS AGRICOLAS LTDA",
-      "documento": "000274/01",
-      "company": "CZ",
-      "cliente_fornecedor": "DLM COMÉRCIO DE INSUMOS AGRICOLAS LTDA",
-      "fornecedor": "",
-      "cliente": "DLM COMÉRCIO DE INSUMOS AGRICOLAS LTDA",
       "cultura": "",
       "zafra": "",
       "juros": 0.0,
@@ -41422,27 +41191,6 @@
       "cliente_fornecedor": "VM AgroSciences Ltda",
       "fornecedor": "",
       "cliente": "VM AgroSciences Ltda",
-      "cultura": "",
-      "zafra": "",
-      "juros": 0.0,
-      "dias_atraso": 0,
-      "vencido": false
-    },
-    {
-      "tipo": "receber",
-      "valor": 76800.0,
-      "valor_original": 110400.0,
-      "saldo": 76800.0,
-      "data_emissao": "2025-09-19",
-      "competencia": "2025-09-19",
-      "vencimento": "2026-05-20",
-      "situacao": "3",
-      "contato": "AGRO COMMODITIES DISTRIBUIDORA DE INSUMOS",
-      "documento": "002855/01",
-      "company": "CZ",
-      "cliente_fornecedor": "AGRO COMMODITIES DISTRIBUIDORA DE INSUMOS",
-      "fornecedor": "",
-      "cliente": "AGRO COMMODITIES DISTRIBUIDORA DE INSUMOS",
       "cultura": "",
       "zafra": "",
       "juros": 0.0,
@@ -50212,7 +49960,7 @@
         "mes": "2024-08",
         "company": "CR",
         "label": "Variavel - Insumos",
-        "valor": 1244595.0
+        "valor": 1067695.0
       },
       {
         "mes": "2024-08",
@@ -52306,7 +52054,7 @@
         "mes": "2026-03",
         "company": "CZ",
         "label": "A revisar - Governanca",
-        "valor": 288381.82
+        "valor": 284714.61
       },
       {
         "mes": "2026-03",
@@ -52354,7 +52102,7 @@
         "mes": "2026-03",
         "company": "CZ",
         "label": "Variavel - Insumos",
-        "valor": 445867.24
+        "valor": 440986.15
       },
       {
         "mes": "2026-03",
@@ -55800,7 +55548,7 @@
         "mes": "2024-08",
         "company": "CR",
         "label": "Quimicos e materias-primas",
-        "valor": 1244595.0
+        "valor": 1067695.0
       },
       {
         "mes": "2024-08",
@@ -58254,7 +58002,7 @@
         "mes": "2026-03",
         "company": "CZ",
         "label": "Classificacao ambigua",
-        "valor": 288381.82
+        "valor": 284714.61
       },
       {
         "mes": "2026-03",
@@ -58308,7 +58056,7 @@
         "mes": "2026-03",
         "company": "CZ",
         "label": "Quimicos e materias-primas",
-        "valor": 398093.24
+        "valor": 393212.15
       },
       {
         "mes": "2026-03",
@@ -59841,14 +59589,14 @@
       "mes": "2023-01",
       "mes_num": 1,
       "receita_liquida": 0.0,
-      "custos_variaveis_total": 409022.77,
-      "cmv_proxy": 409022.77,
-      "cmv_sales_cost": 409022.77,
+      "custos_variaveis_total": 204511.38,
+      "cmv_proxy": 204511.38,
+      "cmv_sales_cost": 204511.38,
       "cmv_purchase_fallback": 0.0,
       "cmv_method": "sales_cost",
       "custo_fixo_base": 296069.79,
-      "margem_contribuicao": -409022.77,
-      "ebitda": -705092.56,
+      "margem_contribuicao": -204511.38,
+      "ebitda": -500581.17,
       "dre_model": "bling_erp",
       "dre_source": "nfe_emitida + vendas_itens_custo + contas_pagar_total",
       "despesas_ap_proxy": 296069.79
@@ -59857,14 +59605,14 @@
       "mes": "2023-02",
       "mes_num": 2,
       "receita_liquida": 0.0,
-      "custos_variaveis_total": 576839.66,
-      "cmv_proxy": 576839.66,
-      "cmv_sales_cost": 576839.66,
+      "custos_variaveis_total": 288419.83,
+      "cmv_proxy": 288419.83,
+      "cmv_sales_cost": 288419.83,
       "cmv_purchase_fallback": 0.0,
       "cmv_method": "sales_cost",
       "custo_fixo_base": 1062929.02,
-      "margem_contribuicao": -576839.66,
-      "ebitda": -1639768.68,
+      "margem_contribuicao": -288419.83,
+      "ebitda": -1351348.85,
       "dre_model": "bling_erp",
       "dre_source": "nfe_emitida + vendas_itens_custo + contas_pagar_total",
       "despesas_ap_proxy": 1062929.02
@@ -59873,14 +59621,14 @@
       "mes": "2023-03",
       "mes_num": 3,
       "receita_liquida": 0.0,
-      "custos_variaveis_total": 498946.23,
-      "cmv_proxy": 498946.23,
-      "cmv_sales_cost": 498946.23,
+      "custos_variaveis_total": 249473.11,
+      "cmv_proxy": 249473.11,
+      "cmv_sales_cost": 249473.11,
       "cmv_purchase_fallback": 0.0,
       "cmv_method": "sales_cost",
       "custo_fixo_base": 465942.26,
-      "margem_contribuicao": -498946.23,
-      "ebitda": -964888.49,
+      "margem_contribuicao": -249473.11,
+      "ebitda": -715415.37,
       "dre_model": "bling_erp",
       "dre_source": "nfe_emitida + vendas_itens_custo + contas_pagar_total",
       "despesas_ap_proxy": 465942.26
@@ -59889,14 +59637,14 @@
       "mes": "2023-04",
       "mes_num": 4,
       "receita_liquida": 0.0,
-      "custos_variaveis_total": 173428.55,
-      "cmv_proxy": 173428.55,
-      "cmv_sales_cost": 173428.55,
+      "custos_variaveis_total": 86714.27,
+      "cmv_proxy": 86714.27,
+      "cmv_sales_cost": 86714.27,
       "cmv_purchase_fallback": 0.0,
       "cmv_method": "sales_cost",
       "custo_fixo_base": 385145.39,
-      "margem_contribuicao": -173428.55,
-      "ebitda": -558573.94,
+      "margem_contribuicao": -86714.27,
+      "ebitda": -471859.66,
       "dre_model": "bling_erp",
       "dre_source": "nfe_emitida + vendas_itens_custo + contas_pagar_total",
       "despesas_ap_proxy": 385145.39
@@ -59905,14 +59653,14 @@
       "mes": "2023-05",
       "mes_num": 5,
       "receita_liquida": 0.0,
-      "custos_variaveis_total": 99542.45,
-      "cmv_proxy": 99542.45,
-      "cmv_sales_cost": 99542.45,
+      "custos_variaveis_total": 49771.23,
+      "cmv_proxy": 49771.23,
+      "cmv_sales_cost": 49771.23,
       "cmv_purchase_fallback": 0.0,
       "cmv_method": "sales_cost",
       "custo_fixo_base": 451591.35,
-      "margem_contribuicao": -99542.45,
-      "ebitda": -551133.8,
+      "margem_contribuicao": -49771.23,
+      "ebitda": -501362.58,
       "dre_model": "bling_erp",
       "dre_source": "nfe_emitida + vendas_itens_custo + contas_pagar_total",
       "despesas_ap_proxy": 451591.35
@@ -59921,14 +59669,14 @@
       "mes": "2023-06",
       "mes_num": 6,
       "receita_liquida": 0.0,
-      "custos_variaveis_total": 293721.67,
-      "cmv_proxy": 293721.67,
-      "cmv_sales_cost": 293721.67,
+      "custos_variaveis_total": 146860.84,
+      "cmv_proxy": 146860.84,
+      "cmv_sales_cost": 146860.84,
       "cmv_purchase_fallback": 0.0,
       "cmv_method": "sales_cost",
       "custo_fixo_base": 289072.72,
-      "margem_contribuicao": -293721.67,
-      "ebitda": -582794.39,
+      "margem_contribuicao": -146860.84,
+      "ebitda": -435933.56,
       "dre_model": "bling_erp",
       "dre_source": "nfe_emitida + vendas_itens_custo + contas_pagar_total",
       "despesas_ap_proxy": 289072.72
@@ -59937,14 +59685,14 @@
       "mes": "2023-07",
       "mes_num": 7,
       "receita_liquida": 0.0,
-      "custos_variaveis_total": 268069.43,
-      "cmv_proxy": 268069.43,
-      "cmv_sales_cost": 268069.43,
+      "custos_variaveis_total": 134034.72,
+      "cmv_proxy": 134034.72,
+      "cmv_sales_cost": 134034.72,
       "cmv_purchase_fallback": 0.0,
       "cmv_method": "sales_cost",
       "custo_fixo_base": 624091.33,
-      "margem_contribuicao": -268069.43,
-      "ebitda": -892160.76,
+      "margem_contribuicao": -134034.72,
+      "ebitda": -758126.05,
       "dre_model": "bling_erp",
       "dre_source": "nfe_emitida + vendas_itens_custo + contas_pagar_total",
       "despesas_ap_proxy": 624091.33
@@ -59953,14 +59701,14 @@
       "mes": "2023-08",
       "mes_num": 8,
       "receita_liquida": 0.0,
-      "custos_variaveis_total": 750043.74,
-      "cmv_proxy": 750043.74,
-      "cmv_sales_cost": 750043.74,
+      "custos_variaveis_total": 375021.87,
+      "cmv_proxy": 375021.87,
+      "cmv_sales_cost": 375021.87,
       "cmv_purchase_fallback": 0.0,
       "cmv_method": "sales_cost",
       "custo_fixo_base": 749111.86,
-      "margem_contribuicao": -750043.74,
-      "ebitda": -1499155.6,
+      "margem_contribuicao": -375021.87,
+      "ebitda": -1124133.73,
       "dre_model": "bling_erp",
       "dre_source": "nfe_emitida + vendas_itens_custo + contas_pagar_total",
       "despesas_ap_proxy": 749111.86
@@ -59969,14 +59717,14 @@
       "mes": "2023-09",
       "mes_num": 9,
       "receita_liquida": 0.0,
-      "custos_variaveis_total": 979431.26,
-      "cmv_proxy": 979431.26,
-      "cmv_sales_cost": 979431.26,
+      "custos_variaveis_total": 419737.48,
+      "cmv_proxy": 419737.48,
+      "cmv_sales_cost": 419737.48,
       "cmv_purchase_fallback": 0.0,
       "cmv_method": "sales_cost",
       "custo_fixo_base": 977762.65,
-      "margem_contribuicao": -979431.26,
-      "ebitda": -1957193.91,
+      "margem_contribuicao": -419737.48,
+      "ebitda": -1397500.13,
       "dre_model": "bling_erp",
       "dre_source": "nfe_emitida + vendas_itens_custo + contas_pagar_total",
       "despesas_ap_proxy": 977762.65
@@ -59985,14 +59733,14 @@
       "mes": "2023-10",
       "mes_num": 10,
       "receita_liquida": 0.0,
-      "custos_variaveis_total": 1009840.41,
-      "cmv_proxy": 1009840.41,
-      "cmv_sales_cost": 1009840.41,
+      "custos_variaveis_total": 500525.72,
+      "cmv_proxy": 500525.72,
+      "cmv_sales_cost": 500525.72,
       "cmv_purchase_fallback": 0.0,
       "cmv_method": "sales_cost",
       "custo_fixo_base": 2145426.89,
-      "margem_contribuicao": -1009840.41,
-      "ebitda": -3155267.3,
+      "margem_contribuicao": -500525.72,
+      "ebitda": -2645952.61,
       "dre_model": "bling_erp",
       "dre_source": "nfe_emitida + vendas_itens_custo + contas_pagar_total",
       "despesas_ap_proxy": 2145426.89
@@ -60001,14 +59749,14 @@
       "mes": "2023-11",
       "mes_num": 11,
       "receita_liquida": 0.0,
-      "custos_variaveis_total": 539630.35,
-      "cmv_proxy": 539630.35,
-      "cmv_sales_cost": 539630.35,
+      "custos_variaveis_total": 226639.32,
+      "cmv_proxy": 226639.32,
+      "cmv_sales_cost": 226639.32,
       "cmv_purchase_fallback": 0.0,
       "cmv_method": "sales_cost",
       "custo_fixo_base": 936068.31,
-      "margem_contribuicao": -539630.35,
-      "ebitda": -1475698.66,
+      "margem_contribuicao": -226639.32,
+      "ebitda": -1162707.63,
       "dre_model": "bling_erp",
       "dre_source": "nfe_emitida + vendas_itens_custo + contas_pagar_total",
       "despesas_ap_proxy": 936068.31
@@ -60017,14 +59765,14 @@
       "mes": "2023-12",
       "mes_num": 12,
       "receita_liquida": 0.0,
-      "custos_variaveis_total": 1471462.46,
-      "cmv_proxy": 1471462.46,
-      "cmv_sales_cost": 1471462.46,
+      "custos_variaveis_total": 387361.45,
+      "cmv_proxy": 387361.45,
+      "cmv_sales_cost": 387361.45,
       "cmv_purchase_fallback": 0.0,
       "cmv_method": "sales_cost",
       "custo_fixo_base": 564478.81,
-      "margem_contribuicao": -1471462.46,
-      "ebitda": -2035941.27,
+      "margem_contribuicao": -387361.45,
+      "ebitda": -951840.26,
       "dre_model": "bling_erp",
       "dre_source": "nfe_emitida + vendas_itens_custo + contas_pagar_total",
       "despesas_ap_proxy": 564478.81
@@ -60033,14 +59781,14 @@
       "mes": "2024-01",
       "mes_num": 1,
       "receita_liquida": 0.0,
-      "custos_variaveis_total": 1352451.45,
-      "cmv_proxy": 1352451.45,
-      "cmv_sales_cost": 1352451.45,
+      "custos_variaveis_total": 218304.4,
+      "cmv_proxy": 218304.4,
+      "cmv_sales_cost": 218304.4,
       "cmv_purchase_fallback": 0.0,
       "cmv_method": "sales_cost",
       "custo_fixo_base": 775760.33,
-      "margem_contribuicao": -1352451.45,
-      "ebitda": -2128211.78,
+      "margem_contribuicao": -218304.4,
+      "ebitda": -994064.73,
       "dre_model": "bling_erp",
       "dre_source": "nfe_emitida + vendas_itens_custo + contas_pagar_total",
       "despesas_ap_proxy": 775760.33
@@ -60049,14 +59797,14 @@
       "mes": "2024-02",
       "mes_num": 2,
       "receita_liquida": 0.0,
-      "custos_variaveis_total": 2483531.54,
-      "cmv_proxy": 2483531.54,
-      "cmv_sales_cost": 2483531.54,
+      "custos_variaveis_total": 374250.6,
+      "cmv_proxy": 374250.6,
+      "cmv_sales_cost": 374250.6,
       "cmv_purchase_fallback": 0.0,
       "cmv_method": "sales_cost",
       "custo_fixo_base": 2280645.15,
-      "margem_contribuicao": -2483531.54,
-      "ebitda": -4764176.69,
+      "margem_contribuicao": -374250.6,
+      "ebitda": -2654895.75,
       "dre_model": "bling_erp",
       "dre_source": "nfe_emitida + vendas_itens_custo + contas_pagar_total",
       "despesas_ap_proxy": 2280645.15
@@ -60065,14 +59813,14 @@
       "mes": "2024-03",
       "mes_num": 3,
       "receita_liquida": 0.0,
-      "custos_variaveis_total": 443821.08,
-      "cmv_proxy": 443821.08,
-      "cmv_sales_cost": 443821.08,
+      "custos_variaveis_total": 200961.31,
+      "cmv_proxy": 200961.31,
+      "cmv_sales_cost": 200961.31,
       "cmv_purchase_fallback": 0.0,
       "cmv_method": "sales_cost",
       "custo_fixo_base": 2038696.05,
-      "margem_contribuicao": -443821.08,
-      "ebitda": -2482517.13,
+      "margem_contribuicao": -200961.31,
+      "ebitda": -2239657.36,
       "dre_model": "bling_erp",
       "dre_source": "nfe_emitida + vendas_itens_custo + contas_pagar_total",
       "despesas_ap_proxy": 2038696.05
@@ -60081,14 +59829,14 @@
       "mes": "2024-04",
       "mes_num": 4,
       "receita_liquida": 0.0,
-      "custos_variaveis_total": 444599.11,
-      "cmv_proxy": 444599.11,
-      "cmv_sales_cost": 444599.11,
+      "custos_variaveis_total": 192829.25,
+      "cmv_proxy": 192829.25,
+      "cmv_sales_cost": 192829.25,
       "cmv_purchase_fallback": 0.0,
       "cmv_method": "sales_cost",
       "custo_fixo_base": 789517.03,
-      "margem_contribuicao": -444599.11,
-      "ebitda": -1234116.14,
+      "margem_contribuicao": -192829.25,
+      "ebitda": -982346.28,
       "dre_model": "bling_erp",
       "dre_source": "nfe_emitida + vendas_itens_custo + contas_pagar_total",
       "despesas_ap_proxy": 789517.03
@@ -60097,14 +59845,14 @@
       "mes": "2024-05",
       "mes_num": 5,
       "receita_liquida": 0.0,
-      "custos_variaveis_total": 47011.58,
-      "cmv_proxy": 47011.58,
-      "cmv_sales_cost": 47011.58,
+      "custos_variaveis_total": 16407.25,
+      "cmv_proxy": 16407.25,
+      "cmv_sales_cost": 16407.25,
       "cmv_purchase_fallback": 0.0,
       "cmv_method": "sales_cost",
       "custo_fixo_base": 530856.34,
-      "margem_contribuicao": -47011.58,
-      "ebitda": -577867.92,
+      "margem_contribuicao": -16407.25,
+      "ebitda": -547263.59,
       "dre_model": "bling_erp",
       "dre_source": "nfe_emitida + vendas_itens_custo + contas_pagar_total",
       "despesas_ap_proxy": 530856.34
@@ -60113,14 +59861,14 @@
       "mes": "2024-06",
       "mes_num": 6,
       "receita_liquida": 0.0,
-      "custos_variaveis_total": 351640.32,
-      "cmv_proxy": 351640.32,
-      "cmv_sales_cost": 351640.32,
+      "custos_variaveis_total": 66760.89,
+      "cmv_proxy": 66760.89,
+      "cmv_sales_cost": 66760.89,
       "cmv_purchase_fallback": 0.0,
       "cmv_method": "sales_cost",
       "custo_fixo_base": 555131.9,
-      "margem_contribuicao": -351640.32,
-      "ebitda": -906772.22,
+      "margem_contribuicao": -66760.89,
+      "ebitda": -621892.79,
       "dre_model": "bling_erp",
       "dre_source": "nfe_emitida + vendas_itens_custo + contas_pagar_total",
       "despesas_ap_proxy": 555131.9
@@ -60129,14 +59877,14 @@
       "mes": "2024-07",
       "mes_num": 7,
       "receita_liquida": 0.0,
-      "custos_variaveis_total": 600718.55,
-      "cmv_proxy": 600718.55,
-      "cmv_sales_cost": 600718.55,
+      "custos_variaveis_total": 236060.12,
+      "cmv_proxy": 236060.12,
+      "cmv_sales_cost": 236060.12,
       "cmv_purchase_fallback": 0.0,
       "cmv_method": "sales_cost",
       "custo_fixo_base": 981080.95,
-      "margem_contribuicao": -600718.55,
-      "ebitda": -1581799.5,
+      "margem_contribuicao": -236060.12,
+      "ebitda": -1217141.07,
       "dre_model": "bling_erp",
       "dre_source": "nfe_emitida + vendas_itens_custo + contas_pagar_total",
       "despesas_ap_proxy": 981080.95
@@ -60145,30 +59893,30 @@
       "mes": "2024-08",
       "mes_num": 8,
       "receita_liquida": 0.0,
-      "custos_variaveis_total": 2248030.78,
-      "cmv_proxy": 2248030.78,
-      "cmv_sales_cost": 2248030.78,
+      "custos_variaveis_total": 240937.41,
+      "cmv_proxy": 240937.41,
+      "cmv_sales_cost": 240937.41,
       "cmv_purchase_fallback": 0.0,
       "cmv_method": "sales_cost",
-      "custo_fixo_base": 1154567.13,
-      "margem_contribuicao": -2248030.78,
-      "ebitda": -3402597.91,
+      "custo_fixo_base": 977667.13,
+      "margem_contribuicao": -240937.41,
+      "ebitda": -1218604.54,
       "dre_model": "bling_erp",
       "dre_source": "nfe_emitida + vendas_itens_custo + contas_pagar_total",
-      "despesas_ap_proxy": 1154567.13
+      "despesas_ap_proxy": 977667.13
     },
     {
       "mes": "2024-09",
       "mes_num": 9,
       "receita_liquida": 0.0,
-      "custos_variaveis_total": 1451389.86,
-      "cmv_proxy": 1451389.86,
-      "cmv_sales_cost": 1451389.86,
+      "custos_variaveis_total": 600281.66,
+      "cmv_proxy": 600281.66,
+      "cmv_sales_cost": 600281.66,
       "cmv_purchase_fallback": 0.0,
       "cmv_method": "sales_cost",
       "custo_fixo_base": 1802462.0,
-      "margem_contribuicao": -1451389.86,
-      "ebitda": -3253851.86,
+      "margem_contribuicao": -600281.66,
+      "ebitda": -2402743.66,
       "dre_model": "bling_erp",
       "dre_source": "nfe_emitida + vendas_itens_custo + contas_pagar_total",
       "despesas_ap_proxy": 1802462.0
@@ -60177,14 +59925,14 @@
       "mes": "2024-10",
       "mes_num": 10,
       "receita_liquida": 0.0,
-      "custos_variaveis_total": 905560.52,
-      "cmv_proxy": 905560.52,
-      "cmv_sales_cost": 905560.52,
+      "custos_variaveis_total": 369147.57,
+      "cmv_proxy": 369147.57,
+      "cmv_sales_cost": 369147.57,
       "cmv_purchase_fallback": 0.0,
       "cmv_method": "sales_cost",
       "custo_fixo_base": 1918287.99,
-      "margem_contribuicao": -905560.52,
-      "ebitda": -2823848.51,
+      "margem_contribuicao": -369147.57,
+      "ebitda": -2287435.56,
       "dre_model": "bling_erp",
       "dre_source": "nfe_emitida + vendas_itens_custo + contas_pagar_total",
       "despesas_ap_proxy": 1918287.99
@@ -60193,14 +59941,14 @@
       "mes": "2024-11",
       "mes_num": 11,
       "receita_liquida": 0.0,
-      "custos_variaveis_total": 500861.25,
-      "cmv_proxy": 500861.25,
-      "cmv_sales_cost": 500861.25,
+      "custos_variaveis_total": 233168.84,
+      "cmv_proxy": 233168.84,
+      "cmv_sales_cost": 233168.84,
       "cmv_purchase_fallback": 0.0,
       "cmv_method": "sales_cost",
       "custo_fixo_base": 1145390.7,
-      "margem_contribuicao": -500861.25,
-      "ebitda": -1646251.95,
+      "margem_contribuicao": -233168.84,
+      "ebitda": -1378559.54,
       "dre_model": "bling_erp",
       "dre_source": "nfe_emitida + vendas_itens_custo + contas_pagar_total",
       "despesas_ap_proxy": 1145390.7
@@ -60209,14 +59957,14 @@
       "mes": "2024-12",
       "mes_num": 12,
       "receita_liquida": 0.0,
-      "custos_variaveis_total": 459390.33,
-      "cmv_proxy": 459390.33,
-      "cmv_sales_cost": 459390.33,
+      "custos_variaveis_total": 216173.04,
+      "cmv_proxy": 216173.04,
+      "cmv_sales_cost": 216173.04,
       "cmv_purchase_fallback": 0.0,
       "cmv_method": "sales_cost",
       "custo_fixo_base": 574104.8,
-      "margem_contribuicao": -459390.33,
-      "ebitda": -1033495.13,
+      "margem_contribuicao": -216173.04,
+      "ebitda": -790277.84,
       "dre_model": "bling_erp",
       "dre_source": "nfe_emitida + vendas_itens_custo + contas_pagar_total",
       "despesas_ap_proxy": 574104.8
@@ -60225,14 +59973,14 @@
       "mes": "2025-01",
       "mes_num": 1,
       "receita_liquida": 0.0,
-      "custos_variaveis_total": 553772.1,
-      "cmv_proxy": 553772.1,
-      "cmv_sales_cost": 553772.1,
+      "custos_variaveis_total": 267370.35,
+      "cmv_proxy": 267370.35,
+      "cmv_sales_cost": 267370.35,
       "cmv_purchase_fallback": 0.0,
       "cmv_method": "sales_cost",
       "custo_fixo_base": 1713801.17,
-      "margem_contribuicao": -553772.1,
-      "ebitda": -2267573.27,
+      "margem_contribuicao": -267370.35,
+      "ebitda": -1981171.52,
       "dre_model": "bling_erp",
       "dre_source": "nfe_emitida + vendas_itens_custo + contas_pagar_total",
       "despesas_ap_proxy": 1713801.17
@@ -60241,14 +59989,14 @@
       "mes": "2025-02",
       "mes_num": 2,
       "receita_liquida": 0.0,
-      "custos_variaveis_total": 4231017.46,
-      "cmv_proxy": 4231017.46,
-      "cmv_sales_cost": 4231017.46,
+      "custos_variaveis_total": 2055119.7,
+      "cmv_proxy": 2055119.7,
+      "cmv_sales_cost": 2055119.7,
       "cmv_purchase_fallback": 0.0,
       "cmv_method": "sales_cost",
       "custo_fixo_base": 3153121.0,
-      "margem_contribuicao": -4231017.46,
-      "ebitda": -7384138.46,
+      "margem_contribuicao": -2055119.7,
+      "ebitda": -5208240.7,
       "dre_model": "bling_erp",
       "dre_source": "nfe_emitida + vendas_itens_custo + contas_pagar_total",
       "despesas_ap_proxy": 3153121.0
@@ -60257,14 +60005,14 @@
       "mes": "2025-03",
       "mes_num": 3,
       "receita_liquida": 0.0,
-      "custos_variaveis_total": 607128.3,
-      "cmv_proxy": 607128.3,
-      "cmv_sales_cost": 607128.3,
+      "custos_variaveis_total": 236134.04,
+      "cmv_proxy": 236134.04,
+      "cmv_sales_cost": 236134.04,
       "cmv_purchase_fallback": 0.0,
       "cmv_method": "sales_cost",
       "custo_fixo_base": 4374791.0,
-      "margem_contribuicao": -607128.3,
-      "ebitda": -4981919.3,
+      "margem_contribuicao": -236134.04,
+      "ebitda": -4610925.04,
       "dre_model": "bling_erp",
       "dre_source": "nfe_emitida + vendas_itens_custo + contas_pagar_total",
       "despesas_ap_proxy": 4374791.0
@@ -60273,14 +60021,14 @@
       "mes": "2025-04",
       "mes_num": 4,
       "receita_liquida": 0.0,
-      "custos_variaveis_total": 1039455.22,
-      "cmv_proxy": 1039455.22,
-      "cmv_sales_cost": 1039455.22,
+      "custos_variaveis_total": 502173.35,
+      "cmv_proxy": 502173.35,
+      "cmv_sales_cost": 502173.35,
       "cmv_purchase_fallback": 0.0,
       "cmv_method": "sales_cost",
       "custo_fixo_base": 1179834.95,
-      "margem_contribuicao": -1039455.22,
-      "ebitda": -2219290.17,
+      "margem_contribuicao": -502173.35,
+      "ebitda": -1682008.3,
       "dre_model": "bling_erp",
       "dre_source": "nfe_emitida + vendas_itens_custo + contas_pagar_total",
       "despesas_ap_proxy": 1179834.95
@@ -60289,14 +60037,14 @@
       "mes": "2025-05",
       "mes_num": 5,
       "receita_liquida": 0.0,
-      "custos_variaveis_total": 245343.33,
-      "cmv_proxy": 245343.33,
-      "cmv_sales_cost": 245343.33,
+      "custos_variaveis_total": 103036.17,
+      "cmv_proxy": 103036.17,
+      "cmv_sales_cost": 103036.17,
       "cmv_purchase_fallback": 0.0,
       "cmv_method": "sales_cost",
       "custo_fixo_base": 627854.07,
-      "margem_contribuicao": -245343.33,
-      "ebitda": -873197.4,
+      "margem_contribuicao": -103036.17,
+      "ebitda": -730890.24,
       "dre_model": "bling_erp",
       "dre_source": "nfe_emitida + vendas_itens_custo + contas_pagar_total",
       "despesas_ap_proxy": 627854.07
@@ -60305,14 +60053,14 @@
       "mes": "2025-06",
       "mes_num": 6,
       "receita_liquida": 0.0,
-      "custos_variaveis_total": 922996.89,
-      "cmv_proxy": 922996.89,
-      "cmv_sales_cost": 922996.89,
+      "custos_variaveis_total": 451990.71,
+      "cmv_proxy": 451990.71,
+      "cmv_sales_cost": 451990.71,
       "cmv_purchase_fallback": 0.0,
       "cmv_method": "sales_cost",
       "custo_fixo_base": 1890117.86,
-      "margem_contribuicao": -922996.89,
-      "ebitda": -2813114.75,
+      "margem_contribuicao": -451990.71,
+      "ebitda": -2342108.57,
       "dre_model": "bling_erp",
       "dre_source": "nfe_emitida + vendas_itens_custo + contas_pagar_total",
       "despesas_ap_proxy": 1890117.86
@@ -60321,14 +60069,14 @@
       "mes": "2025-07",
       "mes_num": 7,
       "receita_liquida": 0.0,
-      "custos_variaveis_total": 2142024.41,
-      "cmv_proxy": 2142024.41,
-      "cmv_sales_cost": 2142024.41,
+      "custos_variaveis_total": 996612.57,
+      "cmv_proxy": 996612.57,
+      "cmv_sales_cost": 996612.57,
       "cmv_purchase_fallback": 0.0,
       "cmv_method": "sales_cost",
       "custo_fixo_base": 2362688.65,
-      "margem_contribuicao": -2142024.41,
-      "ebitda": -4504713.06,
+      "margem_contribuicao": -996612.57,
+      "ebitda": -3359301.22,
       "dre_model": "bling_erp",
       "dre_source": "nfe_emitida + vendas_itens_custo + contas_pagar_total",
       "despesas_ap_proxy": 2362688.65
@@ -60337,14 +60085,14 @@
       "mes": "2025-08",
       "mes_num": 8,
       "receita_liquida": 0.0,
-      "custos_variaveis_total": 11620922.18,
-      "cmv_proxy": 11620922.18,
-      "cmv_sales_cost": 11620922.18,
+      "custos_variaveis_total": 5749397.35,
+      "cmv_proxy": 5749397.35,
+      "cmv_sales_cost": 5749397.35,
       "cmv_purchase_fallback": 0.0,
       "cmv_method": "sales_cost",
       "custo_fixo_base": 3532259.3,
-      "margem_contribuicao": -11620922.18,
-      "ebitda": -15153181.48,
+      "margem_contribuicao": -5749397.35,
+      "ebitda": -9281656.65,
       "dre_model": "bling_erp",
       "dre_source": "nfe_emitida + vendas_itens_custo + contas_pagar_total",
       "despesas_ap_proxy": 3532259.3
@@ -60353,14 +60101,14 @@
       "mes": "2025-09",
       "mes_num": 9,
       "receita_liquida": 0.0,
-      "custos_variaveis_total": 1650030.46,
-      "cmv_proxy": 1650030.46,
-      "cmv_sales_cost": 1650030.46,
+      "custos_variaveis_total": 736422.14,
+      "cmv_proxy": 736422.14,
+      "cmv_sales_cost": 736422.14,
       "cmv_purchase_fallback": 0.0,
       "cmv_method": "sales_cost",
       "custo_fixo_base": 2626908.82,
-      "margem_contribuicao": -1650030.46,
-      "ebitda": -4276939.28,
+      "margem_contribuicao": -736422.14,
+      "ebitda": -3363330.96,
       "dre_model": "bling_erp",
       "dre_source": "nfe_emitida + vendas_itens_custo + contas_pagar_total",
       "despesas_ap_proxy": 2626908.82
@@ -60369,14 +60117,14 @@
       "mes": "2025-10",
       "mes_num": 10,
       "receita_liquida": 0.0,
-      "custos_variaveis_total": 912415.78,
-      "cmv_proxy": 912415.78,
-      "cmv_sales_cost": 912415.78,
+      "custos_variaveis_total": 328015.35,
+      "cmv_proxy": 328015.35,
+      "cmv_sales_cost": 328015.35,
       "cmv_purchase_fallback": 0.0,
       "cmv_method": "sales_cost",
       "custo_fixo_base": 1278140.01,
-      "margem_contribuicao": -912415.78,
-      "ebitda": -2190555.79,
+      "margem_contribuicao": -328015.35,
+      "ebitda": -1606155.36,
       "dre_model": "bling_erp",
       "dre_source": "nfe_emitida + vendas_itens_custo + contas_pagar_total",
       "despesas_ap_proxy": 1278140.01
@@ -60385,14 +60133,14 @@
       "mes": "2025-11",
       "mes_num": 11,
       "receita_liquida": 0.0,
-      "custos_variaveis_total": 740957.9,
-      "cmv_proxy": 740957.9,
-      "cmv_sales_cost": 740957.9,
+      "custos_variaveis_total": 295539.54,
+      "cmv_proxy": 295539.54,
+      "cmv_sales_cost": 295539.54,
       "cmv_purchase_fallback": 0.0,
       "cmv_method": "sales_cost",
       "custo_fixo_base": 1838012.35,
-      "margem_contribuicao": -740957.9,
-      "ebitda": -2578970.25,
+      "margem_contribuicao": -295539.54,
+      "ebitda": -2133551.89,
       "dre_model": "bling_erp",
       "dre_source": "nfe_emitida + vendas_itens_custo + contas_pagar_total",
       "despesas_ap_proxy": 1838012.35
@@ -60401,14 +60149,14 @@
       "mes": "2025-12",
       "mes_num": 12,
       "receita_liquida": 0.0,
-      "custos_variaveis_total": 1267606.74,
-      "cmv_proxy": 1267606.74,
-      "cmv_sales_cost": 1267606.74,
+      "custos_variaveis_total": 609162.85,
+      "cmv_proxy": 609162.85,
+      "cmv_sales_cost": 609162.85,
       "cmv_purchase_fallback": 0.0,
       "cmv_method": "sales_cost",
       "custo_fixo_base": 2277443.81,
-      "margem_contribuicao": -1267606.74,
-      "ebitda": -3545050.55,
+      "margem_contribuicao": -609162.85,
+      "ebitda": -2886606.66,
       "dre_model": "bling_erp",
       "dre_source": "nfe_emitida + vendas_itens_custo + contas_pagar_total",
       "despesas_ap_proxy": 2277443.81
@@ -60416,15 +60164,15 @@
     {
       "mes": "2026-01",
       "mes_num": 1,
-      "receita_liquida": 3156494.4,
-      "custos_variaveis_total": 860605.73,
-      "cmv_proxy": 860605.73,
-      "cmv_sales_cost": 860605.73,
+      "receita_liquida": 1162554.81,
+      "custos_variaveis_total": 400938.88,
+      "cmv_proxy": 400938.88,
+      "cmv_sales_cost": 400938.88,
       "cmv_purchase_fallback": 0.0,
       "cmv_method": "sales_cost",
       "custo_fixo_base": 1550066.04,
-      "margem_contribuicao": 2295888.67,
-      "ebitda": 745822.63,
+      "margem_contribuicao": 761615.93,
+      "ebitda": -788450.11,
       "dre_model": "bling_erp",
       "dre_source": "nfe_emitida + vendas_itens_custo + contas_pagar_total",
       "despesas_ap_proxy": 1550066.04
@@ -60432,15 +60180,15 @@
     {
       "mes": "2026-02",
       "mes_num": 2,
-      "receita_liquida": 3305121.52,
-      "custos_variaveis_total": 167448.65,
-      "cmv_proxy": 167448.65,
-      "cmv_sales_cost": 167448.65,
+      "receita_liquida": 1473191.84,
+      "custos_variaveis_total": 64370.49,
+      "cmv_proxy": 64370.49,
+      "cmv_sales_cost": 64370.49,
       "cmv_purchase_fallback": 0.0,
       "cmv_method": "sales_cost",
       "custo_fixo_base": 1085047.64,
-      "margem_contribuicao": 3137672.87,
-      "ebitda": 2052625.23,
+      "margem_contribuicao": 1408821.35,
+      "ebitda": 323773.71,
       "dre_model": "bling_erp",
       "dre_source": "nfe_emitida + vendas_itens_custo + contas_pagar_total",
       "despesas_ap_proxy": 1085047.64
@@ -60448,31 +60196,31 @@
     {
       "mes": "2026-03",
       "mes_num": 3,
-      "receita_liquida": 3061639.6,
-      "custos_variaveis_total": 73406.21,
-      "cmv_proxy": 73406.21,
-      "cmv_sales_cost": 73406.21,
+      "receita_liquida": 1373815.16,
+      "custos_variaveis_total": 9007.91,
+      "cmv_proxy": 9007.91,
+      "cmv_sales_cost": 9007.91,
       "cmv_purchase_fallback": 0.0,
       "cmv_method": "sales_cost",
-      "custo_fixo_base": 1268268.92,
-      "margem_contribuicao": 2988233.39,
-      "ebitda": 1719964.47,
+      "custo_fixo_base": 1259720.62,
+      "margem_contribuicao": 1364807.25,
+      "ebitda": 105086.63,
       "dre_model": "bling_erp",
       "dre_source": "nfe_emitida + vendas_itens_custo + contas_pagar_total",
-      "despesas_ap_proxy": 1268268.92
+      "despesas_ap_proxy": 1259720.62
     },
     {
       "mes": "2026-04",
       "mes_num": 4,
-      "receita_liquida": 320162.76,
+      "receita_liquida": 137589.38,
       "custos_variaveis_total": 0.0,
       "cmv_proxy": 0.0,
       "cmv_sales_cost": 0.0,
       "cmv_purchase_fallback": 0.0,
       "cmv_method": "sales_cost",
       "custo_fixo_base": 390072.69,
-      "margem_contribuicao": 320162.76,
-      "ebitda": -69909.93,
+      "margem_contribuicao": 137589.38,
+      "ebitda": -252483.31,
       "dre_model": "bling_erp",
       "dre_source": "nfe_emitida + vendas_itens_custo + contas_pagar_total",
       "despesas_ap_proxy": 390072.69
@@ -60536,175 +60284,175 @@
     "sales_cmv_month_count": 39,
     "expense_source": "contas_pagar_total_sem_cancelados",
     "expense_date_rule": "data_emissao -> competencia -> vencimento",
-    "cmv_item_total": 9300,
-    "cmv_item_matched": 8144,
-    "cmv_item_missing": 1156,
-    "cmv_match_rate": 0.8757,
+    "cmv_item_total": 3602,
+    "cmv_item_matched": 3125,
+    "cmv_item_missing": 477,
+    "cmv_match_rate": 0.8676,
     "cmv_match_sources": {
-      "manual_fallback": 12,
-      "product_code": 76,
-      "product_id": 7832,
-      "product_id_zero_cost": 200,
-      "product_name": 224,
-      "product_name_zero_cost": 42,
-      "product_not_found": 914
+      "manual_fallback": 6,
+      "product_code": 19,
+      "product_id": 3036,
+      "product_id_zero_cost": 63,
+      "product_name": 64,
+      "product_name_zero_cost": 1,
+      "product_not_found": 413
     },
     "cmv_sales_coverage_by_month": {
       "2023-01": {
-        "matched_items": 218,
-        "total_items": 264
+        "matched_items": 109,
+        "total_items": 132
       },
       "2023-02": {
-        "matched_items": 224,
-        "total_items": 266
+        "matched_items": 112,
+        "total_items": 133
       },
       "2023-03": {
-        "matched_items": 156,
-        "total_items": 190
+        "matched_items": 78,
+        "total_items": 93
       },
       "2023-04": {
-        "matched_items": 88,
-        "total_items": 96
+        "matched_items": 44,
+        "total_items": 48
       },
       "2023-05": {
-        "matched_items": 78,
-        "total_items": 96
+        "matched_items": 39,
+        "total_items": 47
       },
       "2023-06": {
-        "matched_items": 88,
-        "total_items": 100
+        "matched_items": 44,
+        "total_items": 50
       },
       "2023-07": {
-        "matched_items": 82,
-        "total_items": 102
+        "matched_items": 41,
+        "total_items": 49
       },
       "2023-08": {
-        "matched_items": 196,
-        "total_items": 202
+        "matched_items": 98,
+        "total_items": 100
       },
       "2023-09": {
-        "matched_items": 132,
-        "total_items": 152
+        "matched_items": 63,
+        "total_items": 73
       },
       "2023-10": {
-        "matched_items": 128,
-        "total_items": 160
+        "matched_items": 62,
+        "total_items": 77
       },
       "2023-11": {
-        "matched_items": 226,
-        "total_items": 282
+        "matched_items": 85,
+        "total_items": 107
       },
       "2023-12": {
-        "matched_items": 218,
-        "total_items": 250
+        "matched_items": 74,
+        "total_items": 86
       },
       "2024-01": {
-        "matched_items": 196,
-        "total_items": 234
+        "matched_items": 57,
+        "total_items": 74
       },
       "2024-02": {
-        "matched_items": 302,
-        "total_items": 354
+        "matched_items": 93,
+        "total_items": 114
       },
       "2024-03": {
-        "matched_items": 286,
-        "total_items": 362
+        "matched_items": 115,
+        "total_items": 133
       },
       "2024-04": {
-        "matched_items": 156,
-        "total_items": 212
+        "matched_items": 61,
+        "total_items": 82
       },
       "2024-05": {
-        "matched_items": 66,
-        "total_items": 90
+        "matched_items": 24,
+        "total_items": 36
       },
       "2024-06": {
-        "matched_items": 154,
-        "total_items": 236
+        "matched_items": 43,
+        "total_items": 77
       },
       "2024-07": {
-        "matched_items": 136,
-        "total_items": 214
+        "matched_items": 44,
+        "total_items": 80
       },
       "2024-08": {
-        "matched_items": 254,
-        "total_items": 306
+        "matched_items": 74,
+        "total_items": 94
       },
       "2024-09": {
-        "matched_items": 284,
-        "total_items": 320
+        "matched_items": 79,
+        "total_items": 95
       },
       "2024-10": {
-        "matched_items": 312,
-        "total_items": 358
+        "matched_items": 101,
+        "total_items": 117
       },
       "2024-11": {
-        "matched_items": 222,
-        "total_items": 264
+        "matched_items": 88,
+        "total_items": 109
       },
       "2024-12": {
-        "matched_items": 196,
-        "total_items": 222
+        "matched_items": 84,
+        "total_items": 95
       },
       "2025-01": {
-        "matched_items": 264,
-        "total_items": 290
+        "matched_items": 114,
+        "total_items": 122
       },
       "2025-02": {
-        "matched_items": 394,
-        "total_items": 484
+        "matched_items": 149,
+        "total_items": 194
       },
       "2025-03": {
-        "matched_items": 240,
-        "total_items": 260
+        "matched_items": 76,
+        "total_items": 85
       },
       "2025-04": {
-        "matched_items": 166,
-        "total_items": 182
+        "matched_items": 54,
+        "total_items": 61
       },
       "2025-05": {
-        "matched_items": 116,
-        "total_items": 116
+        "matched_items": 39,
+        "total_items": 39
       },
       "2025-06": {
-        "matched_items": 116,
-        "total_items": 120
+        "matched_items": 43,
+        "total_items": 45
       },
       "2025-07": {
-        "matched_items": 232,
-        "total_items": 232
+        "matched_items": 94,
+        "total_items": 94
       },
       "2025-08": {
-        "matched_items": 444,
-        "total_items": 462
+        "matched_items": 180,
+        "total_items": 184
       },
       "2025-09": {
-        "matched_items": 402,
-        "total_items": 410
+        "matched_items": 147,
+        "total_items": 150
       },
       "2025-10": {
-        "matched_items": 374,
-        "total_items": 392
+        "matched_items": 129,
+        "total_items": 133
       },
       "2025-11": {
-        "matched_items": 346,
-        "total_items": 364
+        "matched_items": 140,
+        "total_items": 144
       },
       "2025-12": {
-        "matched_items": 226,
-        "total_items": 230
+        "matched_items": 95,
+        "total_items": 97
       },
       "2026-01": {
-        "matched_items": 282,
-        "total_items": 282
+        "matched_items": 106,
+        "total_items": 106
       },
       "2026-02": {
-        "matched_items": 90,
-        "total_items": 90
+        "matched_items": 30,
+        "total_items": 30
       },
       "2026-03": {
-        "matched_items": 54,
-        "total_items": 54
+        "matched_items": 17,
+        "total_items": 17
       }
     },
     "cmv_missing_items_top": [
@@ -60715,8 +60463,8 @@
         "produto_codigo": "BIO-0012",
         "produto": "MEIO DE CULTURA - G- CROM CHROMO B 5L",
         "motivo": "product_not_found",
-        "quantidade_total": 10000.0,
-        "itens": 12
+        "quantidade_total": 5000.0,
+        "itens": 6
       },
       {
         "company": "CZ",
@@ -60725,8 +60473,8 @@
         "produto_codigo": "BIO-0009",
         "produto": "MEIO DE CULTURA - B2 ARYB CACTUS 1L",
         "motivo": "product_not_found",
-        "quantidade_total": 6000.0,
-        "itens": 12
+        "quantidade_total": 3000.0,
+        "itens": 6
       },
       {
         "company": "CZ",
@@ -60735,18 +60483,8 @@
         "produto_codigo": "REV-0050",
         "produto": "LAROK 20L",
         "motivo": "product_not_found",
-        "quantidade_total": 1650.0,
-        "itens": 12
-      },
-      {
-        "company": "CR",
-        "mes": "2024-08",
-        "produto_id": "16225425018",
-        "produto_codigo": "PA-00001",
-        "produto": "SULFUR PRO 20L",
-        "motivo": "product_id_zero_cost",
-        "quantidade_total": 510.0,
-        "itens": 12
+        "quantidade_total": 825.0,
+        "itens": 6
       },
       {
         "company": "CZ",
@@ -60755,18 +60493,8 @@
         "produto_codigo": "REV-0008",
         "produto": "LAROK 5L",
         "motivo": "product_not_found",
-        "quantidade_total": 2880.0,
-        "itens": 10
-      },
-      {
-        "company": "CR",
-        "mes": "2025-08",
-        "produto_id": "16225425018",
-        "produto_codigo": "PA-00001",
-        "produto": "SULFUR PRO 20L",
-        "motivo": "product_id_zero_cost",
-        "quantidade_total": 334.0,
-        "itens": 10
+        "quantidade_total": 1440.0,
+        "itens": 5
       },
       {
         "company": "CZ",
@@ -60775,28 +60503,8 @@
         "produto_codigo": "REV-0051",
         "produto": "LAROK 200L",
         "motivo": "product_not_found",
-        "quantidade_total": 328.0,
-        "itens": 10
-      },
-      {
-        "company": "CR",
-        "mes": "2025-11",
-        "produto_id": "16225425018",
-        "produto_codigo": "PA-00001",
-        "produto": "SULFUR PRO 20L",
-        "motivo": "product_id_zero_cost",
-        "quantidade_total": 214.0,
-        "itens": 10
-      },
-      {
-        "company": "CR",
-        "mes": "2025-01",
-        "produto_id": "16225425018",
-        "produto_codigo": "PA-00001",
-        "produto": "SULFUR PRO 20L",
-        "motivo": "product_id_zero_cost",
-        "quantidade_total": 124.0,
-        "itens": 10
+        "quantidade_total": 164.0,
+        "itens": 5
       },
       {
         "company": "CZ",
@@ -60805,8 +60513,8 @@
         "produto_codigo": "MIXXR1",
         "produto": "PRODUTO- MIX XR 1L",
         "motivo": "product_not_found",
-        "quantidade_total": 60.0,
-        "itens": 10
+        "quantidade_total": 30.0,
+        "itens": 5
       },
       {
         "company": "CZ",
@@ -60815,8 +60523,8 @@
         "produto_codigo": "",
         "produto": "COMPOSTO ADJUVANTE",
         "motivo": "product_not_found",
-        "quantidade_total": 3142.0,
-        "itens": 8
+        "quantidade_total": 1571.0,
+        "itens": 4
       },
       {
         "company": "CZ",
@@ -60825,8 +60533,8 @@
         "produto_codigo": "REV-0025",
         "produto": "CITROFERTI 5L",
         "motivo": "product_not_found",
-        "quantidade_total": 1432.0,
-        "itens": 8
+        "quantidade_total": 716.0,
+        "itens": 4
       },
       {
         "company": "CZ",
@@ -60835,8 +60543,8 @@
         "produto_codigo": "",
         "produto": "ÁGUA DE REUSO",
         "motivo": "product_id_zero_cost",
-        "quantidade_total": 318.0,
-        "itens": 8
+        "quantidade_total": 159.0,
+        "itens": 4
       },
       {
         "company": "CZ",
@@ -60845,8 +60553,8 @@
         "produto_codigo": "PA-0042",
         "produto": "TOPCLEAR 1L",
         "motivo": "product_not_found",
-        "quantidade_total": 134.0,
-        "itens": 8
+        "quantidade_total": 67.0,
+        "itens": 4
       },
       {
         "company": "CZ",
@@ -60855,18 +60563,8 @@
         "produto_codigo": "PA-0042",
         "produto": "TOPCLEAR 1L",
         "motivo": "product_not_found",
-        "quantidade_total": 86.0,
-        "itens": 8
-      },
-      {
-        "company": "CR",
-        "mes": "2024-06",
-        "produto_id": "16221759639",
-        "produto_codigo": "BIO-0015",
-        "produto": "I.CONTROL 250ML",
-        "motivo": "product_name_zero_cost",
-        "quantidade_total": 16.0,
-        "itens": 8
+        "quantidade_total": 43.0,
+        "itens": 4
       },
       {
         "company": "CZ",
@@ -60875,8 +60573,8 @@
         "produto_codigo": "BIO-0012",
         "produto": "CHROMO B 5L",
         "motivo": "product_not_found",
-        "quantidade_total": 15000.0,
-        "itens": 6
+        "quantidade_total": 7500.0,
+        "itens": 3
       },
       {
         "company": "CZ",
@@ -60885,8 +60583,8 @@
         "produto_codigo": "BIO-0025",
         "produto": "TRICHO + 1L",
         "motivo": "product_not_found",
-        "quantidade_total": 9000.0,
-        "itens": 6
+        "quantidade_total": 4500.0,
+        "itens": 3
       },
       {
         "company": "CZ",
@@ -60895,8 +60593,8 @@
         "produto_codigo": "",
         "produto": "BIOBRADY 1,5L",
         "motivo": "product_not_found",
-        "quantidade_total": 6237.0,
-        "itens": 6
+        "quantidade_total": 3118.5,
+        "itens": 3
       },
       {
         "company": "CZ",
@@ -60905,8 +60603,8 @@
         "produto_codigo": "",
         "produto": "TP63MM VALVULADA",
         "motivo": "product_not_found",
-        "quantidade_total": 2286.0,
-        "itens": 6
+        "quantidade_total": 1143.0,
+        "itens": 3
       },
       {
         "company": "CZ",
@@ -60915,8 +60613,8 @@
         "produto_codigo": "",
         "produto": "SILFOAM SE 39 200KG",
         "motivo": "product_not_found",
-        "quantidade_total": 1604.0,
-        "itens": 6
+        "quantidade_total": 802.0,
+        "itens": 3
       },
       {
         "company": "CZ",
@@ -60925,8 +60623,8 @@
         "produto_codigo": "",
         "produto": "NITRATO DE CÁLCIO",
         "motivo": "product_id_zero_cost",
-        "quantidade_total": 910.0,
-        "itens": 6
+        "quantidade_total": 455.0,
+        "itens": 3
       },
       {
         "company": "CZ",
@@ -60935,8 +60633,8 @@
         "produto_codigo": "IPT005",
         "produto": "PRODUTO - IMPACTUSFERTI 5L",
         "motivo": "product_not_found",
-        "quantidade_total": 360.0,
-        "itens": 6
+        "quantidade_total": 180.0,
+        "itens": 3
       },
       {
         "company": "CZ",
@@ -60945,18 +60643,8 @@
         "produto_codigo": "",
         "produto": "SODA CAUSTICA EM ESCAMA SC 25 KG",
         "motivo": "product_not_found",
-        "quantidade_total": 102.0,
-        "itens": 6
-      },
-      {
-        "company": "CR",
-        "mes": "2024-10",
-        "produto_id": "16221759639",
-        "produto_codigo": "BIO-0015",
-        "produto": "I.CONTROL 250ML",
-        "motivo": "product_name_zero_cost",
-        "quantidade_total": 20.0,
-        "itens": 6
+        "quantidade_total": 51.0,
+        "itens": 3
       },
       {
         "company": "CZ",
@@ -60965,8 +60653,8 @@
         "produto_codigo": "",
         "produto": "CLEARZEB 500 ML",
         "motivo": "product_not_found",
-        "quantidade_total": 6.0,
-        "itens": 6
+        "quantidade_total": 3.0,
+        "itens": 3
       },
       {
         "company": "CZ",
@@ -60975,18 +60663,8 @@
         "produto_codigo": "3821.00.00",
         "produto": "MEIO DE CULTURA - MIX F1 BMI I.CONTROL 5L",
         "motivo": "product_not_found",
-        "quantidade_total": 56000.0,
-        "itens": 4
-      },
-      {
-        "company": "CR",
-        "mes": "2024-02",
-        "produto_id": "16214752425",
-        "produto_codigo": "",
-        "produto": "MEIO DE CULTURA PARA MICRORGANISMOS - LOTES(S): 9060MC QTDE: 3000 VCTO LOTES(S) 13/02/25",
-        "motivo": "product_not_found",
-        "quantidade_total": 12000.0,
-        "itens": 4
+        "quantidade_total": 28000.0,
+        "itens": 2
       },
       {
         "company": "CZ",
@@ -60995,8 +60673,8 @@
         "produto_codigo": "BIO-0025",
         "produto": "MEIO DE CULTURA - MIX F1 THA TRICHO + 1L",
         "motivo": "product_not_found",
-        "quantidade_total": 6000.0,
-        "itens": 4
+        "quantidade_total": 3000.0,
+        "itens": 2
       },
       {
         "company": "CZ",
@@ -61005,8 +60683,8 @@
         "produto_codigo": "REV-0008",
         "produto": "LAROK 5L",
         "motivo": "product_not_found",
-        "quantidade_total": 4480.0,
-        "itens": 4
+        "quantidade_total": 2240.0,
+        "itens": 2
       },
       {
         "company": "CZ",
@@ -61015,8 +60693,8 @@
         "produto_codigo": "",
         "produto": "INOCULANTE LIQ REG. MAPA SC003327-8.000001 BRADYRHIZOBIUM JAPONICUM (SEMIA 5079/5080) MIN. 1X10^9 UFC/ML (EMB: BAG 1,5)",
         "motivo": "product_not_found",
-        "quantidade_total": 4158.0,
-        "itens": 4
+        "quantidade_total": 2079.0,
+        "itens": 2
       },
       {
         "company": "CZ",
@@ -61025,8 +60703,8 @@
         "produto_codigo": "BIO-0022",
         "produto": "MEIO DE CULTURA - MIX B2 GTI MIX XR 1L",
         "motivo": "product_not_found",
-        "quantidade_total": 4000.0,
-        "itens": 4
+        "quantidade_total": 2000.0,
+        "itens": 2
       },
       {
         "company": "CZ",
@@ -61035,8 +60713,8 @@
         "produto_codigo": "",
         "produto": "DISPERSANTE CLEAR 1000KG",
         "motivo": "product_not_found",
-        "quantidade_total": 4000.0,
-        "itens": 4
+        "quantidade_total": 2000.0,
+        "itens": 2
       },
       {
         "company": "CZ",
@@ -61045,8 +60723,8 @@
         "produto_codigo": "",
         "produto": "MIXTURE 1L",
         "motivo": "product_not_found",
-        "quantidade_total": 2112.0,
-        "itens": 4
+        "quantidade_total": 1056.0,
+        "itens": 2
       },
       {
         "company": "CZ",
@@ -61055,8 +60733,8 @@
         "produto_codigo": "",
         "produto": "SPRAY TANK 1L",
         "motivo": "product_not_found",
-        "quantidade_total": 2112.0,
-        "itens": 4
+        "quantidade_total": 1056.0,
+        "itens": 2
       },
       {
         "company": "CZ",
@@ -61065,8 +60743,8 @@
         "produto_codigo": "BIO-0020",
         "produto": "MEIO DE CULTURA - F1 PL NEMASTOP 1L",
         "motivo": "product_not_found",
-        "quantidade_total": 2000.0,
-        "itens": 4
+        "quantidade_total": 1000.0,
+        "itens": 2
       },
       {
         "company": "CZ",
@@ -61075,8 +60753,8 @@
         "produto_codigo": "REV-0008",
         "produto": "LAROK 5L",
         "motivo": "product_not_found",
-        "quantidade_total": 1280.0,
-        "itens": 4
+        "quantidade_total": 640.0,
+        "itens": 2
       },
       {
         "company": "CZ",
@@ -61085,8 +60763,8 @@
         "produto_codigo": "",
         "produto": "MEIO DE CULTURA - B2 BT CRISTAL K 5L",
         "motivo": "product_not_found",
-        "quantidade_total": 1200.0,
-        "itens": 4
+        "quantidade_total": 600.0,
+        "itens": 2
       },
       {
         "company": "CZ",
@@ -61095,8 +60773,8 @@
         "produto_codigo": "",
         "produto": "DISPERSANTE H1 270KG",
         "motivo": "product_not_found",
-        "quantidade_total": 1080.0,
-        "itens": 4
+        "quantidade_total": 540.0,
+        "itens": 2
       },
       {
         "company": "CZ",
@@ -61105,8 +60783,8 @@
         "produto_codigo": "",
         "produto": "RR MAX 20L",
         "motivo": "product_not_found",
-        "quantidade_total": 984.0,
-        "itens": 4
+        "quantidade_total": 492.0,
+        "itens": 2
       },
       {
         "company": "CZ",
@@ -61115,8 +60793,8 @@
         "produto_codigo": "VGT005",
         "produto": "PRODUTO - VIGORMAISCITRO 5L",
         "motivo": "product_not_found",
-        "quantidade_total": 960.0,
-        "itens": 4
+        "quantidade_total": 480.0,
+        "itens": 2
       },
       {
         "company": "CZ",
@@ -61125,8 +60803,8 @@
         "produto_codigo": "REV-0008",
         "produto": "LAROK 5L",
         "motivo": "product_not_found",
-        "quantidade_total": 840.0,
-        "itens": 4
+        "quantidade_total": 420.0,
+        "itens": 2
       },
       {
         "company": "CZ",
@@ -61135,8 +60813,8 @@
         "produto_codigo": "",
         "produto": "SILFOAM SE 39",
         "motivo": "product_id_zero_cost",
-        "quantidade_total": 800.0,
-        "itens": 4
+        "quantidade_total": 400.0,
+        "itens": 2
       },
       {
         "company": "CZ",
@@ -61145,8 +60823,8 @@
         "produto_codigo": "BIO-0002",
         "produto": "MEIO DE CULTURA - G- AZO BIOAZO 1L",
         "motivo": "product_not_found",
-        "quantidade_total": 800.0,
-        "itens": 4
+        "quantidade_total": 400.0,
+        "itens": 2
       },
       {
         "company": "CZ",
@@ -61155,8 +60833,8 @@
         "produto_codigo": "REV-0041",
         "produto": "VIGORMAIS CONTROL 5L",
         "motivo": "product_not_found",
-        "quantidade_total": 800.0,
-        "itens": 4
+        "quantidade_total": 400.0,
+        "itens": 2
       },
       {
         "company": "CZ",
@@ -61165,8 +60843,8 @@
         "produto_codigo": "",
         "produto": "PROD-CQDX",
         "motivo": "product_not_found",
-        "quantidade_total": 704.0,
-        "itens": 4
+        "quantidade_total": 352.0,
+        "itens": 2
       },
       {
         "company": "CZ",
@@ -61175,8 +60853,8 @@
         "produto_codigo": "REV-0008",
         "produto": "LAROK 5L",
         "motivo": "product_not_found",
-        "quantidade_total": 688.0,
-        "itens": 4
+        "quantidade_total": 344.0,
+        "itens": 2
       },
       {
         "company": "CZ",
@@ -61185,8 +60863,8 @@
         "produto_codigo": "REV-0025",
         "produto": "CITROFERTI 5L",
         "motivo": "product_not_found",
-        "quantidade_total": 640.0,
-        "itens": 4
+        "quantidade_total": 320.0,
+        "itens": 2
       },
       {
         "company": "CZ",
@@ -61195,8 +60873,8 @@
         "produto_codigo": "B2B-0074",
         "produto": "FERRUS 1L",
         "motivo": "product_id_zero_cost",
-        "quantidade_total": 600.0,
-        "itens": 4
+        "quantidade_total": 300.0,
+        "itens": 2
       },
       {
         "company": "CZ",
@@ -61205,8 +60883,8 @@
         "produto_codigo": "MIXXR1",
         "produto": "PRODUTO- MIX XR 1L",
         "motivo": "product_not_found",
-        "quantidade_total": 496.0,
-        "itens": 4
+        "quantidade_total": 248.0,
+        "itens": 2
       },
       {
         "company": "CZ",
@@ -61215,8 +60893,8 @@
         "produto_codigo": "REV-0029",
         "produto": "NANOSIL 1L",
         "motivo": "product_not_found",
-        "quantidade_total": 480.0,
-        "itens": 4
+        "quantidade_total": 240.0,
+        "itens": 2
       },
       {
         "company": "CZ",
@@ -61225,8 +60903,8 @@
         "produto_codigo": "REV-0032",
         "produto": "SFRASH 1L",
         "motivo": "product_not_found",
-        "quantidade_total": 480.0,
-        "itens": 4
+        "quantidade_total": 240.0,
+        "itens": 2
       },
       {
         "company": "CZ",
@@ -61235,8 +60913,8 @@
         "produto_codigo": "PA-0042",
         "produto": "TOPCLEAR 1L",
         "motivo": "product_not_found",
-        "quantidade_total": 400.0,
-        "itens": 4
+        "quantidade_total": 200.0,
+        "itens": 2
       },
       {
         "company": "CZ",
@@ -61245,8 +60923,8 @@
         "produto_codigo": "REV-0050",
         "produto": "LAROK 20L",
         "motivo": "product_not_found",
-        "quantidade_total": 360.0,
-        "itens": 4
+        "quantidade_total": 180.0,
+        "itens": 2
       },
       {
         "company": "CZ",
@@ -61255,8 +60933,8 @@
         "produto_codigo": "REV-0031",
         "produto": "EXPUL 1KG",
         "motivo": "product_not_found",
-        "quantidade_total": 240.0,
-        "itens": 4
+        "quantidade_total": 120.0,
+        "itens": 2
       },
       {
         "company": "CZ",
@@ -61265,18 +60943,8 @@
         "produto_codigo": "",
         "produto": "MIXTURE 1L",
         "motivo": "product_not_found",
-        "quantidade_total": 212.0,
-        "itens": 4
-      },
-      {
-        "company": "CR",
-        "mes": "2023-03",
-        "produto_id": "16038775068",
-        "produto_codigo": "PA-0001",
-        "produto": "SULPHUR 20L",
-        "motivo": "product_not_found",
-        "quantidade_total": 180.0,
-        "itens": 4
+        "quantidade_total": 106.0,
+        "itens": 2
       },
       {
         "company": "CZ",
@@ -61285,28 +60953,8 @@
         "produto_codigo": "",
         "produto": "REDUTOP",
         "motivo": "product_not_found",
-        "quantidade_total": 170.0,
-        "itens": 4
-      },
-      {
-        "company": "CR",
-        "mes": "2024-02",
-        "produto_id": "16038775068",
-        "produto_codigo": "PA-0001",
-        "produto": "SULPHUR 20L",
-        "motivo": "product_not_found",
-        "quantidade_total": 140.0,
-        "itens": 4
-      },
-      {
-        "company": "CR",
-        "mes": "2024-07",
-        "produto_id": "16225425018",
-        "produto_codigo": "PA-00001",
-        "produto": "SULFUR PRO 20L",
-        "motivo": "product_id_zero_cost",
-        "quantidade_total": 110.0,
-        "itens": 4
+        "quantidade_total": 85.0,
+        "itens": 2
       },
       {
         "company": "CZ",
@@ -61315,8 +60963,8 @@
         "produto_codigo": "REV-0030",
         "produto": "FLASH GOLD 5L",
         "motivo": "product_not_found",
-        "quantidade_total": 96.0,
-        "itens": 4
+        "quantidade_total": 48.0,
+        "itens": 2
       },
       {
         "company": "CZ",
@@ -61325,8 +60973,8 @@
         "produto_codigo": "B2B-0073",
         "produto": "FERRUS 5L",
         "motivo": "product_id_zero_cost",
-        "quantidade_total": 80.0,
-        "itens": 4
+        "quantidade_total": 40.0,
+        "itens": 2
       },
       {
         "company": "CZ",
@@ -61335,8 +60983,8 @@
         "produto_codigo": "",
         "produto": "DISPERSANTE H1 20KG",
         "motivo": "product_not_found",
-        "quantidade_total": 80.0,
-        "itens": 4
+        "quantidade_total": 40.0,
+        "itens": 2
       },
       {
         "company": "CZ",
@@ -61345,8 +60993,8 @@
         "produto_codigo": "REV-0044",
         "produto": "CITROBAC 250 ML",
         "motivo": "product_not_found",
-        "quantidade_total": 80.0,
-        "itens": 4
+        "quantidade_total": 40.0,
+        "itens": 2
       },
       {
         "company": "CZ",
@@ -61355,8 +61003,8 @@
         "produto_codigo": "",
         "produto": "QUATERBAC 250 ML",
         "motivo": "product_not_found",
-        "quantidade_total": 80.0,
-        "itens": 4
+        "quantidade_total": 40.0,
+        "itens": 2
       },
       {
         "company": "CZ",
@@ -61365,18 +61013,8 @@
         "produto_codigo": "REV-0042",
         "produto": "LAROK 250 ML",
         "motivo": "product_not_found",
-        "quantidade_total": 80.0,
-        "itens": 4
-      },
-      {
-        "company": "CR",
-        "mes": "2023-11",
-        "produto_id": "16160179292",
-        "produto_codigo": "",
-        "produto": "CHROMO B 5 LITROS",
-        "motivo": "product_not_found",
-        "quantidade_total": 80.0,
-        "itens": 4
+        "quantidade_total": 40.0,
+        "itens": 2
       },
       {
         "company": "CZ",
@@ -61385,8 +61023,8 @@
         "produto_codigo": "PA-0042",
         "produto": "TOPCLEAR 1L",
         "motivo": "product_not_found",
-        "quantidade_total": 72.0,
-        "itens": 4
+        "quantidade_total": 36.0,
+        "itens": 2
       },
       {
         "company": "CZ",
@@ -61395,8 +61033,8 @@
         "produto_codigo": "REV-0003",
         "produto": "DEFENDER 5 L",
         "motivo": "product_not_found",
-        "quantidade_total": 64.0,
-        "itens": 4
+        "quantidade_total": 32.0,
+        "itens": 2
       },
       {
         "company": "CZ",
@@ -61405,8 +61043,8 @@
         "produto_codigo": "PA-0042",
         "produto": "TOPCLEAR 1L",
         "motivo": "product_not_found",
-        "quantidade_total": 50.0,
-        "itens": 4
+        "quantidade_total": 25.0,
+        "itens": 2
       },
       {
         "company": "CZ",
@@ -61415,8 +61053,8 @@
         "produto_codigo": "REV-0101",
         "produto": "TOP OIL 5L",
         "motivo": "product_id_zero_cost",
-        "quantidade_total": 48.0,
-        "itens": 4
+        "quantidade_total": 24.0,
+        "itens": 2
       },
       {
         "company": "CZ",
@@ -61425,18 +61063,8 @@
         "produto_codigo": "",
         "produto": "NITROX 1000L",
         "motivo": "product_id_zero_cost",
-        "quantidade_total": 40.0,
-        "itens": 4
-      },
-      {
-        "company": "CR",
-        "mes": "2024-12",
-        "produto_id": "16225425018",
-        "produto_codigo": "PA-00001",
-        "produto": "SULFUR PRO 20L",
-        "motivo": "product_id_zero_cost",
-        "quantidade_total": 38.0,
-        "itens": 4
+        "quantidade_total": 20.0,
+        "itens": 2
       },
       {
         "company": "CZ",
@@ -61445,8 +61073,8 @@
         "produto_codigo": "",
         "produto": "TOP OIL 5L",
         "motivo": "product_id_zero_cost",
-        "quantidade_total": 32.0,
-        "itens": 4
+        "quantidade_total": 16.0,
+        "itens": 2
       },
       {
         "company": "CZ",
@@ -61455,8 +61083,8 @@
         "produto_codigo": "B2B-0073",
         "produto": "FERRUS 5L",
         "motivo": "product_id_zero_cost",
-        "quantidade_total": 28.0,
-        "itens": 4
+        "quantidade_total": 14.0,
+        "itens": 2
       },
       {
         "company": "CZ",
@@ -61465,8 +61093,8 @@
         "produto_codigo": "REV-0051",
         "produto": "LAROK 200L",
         "motivo": "product_not_found",
-        "quantidade_total": 28.0,
-        "itens": 4
+        "quantidade_total": 14.0,
+        "itens": 2
       },
       {
         "company": "CZ",
@@ -61475,8 +61103,8 @@
         "produto_codigo": "",
         "produto": "AMOSTRAS DE RESIDUO 250ML",
         "motivo": "product_id_zero_cost",
-        "quantidade_total": 28.0,
-        "itens": 4
+        "quantidade_total": 14.0,
+        "itens": 2
       },
       {
         "company": "CZ",
@@ -61485,18 +61113,8 @@
         "produto_codigo": "",
         "produto": "SK 30 - 5L",
         "motivo": "product_not_found",
-        "quantidade_total": 26.0,
-        "itens": 4
-      },
-      {
-        "company": "CR",
-        "mes": "2023-11",
-        "produto_id": "16144019240",
-        "produto_codigo": "",
-        "produto": "CLEARZEB 5L",
-        "motivo": "product_not_found",
-        "quantidade_total": 26.0,
-        "itens": 4
+        "quantidade_total": 13.0,
+        "itens": 2
       },
       {
         "company": "CZ",
@@ -61505,8 +61123,8 @@
         "produto_codigo": "REV-0051",
         "produto": "LAROK 200L",
         "motivo": "product_not_found",
-        "quantidade_total": 24.0,
-        "itens": 4
+        "quantidade_total": 12.0,
+        "itens": 2
       },
       {
         "company": "CZ",
@@ -61515,8 +61133,8 @@
         "produto_codigo": "PA-0042",
         "produto": "TOPCLEAR 1L",
         "motivo": "product_not_found",
-        "quantidade_total": 20.0,
-        "itens": 4
+        "quantidade_total": 10.0,
+        "itens": 2
       },
       {
         "company": "CZ",
@@ -61525,18 +61143,8 @@
         "produto_codigo": "PA-0042",
         "produto": "TOPCLEAR 1L",
         "motivo": "product_not_found",
-        "quantidade_total": 20.0,
-        "itens": 4
-      },
-      {
-        "company": "CR",
-        "mes": "2023-12",
-        "produto_id": "16160179292",
-        "produto_codigo": "",
-        "produto": "CHROMO B 5 LITROS",
-        "motivo": "product_not_found",
-        "quantidade_total": 20.0,
-        "itens": 4
+        "quantidade_total": 10.0,
+        "itens": 2
       },
       {
         "company": "CZ",
@@ -61545,18 +61153,8 @@
         "produto_codigo": "PA-0042",
         "produto": "TOPCLEAR 1L",
         "motivo": "product_not_found",
-        "quantidade_total": 16.0,
-        "itens": 4
-      },
-      {
-        "company": "CR",
-        "mes": "2024-10",
-        "produto_id": "16221760071",
-        "produto_codigo": "BIO-0010",
-        "produto": "CACTUS 250ML",
-        "motivo": "product_name_zero_cost",
-        "quantidade_total": 16.0,
-        "itens": 4
+        "quantidade_total": 8.0,
+        "itens": 2
       },
       {
         "company": "CZ",
@@ -61565,8 +61163,8 @@
         "produto_codigo": "",
         "produto": "POLI CITRO 200L",
         "motivo": "product_not_found",
-        "quantidade_total": 10.0,
-        "itens": 4
+        "quantidade_total": 5.0,
+        "itens": 2
       },
       {
         "company": "CZ",
@@ -61575,8 +61173,8 @@
         "produto_codigo": "",
         "produto": "AMOSTRA CLEAR",
         "motivo": "product_not_found",
-        "quantidade_total": 9.0,
-        "itens": 4
+        "quantidade_total": 4.5,
+        "itens": 2
       },
       {
         "company": "CZ",
@@ -61585,8 +61183,8 @@
         "produto_codigo": "",
         "produto": "ÁPICE 1L",
         "motivo": "product_not_found",
-        "quantidade_total": 8.0,
-        "itens": 4
+        "quantidade_total": 4.0,
+        "itens": 2
       },
       {
         "company": "CZ",
@@ -61595,8 +61193,8 @@
         "produto_codigo": "",
         "produto": "OIL X 1L",
         "motivo": "product_not_found",
-        "quantidade_total": 8.0,
-        "itens": 4
+        "quantidade_total": 4.0,
+        "itens": 2
       },
       {
         "company": "CZ",
@@ -61605,8 +61203,8 @@
         "produto_codigo": "REV-0028",
         "produto": "CITROBAC 200L",
         "motivo": "product_not_found",
-        "quantidade_total": 8.0,
-        "itens": 4
+        "quantidade_total": 4.0,
+        "itens": 2
       },
       {
         "company": "CZ",
@@ -61615,8 +61213,8 @@
         "produto_codigo": "PA-0042",
         "produto": "TOPCLEAR 1L",
         "motivo": "product_not_found",
-        "quantidade_total": 6.0,
-        "itens": 4
+        "quantidade_total": 3.0,
+        "itens": 2
       },
       {
         "company": "CZ",
@@ -61625,8 +61223,8 @@
         "produto_codigo": "",
         "produto": "AMOSTRA CLEAR",
         "motivo": "product_not_found",
-        "quantidade_total": 6.0,
-        "itens": 4
+        "quantidade_total": 3.0,
+        "itens": 2
       },
       {
         "company": "CZ",
@@ -61635,8 +61233,8 @@
         "produto_codigo": "PA-0041",
         "produto": "TOPCLEAR 250ML",
         "motivo": "product_not_found",
-        "quantidade_total": 6.0,
-        "itens": 4
+        "quantidade_total": 3.0,
+        "itens": 2
       },
       {
         "company": "CZ",
@@ -61645,8 +61243,8 @@
         "produto_codigo": "PA-0019",
         "produto": "COMPATIBILIZE 5L",
         "motivo": "product_not_found",
-        "quantidade_total": 6.0,
-        "itens": 4
+        "quantidade_total": 3.0,
+        "itens": 2
       },
       {
         "company": "CZ",
@@ -61655,64 +61253,214 @@
         "produto_codigo": "REV-0035",
         "produto": "VIGORMAIS IMPACTTUS 20L",
         "motivo": "product_not_found",
-        "quantidade_total": 6.0,
-        "itens": 4
+        "quantidade_total": 3.0,
+        "itens": 2
       },
       {
-        "company": "CR",
-        "mes": "2024-04",
-        "produto_id": "16221761353",
+        "company": "CZ",
+        "mes": "2024-11",
+        "produto_id": "16281076441",
         "produto_codigo": "",
-        "produto": "SULFURPRO 250ML",
+        "produto": "SILFOAM SE 39 200KG",
         "motivo": "product_not_found",
-        "quantidade_total": 6.0,
-        "itens": 4
+        "quantidade_total": 2.0,
+        "itens": 2
       },
       {
-        "company": "CR",
-        "mes": "2024-03",
-        "produto_id": "16221760649",
+        "company": "CZ",
+        "mes": "2024-09",
+        "produto_id": "16198430599",
         "produto_codigo": "",
-        "produto": "BIOPROTECT 250ML",
-        "motivo": "product_name_zero_cost",
-        "quantidade_total": 6.0,
-        "itens": 4
-      },
-      {
-        "company": "CR",
-        "mes": "2024-03",
-        "produto_id": "16221744299",
-        "produto_codigo": "",
-        "produto": "BIOAZO 250ML",
+        "produto": "AMOSTRA CLEAR",
         "motivo": "product_not_found",
-        "quantidade_total": 6.0,
-        "itens": 4
+        "quantidade_total": 2.0,
+        "itens": 2
       },
       {
-        "company": "CR",
-        "mes": "2024-03",
-        "produto_id": "16221760337",
+        "company": "CZ",
+        "mes": "2024-09",
+        "produto_id": "16317841072",
         "produto_codigo": "",
-        "produto": "TRICHO+ 250ML",
-        "motivo": "product_name_zero_cost",
-        "quantidade_total": 6.0,
-        "itens": 4
+        "produto": "SILITI FERTILIZANTE MINERAL MISTO 200L",
+        "motivo": "product_not_found",
+        "quantidade_total": 2.0,
+        "itens": 2
       },
       {
-        "company": "CR",
-        "mes": "2024-03",
-        "produto_id": "16221760071",
+        "company": "CZ",
+        "mes": "2024-08",
+        "produto_id": "10407888191",
+        "produto_codigo": "PA-0042",
+        "produto": "TOPCLEAR 1L",
+        "motivo": "product_not_found",
+        "quantidade_total": 2.0,
+        "itens": 2
+      },
+      {
+        "company": "CZ",
+        "mes": "2023-01",
+        "produto_id": "11892399426",
+        "produto_codigo": "CLZ015",
+        "produto": "PRODUTO - CLEARZEB 1,5L",
+        "motivo": "product_not_found",
+        "quantidade_total": 2.0,
+        "itens": 2
+      },
+      {
+        "company": "CZ",
+        "mes": "2024-12",
+        "produto_id": "16267365150",
         "produto_codigo": "",
-        "produto": "CACTUS 250ML",
-        "motivo": "product_name_zero_cost",
-        "quantidade_total": 6.0,
-        "itens": 4
+        "produto": "TP63MM VALVULADA",
+        "motivo": "product_not_found",
+        "quantidade_total": 2500.0,
+        "itens": 1
+      },
+      {
+        "company": "CZ",
+        "mes": "2025-09",
+        "produto_id": "16529841341",
+        "produto_codigo": "",
+        "produto": "INOCULANTE LÍQ REG. MAPA SC003327-8.000001 BRADYRHIZOBIUM (BB3L)",
+        "motivo": "product_id_zero_cost",
+        "quantidade_total": 2112.0,
+        "itens": 1
+      },
+      {
+        "company": "CZ",
+        "mes": "2023-09",
+        "produto_id": "16120152440",
+        "produto_codigo": "REV-0046",
+        "produto": "VIGORMAIS TOPAIR 1L",
+        "motivo": "product_not_found",
+        "quantidade_total": 2004.0,
+        "itens": 1
+      },
+      {
+        "company": "CZ",
+        "mes": "2023-10",
+        "produto_id": "16120152440",
+        "produto_codigo": "REV-0046",
+        "produto": "VIGORMAIS TOPAIR 1L",
+        "motivo": "product_not_found",
+        "quantidade_total": 1980.0,
+        "itens": 1
+      },
+      {
+        "company": "CZ",
+        "mes": "2023-05",
+        "produto_id": "15950310125",
+        "produto_codigo": "REV-0008",
+        "produto": "LAROK 5L",
+        "motivo": "product_not_found",
+        "quantidade_total": 1440.0,
+        "itens": 1
+      },
+      {
+        "company": "CZ",
+        "mes": "2024-10",
+        "produto_id": "16339999268",
+        "produto_codigo": "",
+        "produto": "ETIQUETA ADESIVA TOPAIR 1L",
+        "motivo": "product_not_found",
+        "quantidade_total": 1250.0,
+        "itens": 1
+      },
+      {
+        "company": "CZ",
+        "mes": "2024-10",
+        "produto_id": "16340000415",
+        "produto_codigo": "",
+        "produto": "ETIQUETA ADESIVA REDTOP 1L",
+        "motivo": "product_not_found",
+        "quantidade_total": 1100.0,
+        "itens": 1
+      },
+      {
+        "company": "CZ",
+        "mes": "2024-06",
+        "produto_id": "16276292335",
+        "produto_codigo": "",
+        "produto": "CARBONATO DE POTÁSSIO",
+        "motivo": "product_not_found",
+        "quantidade_total": 1100.0,
+        "itens": 1
+      },
+      {
+        "company": "CZ",
+        "mes": "2023-08",
+        "produto_id": "16120152440",
+        "produto_codigo": "",
+        "produto": "VIGORMAIS TOPAIR 1L",
+        "motivo": "product_not_found",
+        "quantidade_total": 1056.0,
+        "itens": 1
+      },
+      {
+        "company": "CZ",
+        "mes": "2024-07",
+        "produto_id": "16267365150",
+        "produto_codigo": "",
+        "produto": "TP63MM VALVULADA",
+        "motivo": "product_not_found",
+        "quantidade_total": 1000.0,
+        "itens": 1
+      },
+      {
+        "company": "CZ",
+        "mes": "2024-02",
+        "produto_id": "16187173295",
+        "produto_codigo": "",
+        "produto": "TAMAP 63MM VALVULADA",
+        "motivo": "product_not_found",
+        "quantidade_total": 1000.0,
+        "itens": 1
+      },
+      {
+        "company": "CZ",
+        "mes": "2024-01",
+        "produto_id": "16187173295",
+        "produto_codigo": "",
+        "produto": "TAMAP 63MM VALVULADA",
+        "motivo": "product_not_found",
+        "quantidade_total": 1000.0,
+        "itens": 1
+      },
+      {
+        "company": "CZ",
+        "mes": "2024-10",
+        "produto_id": "16340000031",
+        "produto_codigo": "",
+        "produto": "ETIQUETA ADESIVA TOPCLEAR 1L",
+        "motivo": "product_not_found",
+        "quantidade_total": 700.0,
+        "itens": 1
+      },
+      {
+        "company": "CZ",
+        "mes": "2025-01",
+        "produto_id": "15999772105",
+        "produto_codigo": "REV-0020",
+        "produto": "VIGORMAISSILITI 5L",
+        "motivo": "product_not_found",
+        "quantidade_total": 640.0,
+        "itens": 1
+      },
+      {
+        "company": "CZ",
+        "mes": "2024-06",
+        "produto_id": "15950310125",
+        "produto_codigo": "REV-0008",
+        "produto": "LAROK 5L",
+        "motivo": "product_not_found",
+        "quantidade_total": 640.0,
+        "itens": 1
       }
     ],
-    "ap_rows_total": 13263,
+    "ap_rows_total": 13259,
     "ap_rows_exact_date": 13259,
-    "ap_rows_fallback_due": 4,
-    "nfe_cache_count": 4,
-    "sales_cache_count": 4
+    "ap_rows_fallback_due": 0,
+    "nfe_cache_count": 1,
+    "sales_cache_count": 1
   }
 }

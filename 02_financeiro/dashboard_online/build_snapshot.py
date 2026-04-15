@@ -302,6 +302,13 @@ def unique_paths(paths: list[Path]) -> list[Path]:
     return out
 
 
+def latest_existing_path(paths: list[Path]) -> Path | None:
+    existing = [path for path in unique_paths(paths) if path.exists()]
+    if not existing:
+        return None
+    return sorted(existing, key=lambda path: (path.stat().st_size, path.stat().st_mtime), reverse=True)[0]
+
+
 def resolve_cache_candidates(clear_os_root: Path, filename: str) -> list[Path]:
     candidates = [
         ROOT / "bling_api" / filename,
@@ -320,7 +327,8 @@ def resolve_cache_candidates(clear_os_root: Path, filename: str) -> list[Path]:
     ]
     for root in compatibility_roots:
         candidates.append(root / filename)
-    return unique_paths([path for path in candidates if path is not None])
+    latest = latest_existing_path([path for path in candidates if path is not None])
+    return [latest] if latest is not None else []
 
 
 def resolve_cache_glob_candidates(clear_os_root: Path, pattern: str) -> list[Path]:
@@ -336,7 +344,8 @@ def resolve_cache_glob_candidates(clear_os_root: Path, pattern: str) -> list[Pat
         if not root.exists():
             continue
         candidates.extend(root.glob(pattern))
-    return unique_paths(candidates)
+    latest = latest_existing_path(candidates)
+    return [latest] if latest is not None else []
 
 
 def contato_nome(row: dict) -> str:
