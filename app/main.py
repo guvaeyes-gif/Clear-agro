@@ -1123,6 +1123,17 @@ def overlay_targets_actuals_from_realizado(
     sales["vendedor_name_norm"] = sales.get("vendedor", pd.Series("", index=sales.index)).fillna("").astype(str).str.strip().map(_vendor_key)
     sales["estado_norm"] = sales.get("customer_state", sales.get("estado", pd.Series("", index=sales.index))).fillna("").astype(str).str.strip().str.upper()
 
+    def _pick_vendor_value(row: pd.Series, columns: list[str | None]) -> str:
+        for column in columns:
+            if not column:
+                continue
+            if column not in row.index:
+                continue
+            value = str(row.get(column, "") or "").strip()
+            if value:
+                return value
+        return ""
+
     def _row_realizado(row: pd.Series) -> float:
         try:
             ano = int(pd.to_numeric(row.get(year_col), errors="coerce"))
@@ -1132,7 +1143,19 @@ def overlay_targets_actuals_from_realizado(
         month_value = int(pd.to_numeric(row.get(month_col), errors="coerce")) if month_col and pd.notna(pd.to_numeric(row.get(month_col), errors="coerce")) else None
         quarter_value = int(pd.to_numeric(row.get(quarter_col), errors="coerce")) if quarter_col and pd.notna(pd.to_numeric(row.get(quarter_col), errors="coerce")) else None
         state_value = str(row.get(state_col, "") or "").strip().upper() if state_col else ""
-        vendor_value = _vendor_key(row.get(vendor_col, "")) if vendor_col else ""
+        vendor_value = _vendor_key(
+            _pick_vendor_value(
+                row,
+                [
+                    vendor_col,
+                    "vendedor_label",
+                    "vendedor",
+                    "sales_rep_name",
+                    "sales_rep_code",
+                    "vendedor_id",
+                ],
+            )
+        )
         company_value = str(row.get(company_col, "") or "").strip().upper() if company_col else ""
 
         match = sales[sales["ano"] == ano]
@@ -4077,7 +4100,7 @@ if page == "Metas Comerciais":
                     month_col="mes",
                     quarter_col="quarter",
                     state_col=None,
-                    vendor_col="vendedor_id",
+                    vendor_col="vendedor_label",
                     company_col="empresa",
                     actual_col="actual_value",
                     gap_col="gap_value",
@@ -4128,7 +4151,7 @@ if page == "Metas Comerciais":
                 month_col="mes",
                 quarter_col="quarter",
                 state_col=None,
-                vendor_col="vendedor_id",
+                vendor_col="vendedor_label",
                 company_col="empresa",
                 actual_col="realizado_valor",
                 gap_col="gap_valor",
