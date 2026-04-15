@@ -874,12 +874,13 @@ def load_bling_nfe(year: int) -> pd.DataFrame:
     return df[keep_cols].dropna(subset=["data", "valor"])
 
 
-@st.cache_data(show_spinner=False)
-def load_bling_nfe_detail(year: int = 2026) -> pd.DataFrame:
-    years = [year] if year in {2025, 2026} else [2026, 2025]
-    df = _load_bling_nfe_rows(years)
+def _load_bling_nfe_detail_years(years: tuple[int, ...]) -> pd.DataFrame:
+    years = tuple(sorted({int(year) for year in years if str(year).strip()}))
+    if not years:
+        years = (2026, 2025)
+    df = _load_bling_nfe_rows(list(years))
     if df.empty:
-        df = _load_remote_bling_nfe_rows(years)
+        df = _load_remote_bling_nfe_rows(list(years))
     if df.empty:
         return pd.DataFrame()
 
@@ -1009,6 +1010,18 @@ def load_bling_nfe_detail(year: int = 2026) -> pd.DataFrame:
     out["dias_em_aberto"] = (pd.Timestamp.today().normalize() - out["data"].dt.normalize()).dt.days
     out["month_start"] = out["data"].dt.to_period("M").dt.to_timestamp()
     return out.dropna(subset=["data"])
+
+
+@st.cache_data(show_spinner=False)
+def load_bling_nfe_detail(year: int = 2026) -> pd.DataFrame:
+    years = (year,) if year in {2025, 2026} else (2026, 2025)
+    return _load_bling_nfe_detail_years(years)
+
+
+@st.cache_data(show_spinner=False)
+def load_bling_nfe_detail_years(years: tuple[int, ...] | None = None) -> pd.DataFrame:
+    years = years or (2026, 2025)
+    return _load_bling_nfe_detail_years(years)
 
 
 def _load_jsonl(cache: Path) -> pd.DataFrame:

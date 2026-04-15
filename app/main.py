@@ -24,6 +24,7 @@ from src.data import (
     load_bling_sales_detail,
     load_bling_nfe,
     load_bling_nfe_detail,
+    load_bling_nfe_detail_years,
     load_bling_contas,
     load_bling_estoque,
     load_bling_sales_realized_view,
@@ -1718,7 +1719,7 @@ def prepare_sales_comparison_actual(
 
     missing_years = sorted(set(selected_years) - set(frames[0]["ano"].unique().tolist()) if frames else set(selected_years))
     if missing_years:
-        detail = load_bling_nfe_detail(0)
+        detail = load_bling_nfe_detail_years(tuple(selected_years))
         if not detail.empty and {"data", "valor_total"}.issubset(detail.columns):
             hist = detail.copy()
             hist["data"] = pd.to_datetime(hist["data"], errors="coerce")
@@ -2881,7 +2882,8 @@ if page == "Comparativo de Vendas":
     st.subheader("Comparativo de Vendas")
     st.caption("Analitico comparativo de vendas entre anos, com cortes por mes, produto e cliente.")
 
-    detail_all = load_bling_nfe_detail(0)
+    historical_start_year = max(2020, int(year) - 5)
+    detail_all = load_bling_nfe_detail_years(tuple(range(historical_start_year, int(year) + 1)))
     if detail_all.empty or "data" not in detail_all.columns:
         st.info("Sem base detalhada de vendas para montar o comparativo.")
     else:
