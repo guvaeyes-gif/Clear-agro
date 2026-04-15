@@ -2362,6 +2362,7 @@ if page == "Executive Cockpit":
     crm_pipeline_view = filter_vendor_scope(
         crm_pipeline_view, sel_vendor, ["sales_rep_code", "sales_rep_name"], selected_vendor_candidates
     )
+    crm_pipeline_view = filter_company_scope(crm_pipeline_view, sel_company)
     crm_pipeline_view = filter_pipeline_period(crm_pipeline_view, year, selected_month, effective_ytd, selected_quarter)
     cockpit_sheets = {key: value.copy() if isinstance(value, pd.DataFrame) else value for key, value in sheets.items()}
     kpis = compute_kpis(
@@ -3234,6 +3235,7 @@ if page == "Pipeline Manager":
     pipeline_view = filter_vendor_scope(
         pipeline_view, sel_vendor, ["sales_rep_code", "sales_rep_name"], selected_vendor_candidates
     )
+    pipeline_view = filter_company_scope(pipeline_view, sel_company)
     pipeline_view = filter_pipeline_period(pipeline_view, year, selected_month, effective_ytd, selected_quarter)
 
     if not pipeline_view.empty:
@@ -3377,6 +3379,7 @@ if page == "Pipeline Manager":
         queue_df = filter_vendor_scope(
             queue_df, sel_vendor, ["sales_rep_code", "sales_rep_name"], selected_vendor_candidates
         )
+        queue_df = filter_company_scope(queue_df, sel_company)
         queue_df = filter_queue_period(queue_df, year, selected_month, effective_ytd, selected_quarter)
         if not queue_df.empty:
             queue_df = sort_by_available(queue_df, [("priority_score", False), ("due_at", True)])
@@ -3437,6 +3440,7 @@ if page == "Performance & Ritmo":
     perf_pipeline_view = filter_vendor_scope(
         perf_pipeline_view, sel_vendor, ["sales_rep_code", "sales_rep_name"], selected_vendor_candidates
     )
+    perf_pipeline_view = filter_company_scope(perf_pipeline_view, sel_company)
     perf_pipeline_view = filter_pipeline_period(perf_pipeline_view, year, selected_month, effective_ytd, selected_quarter)
     perf_kpis = compute_kpis(
         sheets,
@@ -3489,6 +3493,7 @@ if page == "Insights & Alertas":
     queue_df = filter_vendor_scope(
         queue_df, sel_vendor, ["sales_rep_code", "sales_rep_name"], selected_vendor_candidates
     )
+    queue_df = filter_company_scope(queue_df, sel_company)
     queue_df = filter_queue_period(queue_df, year, selected_month, effective_ytd, selected_quarter)
 
     if not queue_df.empty:
