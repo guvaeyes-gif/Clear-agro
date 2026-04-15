@@ -1352,12 +1352,14 @@ def render_overview(
     quality = snapshot["quality_reconciliation"]
     governance = snapshot["governance"]
     classic = snapshot["classic_kpis"]
-    
-    # Compute summary from dataframes, with fallback to classic_kpis
+
+    has_detail_base = not ap_period.empty or not ar_period.empty or not cash_period.empty
+
     summary = compute_bling_management_summary(ap_period, ar_period, cash_period)
-    
-    # Fallback to classic_kpis when dataframes are empty (e.g., on Render)
-    if summary["ar_total"] == 0 and summary["ap_total"] == 0:
+
+    # Fallback only when there is no detail base loaded at all.
+    # Do not override a user-selected filter that legitimately returns zero rows.
+    if not has_detail_base:
         classic_kpis = snapshot.get("classic_kpis", {})
         summary["ar_total"] = classic_kpis.get("ar_aberto", 0)
         summary["ap_total"] = classic_kpis.get("ap_aberto", 0)
@@ -1464,12 +1466,13 @@ def render_executive(
     label: str,
 ) -> None:
     classic = snapshot["classic_kpis"]
-    
-    # Compute summary from dataframes, with fallback to classic_kpis
+
+    has_detail_base = not ap_period.empty or not ar_period.empty or not cash_period.empty
+
     summary = compute_bling_management_summary(ap_period, ar_period, cash_period)
-    
-    # Fallback to classic_kpis when dataframes are empty (e.g., on Render)
-    if summary["ar_total"] == 0 and summary["ap_total"] == 0:
+
+    # Fallback only when there is no detail base loaded at all.
+    if not has_detail_base:
         classic_kpis = snapshot.get("classic_kpis", {})
         summary["ar_total"] = classic_kpis.get("ar_aberto", 0)
         summary["ap_total"] = classic_kpis.get("ap_aberto", 0)

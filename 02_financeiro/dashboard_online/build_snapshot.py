@@ -1255,9 +1255,14 @@ def main() -> None:
         clear_os_root / "11_agentes_automacoes" / "12_integracoes_agent" / "pipeline" / "out" / "status",
     ]
     latest_path = root / "dre" / "finance-recon-hub" / "out" / "aios" / "monthly-fin-close" / "latest.json"
+    fallback_snapshot_candidates = [
+        out_path,
+        clear_os_root / ".worktrees" / "comercial" / "02_financeiro" / "dashboard_online" / "data" / "latest_snapshot.json",
+    ]
     if not latest_path.exists():
-        if out_path.exists():
-            snapshot = load_json(out_path)
+        seed_path = next((path for path in fallback_snapshot_candidates if path.exists()), None)
+        if seed_path is not None:
+            snapshot = load_json(seed_path)
             ap_ar_payload = build_ap_ar_snapshot(clear_os_root)
             snapshot.setdefault("classic_kpis", {})
             snapshot["classic_kpis"].update(ap_ar_payload["classic_kpis"])
@@ -1269,6 +1274,10 @@ def main() -> None:
             snapshot["monthly_bling"] = ap_ar_payload["monthly_bling"]
             snapshot["dre_bling_info"] = ap_ar_payload["dre_bling_info"]
             snapshot["generated_at"] = datetime.now().isoformat()
+            snapshot.setdefault("health", {})
+            snapshot["health"]["generated_at"] = datetime.now().isoformat()
+            snapshot["health"]["ready"] = bool(snapshot["health"].get("ready", False))
+            snapshot["health"]["source_file"] = str(seed_path)
             out_path.write_text(json.dumps(snapshot, ensure_ascii=False, indent=2), encoding="utf-8")
             print(str(out_path))
             return
@@ -1277,8 +1286,9 @@ def main() -> None:
     latest = load_json(latest_path)
     run_dir = Path(str(latest.get("path") or "")).resolve()
     if not run_dir.exists():
-        if out_path.exists():
-            snapshot = load_json(out_path)
+        seed_path = next((path for path in fallback_snapshot_candidates if path.exists()), None)
+        if seed_path is not None:
+            snapshot = load_json(seed_path)
             ap_ar_payload = build_ap_ar_snapshot(clear_os_root)
             snapshot.setdefault("classic_kpis", {})
             snapshot["classic_kpis"].update(ap_ar_payload["classic_kpis"])
@@ -1290,6 +1300,10 @@ def main() -> None:
             snapshot["monthly_bling"] = ap_ar_payload["monthly_bling"]
             snapshot["dre_bling_info"] = ap_ar_payload["dre_bling_info"]
             snapshot["generated_at"] = datetime.now().isoformat()
+            snapshot.setdefault("health", {})
+            snapshot["health"]["generated_at"] = datetime.now().isoformat()
+            snapshot["health"]["ready"] = bool(snapshot["health"].get("ready", False))
+            snapshot["health"]["source_file"] = str(seed_path)
             out_path.write_text(json.dumps(snapshot, ensure_ascii=False, indent=2), encoding="utf-8")
             print(str(out_path))
             return
