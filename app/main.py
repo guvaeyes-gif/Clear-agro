@@ -980,6 +980,9 @@ def canonicalize_targets_frame(df: pd.DataFrame) -> pd.DataFrame:
         if column not in out.columns:
             out[column] = default
 
+    if out.columns.duplicated().any():
+        out = out.loc[:, ~out.columns.duplicated()].copy()
+
     for column in ["ano", "mes", "quarter", "meta_valor", "realizado_valor", "gap_valor", "atingimento_pct"]:
         out[column] = pd.to_numeric(out[column], errors="coerce")
     for column in ["periodo_tipo", "estado", "empresa", "vendedor_id", "vendedor", "status", "observacoes"]:
