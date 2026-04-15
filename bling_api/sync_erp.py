@@ -500,6 +500,7 @@ def _sync_paginated_snapshot(
     company: str,
     params: dict[str, Any] | None = None,
     enrich_row: Any | None = None,
+    row_filter: Any | None = None,
     max_pages: int | None = None,
     sleep_s: float = 0.15,
     progress_every_pages: int = 1,
@@ -525,6 +526,12 @@ def _sync_paginated_snapshot(
             rid = r.get("id")
             if rid is None:
                 continue
+            if row_filter is not None:
+                try:
+                    if not row_filter(r):
+                        continue
+                except Exception:
+                    continue
             key = str(rid)
             if key in seen_ids:
                 continue

@@ -100,6 +100,24 @@ def split_date_ranges(date_from: str, date_to: str, max_span_days: int = 365) ->
     return ranges
 
 
+def _row_matches_window(row: dict, chunk_start: str, chunk_end: str) -> bool:
+    vencimento = str(row.get("vencimento") or "").strip()
+    if not vencimento:
+        return False
+    if vencimento < chunk_start or vencimento > chunk_end:
+        return False
+    try:
+        situacao = row.get("situacao")
+        if situacao is not None and int(float(situacao)) != 1:
+            return False
+    except Exception:
+        return False
+    situacao_txt = str(row.get("situacao") or "").strip().upper()
+    if "CANCEL" in situacao_txt:
+        return False
+    return True
+
+
 def sync_contas_incremental(
     client,
     company: str,
@@ -159,6 +177,7 @@ def sync_contas_incremental(
             company=company,
             params=params,
             enrich_row=enrich_fn,
+            row_filter=lambda row, start=chunk_start, end=chunk_end: _row_matches_window(row, start, end),
             max_pages=max_pages,
             sleep_s=0.4,
         )
