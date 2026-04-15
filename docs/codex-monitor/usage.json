@@ -1,10 +1,10 @@
 {
-  "generated_at": "15/04/2026 14:55",
+  "generated_at": "15/04/2026 15:04",
   "plan_type": "team",
   "estimated_window_tokens": 1000,
   "current": {
-    "primary_used_percent": 68.0,
-    "primary_remaining_percent": 32.0,
+    "primary_used_percent": 71.0,
+    "primary_remaining_percent": 29.0,
     "primary_window_minutes": 300,
     "primary_resets_at": "15/04 18:13",
     "secondary_used_percent": 77.0,
