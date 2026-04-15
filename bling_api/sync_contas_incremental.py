@@ -117,14 +117,15 @@ def sync_contas_incremental(
     
     print(f"[INFO] Sync incremental: {endpoint} de {date_from} até {date_to or 'hoje'}")
     
-    # Parâmetros da API Bling para filtro por data
+    # Para AP/AR, o recorte correto é por vencimento e título aberto.
+    # `dataModificacao*` traz só o que mudou recentemente e deixa a base incompleta.
     params = {
-        "situacao": [1, 2, 3, 4],  # Todas as situações
-        "dataModificacaoInicial": date_from,
+        "situacao": [1],
+        "dataVencimentoInicial": date_from,
     }
-    
-    if date_to:
-        params["dataModificacaoFinal"] = date_to
+
+    if date_to and not args.force_full:
+        params["dataVencimentoFinal"] = date_to
     
     # Fazer o sync
     result = _sync_paginated_snapshot(

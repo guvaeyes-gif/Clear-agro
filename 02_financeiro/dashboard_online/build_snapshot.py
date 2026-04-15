@@ -327,8 +327,10 @@ def resolve_cache_candidates(clear_os_root: Path, filename: str) -> list[Path]:
     ]
     for root in compatibility_roots:
         candidates.append(root / filename)
-    latest = latest_existing_path([path for path in candidates if path is not None])
-    return [latest] if latest is not None else []
+    for path in unique_paths(candidates):
+        if path.exists():
+            return [path]
+    return []
 
 
 def resolve_cache_glob_candidates(clear_os_root: Path, pattern: str) -> list[Path]:
@@ -339,13 +341,14 @@ def resolve_cache_glob_candidates(clear_os_root: Path, pattern: str) -> list[Pat
         Path.home() / "Documents" / "Clear_OS" / "bling_api",
         Path.home() / "projects" / "CRM_Clear_Agro" / "bling_api",
     ]
-    candidates: list[Path] = []
     for root in roots:
         if not root.exists():
             continue
-        candidates.extend(root.glob(pattern))
-    latest = latest_existing_path(candidates)
-    return [latest] if latest is not None else []
+        candidates = list(root.glob(pattern))
+        latest = latest_existing_path(candidates)
+        if latest is not None:
+            return [latest]
+    return []
 
 
 def contato_nome(row: dict) -> str:
