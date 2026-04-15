@@ -489,27 +489,20 @@ def row_is_open(row: dict[str, Any]) -> bool:
     if situacao_txt and "CANCEL" in situacao_txt:
         return False
 
-    saldo = row.get("saldo")
     try:
-        if saldo not in (None, ""):
-            return float(saldo) > 0
-    except Exception:
-        pass
-
-    try:
-        if situacao is not None and int(situacao) in {3, 4, 6}:
+        if situacao is not None and int(situacao) == 1:
             return True
-        if situacao is not None and int(situacao) in {1, 2, 5}:
+        if situacao is not None and int(situacao) in {2, 3, 4, 5, 6}:
             return False
     except Exception:
         pass
 
     if situacao_txt:
-        if any(token in situacao_txt for token in ["ABERTO", "EM ABERTO", "PENDENTE", "PARCIAL"]):
+        if any(token in situacao_txt for token in ["ABERTO", "EM ABERTO"]):
             return True
-        if any(token in situacao_txt for token in ["PAGO", "PAGA", "BAIXADO", "LIQUIDADO", "QUITADO", "RECEBIDO"]):
+        if any(token in situacao_txt for token in ["PAGO", "PAGA", "BAIXADO", "LIQUIDADO", "QUITADO", "RECEBIDO", "PENDENTE", "PARCIAL"]):
             return False
-    return True
+    return False
 
 
 def row_is_cancelled(row: dict[str, Any]) -> bool:

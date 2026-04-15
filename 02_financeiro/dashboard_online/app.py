@@ -1134,6 +1134,30 @@ def normalize_account_company(company: str | None) -> str:
     return "Todas"
 
 
+def is_aberto_title(row: pd.Series | dict[str, Any]) -> bool:
+    raw_value = row.get("situacao")
+    raw_status = str(raw_value or "").strip().upper()
+    if "CANCEL" in raw_status:
+        return False
+    try:
+        status_code = int(float(raw_value or 0))
+    except (TypeError, ValueError):
+        status_code = None
+    if status_code == 1:
+        return True
+    if status_code in {2, 3, 4, 5, 6}:
+        return False
+    return "ABERTO" in raw_status or "EM ABERTO" in raw_status
+
+
+def filter_aberto_titles(frame: pd.DataFrame) -> pd.DataFrame:
+    if frame.empty or "situacao" not in frame.columns:
+        return frame
+    work = frame.copy()
+    mask = work.apply(is_aberto_title, axis=1)
+    return work[mask].copy()
+
+
 def aging_bucket(days_overdue: Any) -> str:
     try:
         days = int(days_overdue or 0)
@@ -2591,8 +2615,12 @@ def main() -> None:
     monthly_all = monthly_frame(snapshot)
     monthly_bling_all = monthly_frame(snapshot, "monthly_bling")
     bank_balances_all = bank_balance_frame(snapshot)
-    ap_details_all = account_detail_frame(snapshot, "ap_details", snapshot.get("cash_projection", {}).get("top_outflows"), "pagar")
-    ar_details_all = account_detail_frame(snapshot, "ar_details", snapshot.get("cash_projection", {}).get("top_inflows"), "receber")
+    ap_details_all = filter_aberto_titles(
+        account_detail_frame(snapshot, "ap_details", snapshot.get("cash_projection", {}).get("top_outflows"), "pagar")
+    )
+    ar_details_all = filter_aberto_titles(
+        account_detail_frame(snapshot, "ar_details", snapshot.get("cash_projection", {}).get("top_inflows"), "receber")
+    )
     cash_all = cash_days_frame(snapshot)
     years, month_map = period_options_from_frames([monthly_all, monthly_bling_all, cash_all, ap_details_all, ar_details_all])
     current_year = datetime.now().year
