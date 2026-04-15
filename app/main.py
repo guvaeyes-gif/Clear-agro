@@ -1422,7 +1422,7 @@ def filter_targets_company_scope(df: pd.DataFrame, selected_company: str) -> pd.
         return df
     if "empresa" in df.columns:
         series = df["empresa"].fillna("").astype(str).str.strip().str.upper()
-        return df[series.eq(company)]
+        return df[series.eq(company) | series.eq("TODOS")]
 
     vendor_ids: set[str] = set()
     vendor_names: set[str] = set()
