@@ -1257,6 +1257,7 @@ def format_targets_listing(df: pd.DataFrame) -> pd.DataFrame:
     if out.columns.duplicated().any():
         # Keep the first occurrence to avoid pandas returning a DataFrame for duplicate labels.
         out = out.loc[:, ~out.columns.duplicated()].copy()
+    out = upper_dashboard_text(out)
     if "meta_valor" in out.columns:
         out["meta_valor"] = pd.to_numeric(out["meta_valor"], errors="coerce").fillna(0)
     if "realizado_valor" in out.columns:
@@ -4087,7 +4088,6 @@ if page == "Metas Comerciais":
                 month_num=mes,
                 quarter_num=quarter,
                 ytd=effective_ytd,
-                state=uf or None,
                 statuses=status or None,
             )
             if not df.empty:
