@@ -91,6 +91,7 @@ def sync_contas_incremental(
     module: str,  # "contas_pagar" ou "contas_receber"
     date_from: str,
     date_to: str | None = None,
+    force_full: bool = False,
     max_pages: int | None = None,
 ) -> dict:
     """
@@ -124,7 +125,7 @@ def sync_contas_incremental(
         "dataVencimentoInicial": date_from,
     }
 
-    if date_to and not args.force_full:
+    if date_to and not force_full:
         params["dataVencimentoFinal"] = date_to
     
     # Fazer o sync
@@ -281,6 +282,7 @@ def main() -> int:
                 module=module,
                 date_from=date_from,
                 date_to=date_to,
+                force_full=args.force_full,
                 max_pages=args.max_pages,
             )
             results.append(result)
