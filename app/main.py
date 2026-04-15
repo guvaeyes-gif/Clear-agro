@@ -2328,6 +2328,9 @@ if PUBLIC_REVIEW and page == "Metas Comerciais":
     st.warning("Pagina indisponivel no modo de revisao publica.")
     st.stop()
 
+metas_source_all = sheets.get("metas", pd.DataFrame()).copy()
+realizado_source_all = sheets.get("realizado", pd.DataFrame()).copy()
+
 # Apply vendor filter to metas/realizado
 if sel_company != "TODOS":
     for key in ["realizado", "oportunidades", "atividades"]:
@@ -2350,6 +2353,7 @@ if sel_vendor != "TODOS":
 
 if sales_scope != "Vendas efetivas" and "metas" in sheets:
     sheets["metas"] = sheets["metas"].iloc[0:0].copy()
+    metas_source_all = metas_source_all.iloc[0:0].copy()
 
 # Page A - Executive Cockpit
 if page == "Executive Cockpit":
@@ -3831,8 +3835,7 @@ if page == "Auditoria":
 if page == "Metas Comerciais":
     st.subheader("Metas Comerciais")
     tabs = st.tabs(["Executive Summary", "Metas", "Cadastro", "Importação", "Transferencia"])
-    targets_view_all = apply_acl_codes(load_sales_targets_view(), vendor_col="sales_rep_code")
-    targets_view_all = filter_targets_company_scope(targets_view_all, sel_company)
+    targets_view_all = apply_acl_codes(metas_source_all, vendor_col="sales_rep_code")
     targets_view_all = filter_vendor_scope(
         targets_view_all, sel_vendor, ["sales_rep_code", "sales_rep_name"], selected_vendor_candidates
     )
@@ -3841,7 +3844,7 @@ if page == "Metas Comerciais":
     status = []
     mes = selected_month if selected_month is not None and not effective_ytd and selected_quarter is None else None
     quarter = selected_quarter
-    metas_realizado_base = sheets.get("realizado", pd.DataFrame()).copy()
+    metas_realizado_base = realizado_source_all.copy()
 
     with tabs[0]:
         st.write("Resumo executivo das metas no recorte atual do sidebar.")
@@ -3860,10 +3863,8 @@ if page == "Metas Comerciais":
             uf_opts = [""] + sorted([v for v in all_targets_year.get("state", pd.Series(dtype=str)).dropna().astype(str).unique().tolist() if v])
         else:
             filtros_metas_base = {"ano": year, "periodo_tipo": periodo_tipo, "mes": mes, "quarter": quarter}
-            if sel_company != "TODOS":
-                filtros_metas_base["empresa"] = sel_company
             all_metas = list_metas(filtros_metas_base)
-            all_metas = filter_local_targets_scope(all_metas, sel_company, sel_vendor, selected_vendor_candidates)
+            all_metas = filter_local_targets_scope(all_metas, "TODOS", sel_vendor, selected_vendor_candidates)
             if PROFILE == "gestor" and not all_metas.empty:
                 acl = load_acl().get("gestor", {})
                 allow = _clean_list(acl.get("allow_vendedores", []))
@@ -3899,9 +3900,9 @@ if page == "Metas Comerciais":
                 period_type_col="period_type",
                 month_col="month_num",
                 quarter_col="quarter_num",
-                state_col="state",
+                state_col=None,
                 vendor_col="sales_rep_name",
-                company_col="empresa",
+                company_col=None,
                 actual_col="actual_value",
                 gap_col="gap_value",
             )
@@ -3913,7 +3914,7 @@ if page == "Metas Comerciais":
                 quarter_num=quarter,
                 ytd=effective_ytd,
                 state=uf or None,
-                selected_company=sel_company,
+                selected_company="TODOS",
                 selected_vendor=sel_vendor,
                 selected_vendor_candidates=selected_vendor_candidates,
             )
@@ -3997,7 +3998,7 @@ if page == "Metas Comerciais":
                 elif block and not all_metas.empty:
                     filtros["vendedor_id"] = [v for v in all_metas["vendedor_id"].dropna().tolist() if v not in block]
             dfm = list_metas(filtros)
-            dfm = filter_local_targets_scope(dfm, sel_company, sel_vendor, selected_vendor_candidates)
+            dfm = filter_local_targets_scope(dfm, "TODOS", sel_vendor, selected_vendor_candidates)
             dfm = overlay_targets_actuals_from_realizado(
                 dfm,
                 metas_realizado_base,
@@ -4005,9 +4006,9 @@ if page == "Metas Comerciais":
                 period_type_col="periodo_tipo",
                 month_col="mes",
                 quarter_col="quarter",
-                state_col="estado",
+                state_col=None,
                 vendor_col="vendedor_id",
-                company_col="empresa",
+                company_col=None,
                 actual_col="realizado_valor",
                 gap_col="gap_valor",
             )
@@ -4019,7 +4020,7 @@ if page == "Metas Comerciais":
                 quarter_num=quarter,
                 ytd=effective_ytd,
                 state=uf or None,
-                selected_company=sel_company,
+                selected_company="TODOS",
                 selected_vendor=sel_vendor,
                 selected_vendor_candidates=selected_vendor_candidates,
             )
