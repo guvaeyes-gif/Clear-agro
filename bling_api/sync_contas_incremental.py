@@ -10,7 +10,7 @@ import argparse
 import json
 import os
 import sys
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
@@ -85,6 +85,21 @@ def get_last_record_date(cache_file: Path) -> str | None:
     return latest_date
 
 
+def split_date_ranges(date_from: str, date_to: str, max_span_days: int = 365) -> list[tuple[str, str]]:
+    start = datetime.strptime(date_from, "%Y-%m-%d").date()
+    end = datetime.strptime(date_to, "%Y-%m-%d").date()
+    if end < start:
+        return []
+    ranges: list[tuple[str, str]] = []
+    current = start
+    step = timedelta(days=max_span_days)
+    while current <= end:
+        window_end = min(current + step, end)
+        ranges.append((current.isoformat(), window_end.isoformat()))
+        current = window_end + timedelta(days=1)
+    return ranges
+
+
 def sync_contas_incremental(
     client,
     company: str,
@@ -116,41 +131,55 @@ def sync_contas_incremental(
         cache = _cache_path("contas_receber_cache.jsonl", company)
         enrich_fn = _enrich_conta_receber_with_detail
     
-    print(f"[INFO] Sync incremental: {endpoint} de {date_from} até {date_to or 'hoje'}")
-    
-    # Para AP/AR, o recorte correto é por vencimento e título aberto.
-    # `dataModificacao*` traz só o que mudou recentemente e deixa a base incompleta.
-    params = {
-        "situacao": [1],
-        "dataVencimentoInicial": date_from,
-    }
+    final_date_to = date_to or datetime.now().strftime("%Y-%m-%d")
+    ranges = split_date_ranges(date_from, final_date_to)
+    if not ranges:
+        raise ValueError(f"Invalid date range: {date_from}..{final_date_to}")
 
-    if date_to and not force_full:
-        params["dataVencimentoFinal"] = date_to
-    
-    # Fazer o sync
-    result = _sync_paginated_snapshot(
-        client,
-        endpoint,
-        cache,
-        company=company,
-        params=params,
-        enrich_row=enrich_fn,
-        max_pages=max_pages,
-        sleep_s=0.4,
-    )
-    
+    print(f"[INFO] Sync incremental: {endpoint} de {date_from} até {final_date_to}")
+
+    total_pages = 0
+    total_fetched = 0
+    total_new = 0
+    total_enriched_ok = 0
+    total_enriched_err = 0
+    total_elapsed = 0.0
+
+    for chunk_start, chunk_end in ranges:
+        print(f"[INFO] Janela AP/AR: {chunk_start} até {chunk_end}")
+        params = {
+            "situacao": [1],
+            "dataVencimentoInicial": chunk_start,
+            "dataVencimentoFinal": chunk_end,
+        }
+        result = _sync_paginated_snapshot(
+            client,
+            endpoint,
+            cache,
+            company=company,
+            params=params,
+            enrich_row=enrich_fn,
+            max_pages=max_pages,
+            sleep_s=0.4,
+        )
+        total_pages += int(result["pages"])
+        total_fetched += int(result["fetched"])
+        total_new += int(result["new_records"])
+        total_enriched_ok += int(result["enriched_ok"])
+        total_enriched_err += int(result["enriched_err"])
+        total_elapsed += float(result["elapsed_s"])
+
     return {
         "module": module,
         "endpoint": endpoint,
         "date_from": date_from,
-        "date_to": date_to or datetime.now().strftime("%Y-%m-%d"),
-        "pages": result["pages"],
-        "fetched": result["fetched"],
-        "new_records": result["new_records"],
-        "enriched_ok": result["enriched_ok"],
-        "enriched_err": result["enriched_err"],
-        "elapsed_s": result["elapsed_s"],
+        "date_to": final_date_to,
+        "pages": total_pages,
+        "fetched": total_fetched,
+        "new_records": total_new,
+        "enriched_ok": total_enriched_ok,
+        "enriched_err": total_enriched_err,
+        "elapsed_s": total_elapsed,
     }
 
 
