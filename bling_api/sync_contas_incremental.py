@@ -157,6 +157,10 @@ def sync_contas_incremental(
 
     print(f"[INFO] Sync incremental: {endpoint} de {date_from} até {final_date_to}")
 
+    if force_full:
+        cache.parent.mkdir(parents=True, exist_ok=True)
+        cache.write_text("", encoding="utf-8")
+
     total_pages = 0
     total_fetched = 0
     total_new = 0
@@ -179,6 +183,7 @@ def sync_contas_incremental(
             params=params,
             enrich_row=enrich_fn,
             row_filter=lambda row, start=chunk_start, end=chunk_end: _row_matches_window(row, start, end),
+            append=force_full,
             max_pages=max_pages,
             sleep_s=0.4,
         )

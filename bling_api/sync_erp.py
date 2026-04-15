@@ -501,6 +501,7 @@ def _sync_paginated_snapshot(
     params: dict[str, Any] | None = None,
     enrich_row: Any | None = None,
     row_filter: Any | None = None,
+    append: bool = False,
     max_pages: int | None = None,
     sleep_s: float = 0.15,
     progress_every_pages: int = 1,
@@ -560,7 +561,10 @@ def _sync_paginated_snapshot(
             break
         time.sleep(sleep_s)
 
-    _rewrite_jsonl(cache_file, snapshot_rows)
+    if append:
+        _append_jsonl(cache_file, snapshot_rows)
+    else:
+        _rewrite_jsonl(cache_file, snapshot_rows)
     return {
         "endpoint": endpoint,
         "cache_file": str(cache_file),
