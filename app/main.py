@@ -2882,23 +2882,24 @@ if page == "Comparativo de Vendas":
     st.subheader("Comparativo de Vendas")
     st.caption("Analitico comparativo de vendas entre anos, com cortes por mes, produto e cliente.")
 
-    # Comparativo: por enquanto consideramos somente 2025+ (evita tentar carregar historico mais antigo).
-    historical_start_year = 2025
-    detail_all = load_bling_nfe_detail_years(tuple(range(historical_start_year, int(year) + 1)))
+    # Comparativo: por enquanto consideramos somente 2025 vs 2026.
+    allowed_compare_years = [2025, 2026]
+    detail_all = load_bling_nfe_detail_years(tuple(allowed_compare_years))
     if detail_all.empty or "data" not in detail_all.columns:
         st.info("Sem base detalhada de vendas para montar o comparativo.")
     else:
         detail_all = detail_all.copy()
         detail_all["data"] = pd.to_datetime(detail_all["data"], errors="coerce")
         detail_all = detail_all[detail_all["data"].notna()].copy()
-        available_years = sorted(detail_all["data"].dt.year.dropna().astype(int).unique().tolist())
-        default_years = [int(year)]
-        if int(year) - 1 in available_years:
-            default_years = [int(year) - 1, int(year)]
+        available_years_set = set(detail_all["data"].dt.year.dropna().astype(int).unique().tolist())
+        missing_allowed = [y for y in allowed_compare_years if y not in available_years_set]
+        if missing_allowed:
+            st.warning("Sem dados do Bling para: " + ", ".join(str(y) for y in missing_allowed))
+        default_years = [y for y in allowed_compare_years if y in available_years_set] or allowed_compare_years
         compare_years = st.multiselect(
             "Anos para comparar",
-            options=available_years,
-            default=[item for item in default_years if item in available_years],
+            options=allowed_compare_years,
+            default=default_years,
             key="compare_sales_years",
         )
         customer_scope = detail_all.copy()
