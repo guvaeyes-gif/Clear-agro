@@ -57,7 +57,7 @@ services:
       - key: STREAMLIT_BROWSER_GATHER_USAGE_STATS
         value: "false"
     buildCommand: python -m pip install --upgrade pip && pip install -r requirements.txt
-    startCommand: python 02_financeiro/dashboard_online/build_snapshot.py && streamlit run 02_financeiro/dashboard_online/app.py --server.address 0.0.0.0 --server.port $PORT --server.headless true
+    startCommand: streamlit run 02_financeiro/dashboard_online/app.py --server.address 0.0.0.0 --server.port $PORT --server.headless true
     autoDeploy: true
   - type: web
     name: codex-usage-monitor

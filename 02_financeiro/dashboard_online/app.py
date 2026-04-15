@@ -1125,6 +1125,15 @@ def filter_company(frame: pd.DataFrame, company: str | None) -> pd.DataFrame:
     return out[out["company"].fillna("").astype(str).str.upper() == str(company).upper()]
 
 
+def normalize_account_company(company: str | None) -> str:
+    if not company:
+        return "Todas"
+    company_text = str(company).strip().upper()
+    if company_text in {"CZ", "CR", "TODAS"}:
+        return "Todas" if company_text == "TODAS" else company_text
+    return "Todas"
+
+
 def aging_bucket(days_overdue: Any) -> str:
     try:
         days = int(days_overdue or 0)
@@ -2644,8 +2653,9 @@ def main() -> None:
         st.markdown('<div class="sidebar-box">', unsafe_allow_html=True)
         st.markdown("### Empresa")
         selected_company = st.selectbox("Empresa", options=company_options, index=0)
+        selected_account_company = normalize_account_company(selected_company)
         if page == "Contas a Pagar":
-            ap_filter_frame = filter_company(filter_dated(ap_details_all, selected_year, selected_month), selected_company)
+            ap_filter_frame = filter_company(filter_dated(ap_details_all, selected_year, selected_month), selected_account_company)
             supplier_options = ["Todos"]
             if not ap_filter_frame.empty and "fornecedor" in ap_filter_frame.columns:
                 supplier_values = sorted(
@@ -2658,7 +2668,7 @@ def main() -> None:
                 supplier_options.extend(supplier_values)
             selected_counterparty = st.selectbox("Fornecedores", options=supplier_options, index=0)
         elif page == "Contas a Receber":
-            ar_filter_frame = filter_company(filter_dated(ar_details_all, selected_year, selected_month), selected_company)
+            ar_filter_frame = filter_company(filter_dated(ar_details_all, selected_year, selected_month), selected_account_company)
             customer_options = ["Todos"]
             if not ar_filter_frame.empty and "cliente" in ar_filter_frame.columns:
                 customer_values = sorted(
@@ -2686,9 +2696,9 @@ def main() -> None:
     current_label = period_label(selected_year, selected_month)
     monthly_period = filter_monthly(monthly_all, selected_year, selected_month)
     monthly_bling_period = filter_monthly(monthly_bling_all, selected_year, selected_month)
-    cash_period = filter_company(filter_dated(cash_all, selected_year, selected_month), selected_company)
-    ap_details_period = filter_company(filter_dated(ap_details_all, selected_year, selected_month), selected_company)
-    ar_details_period = filter_company(filter_dated(ar_details_all, selected_year, selected_month), selected_company)
+    cash_period = filter_company(filter_dated(cash_all, selected_year, selected_month), selected_account_company)
+    ap_details_period = filter_company(filter_dated(ap_details_all, selected_year, selected_month), selected_account_company)
+    ar_details_period = filter_company(filter_dated(ar_details_all, selected_year, selected_month), selected_account_company)
     if page == "Contas a Pagar" and selected_counterparty != "Todos" and "fornecedor" in ap_details_period.columns:
         ap_details_period = ap_details_period[
             ap_details_period["fornecedor"].fillna("").astype(str).str.strip() == str(selected_counterparty).strip()
@@ -2737,7 +2747,7 @@ def main() -> None:
             cash_all,
             ap_details_all,
             ar_details_all,
-            selected_company,
+            selected_account_company,
             selected_year,
             selected_month,
             selected_weeks,
@@ -2752,7 +2762,7 @@ def main() -> None:
             current_label,
             selected_year,
             selected_month,
-            selected_company,
+            selected_account_company,
         )
     elif page == "Contas a Receber":
         render_accounts_page(
@@ -2762,7 +2772,7 @@ def main() -> None:
             current_label,
             selected_year,
             selected_month,
-            selected_company,
+            selected_account_company,
         )
     elif page == "Governanca de AP":
         render_ap_governance(snapshot)
