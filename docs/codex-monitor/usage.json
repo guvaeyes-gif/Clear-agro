@@ -1,14 +1,14 @@
 {
-  "generated_at": "15/04/2026 09:39",
+  "generated_at": "15/04/2026 09:52",
   "plan_type": "team",
   "estimated_window_tokens": 1000,
   "current": {
-    "primary_used_percent": 49.0,
-    "primary_remaining_percent": 51.0,
+    "primary_used_percent": 54.0,
+    "primary_remaining_percent": 46.0,
     "primary_window_minutes": 300,
     "primary_resets_at": "15/04 12:59",
-    "secondary_used_percent": 58.0,
-    "secondary_remaining_percent": 42.0,
+    "secondary_used_percent": 59.0,
+    "secondary_remaining_percent": 41.0,
     "secondary_window_minutes": 10080,
     "secondary_resets_at": "20/04 10:09"
   },
@@ -54,7 +54,7 @@
       },
       {
         "day": "15",
-        "value": 49.0
+        "value": 54.0
       }
     ]
   }
