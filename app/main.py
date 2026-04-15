@@ -2882,7 +2882,8 @@ if page == "Comparativo de Vendas":
     st.subheader("Comparativo de Vendas")
     st.caption("Analitico comparativo de vendas entre anos, com cortes por mes, produto e cliente.")
 
-    historical_start_year = max(2020, int(year) - 5)
+    # Comparativo: por enquanto consideramos somente 2025+ (evita tentar carregar historico mais antigo).
+    historical_start_year = 2025
     detail_all = load_bling_nfe_detail_years(tuple(range(historical_start_year, int(year) + 1)))
     if detail_all.empty or "data" not in detail_all.columns:
         st.info("Sem base detalhada de vendas para montar o comparativo.")
