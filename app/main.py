@@ -1796,6 +1796,21 @@ def comparison_period_months(
     return list(range(1, 13)), "Ano completo"
 
 
+def _load_comparison_source_for_year(year: int) -> pd.DataFrame:
+    detail = load_bling_nfe_detail_years((year,))
+    if not detail.empty and {"data", "valor_total"}.issubset(detail.columns):
+        return detail
+    sales = load_bling_sales_detail(year)
+    if not sales.empty and {"data", "receita"}.issubset(sales.columns):
+        out = sales.copy()
+        if "valor_total" not in out.columns:
+            out["valor_total"] = out["receita"]
+        if "quantidade" not in out.columns:
+            out["quantidade"] = 0
+        return out
+    return pd.DataFrame()
+
+
 def prepare_sales_comparison_actual(
     selected_years: list[int],
     target_year: int,
@@ -1831,11 +1846,15 @@ def prepare_sales_comparison_actual(
 
     missing_years = sorted(set(selected_years) - set(frames[0]["ano"].unique().tolist()) if frames else set(selected_years))
     if missing_years:
-        detail = load_bling_nfe_detail_years(tuple(selected_years))
-        if not detail.empty and {"data", "valor_total"}.issubset(detail.columns):
-            hist = detail.copy()
+        detail_frames: list[pd.DataFrame] = []
+        for year_item in missing_years:
+            detail_year = _load_comparison_source_for_year(int(year_item))
+            if not detail_year.empty:
+                detail_frames.append(detail_year)
+        if detail_frames:
+            hist = pd.concat(detail_frames, ignore_index=True)
             hist["data"] = pd.to_datetime(hist["data"], errors="coerce")
-            hist["receita"] = pd.to_numeric(hist["valor_total"], errors="coerce").fillna(0)
+            hist["receita"] = pd.to_numeric(hist.get("valor_total", hist.get("receita", 0)), errors="coerce").fillna(0)
             hist = hist[hist["data"].notna()].copy()
             if selected_company != "TODOS":
                 hist = filter_company_scope(hist, selected_company)
@@ -1849,10 +1868,11 @@ def prepare_sales_comparison_actual(
                 hist["mes"] = hist["data"].dt.month.astype(int)
                 hist = hist[hist["ano"].isin(missing_years) & hist["mes"].isin(period_months)].copy()
                 if not hist.empty:
-                    group_cols = ["nfe_id", "data", "ano", "mes"]
-                    if "empresa" in hist.columns:
-                        group_cols.append("empresa")
-                    hist = hist.groupby(group_cols, dropna=False)["receita"].max().reset_index()
+                    group_cols = [col for col in ["nfe_id", "data", "ano", "mes", "empresa"] if col in hist.columns]
+                    if group_cols:
+                        hist = hist.groupby(group_cols, dropna=False)["receita"].max().reset_index()
+                    else:
+                        hist = hist.groupby(["data", "ano", "mes"], dropna=False)["receita"].sum().reset_index()
                     frames.append(hist[["data", "receita", "ano", "mes"]].copy())
 
     if not frames:
@@ -1882,11 +1902,16 @@ def prepare_sales_comparison_detail(
     effective_ytd: bool,
     selected_quarter: int | None,
 ) -> tuple[pd.DataFrame, str]:
-    detail = load_bling_nfe_detail(0)
-    if detail.empty:
+    selected_years = sorted({int(item) for item in selected_years})
+    detail_frames: list[pd.DataFrame] = []
+    for year_item in selected_years:
+        detail_year = _load_comparison_source_for_year(int(year_item))
+        if not detail_year.empty:
+            detail_frames.append(detail_year)
+    if not detail_frames:
         return pd.DataFrame(), ""
 
-    out = detail.copy()
+    out = pd.concat(detail_frames, ignore_index=True)
     out["data"] = pd.to_datetime(out["data"], errors="coerce")
     out["valor_total"] = pd.to_numeric(out["valor_total"], errors="coerce").fillna(0)
     out["quantidade"] = pd.to_numeric(out["quantidade"], errors="coerce").fillna(0)
@@ -2994,7 +3019,12 @@ if page == "Comparativo de Vendas":
 
     # Comparativo: por enquanto consideramos somente 2025 vs 2026.
     allowed_compare_years = [2025, 2026]
-    detail_all = load_bling_nfe_detail_years(tuple(allowed_compare_years))
+    compare_sources: list[pd.DataFrame] = []
+    for compare_year in allowed_compare_years:
+        source_year = _load_comparison_source_for_year(int(compare_year))
+        if not source_year.empty:
+            compare_sources.append(source_year)
+    detail_all = pd.concat(compare_sources, ignore_index=True) if compare_sources else pd.DataFrame()
     if detail_all.empty or "data" not in detail_all.columns:
         st.info("Sem base detalhada de vendas para montar o comparativo.")
     else:
