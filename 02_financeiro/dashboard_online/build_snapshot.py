@@ -412,36 +412,41 @@ def classify_ap_monthly(clear_os_root: Path, min_year: int = 2023) -> dict[str, 
         for filename in ["contas_pagar_cache.jsonl", "contas_pagar_cache_cr.jsonl"]
         for path in resolve_cache_candidates(clear_os_root, filename)
     ]
+    raw_rows: list[dict[str, Any]] = []
     for path in cache_paths:
         company = "CR" if path.name.endswith("_cr.jsonl") else "CZ"
-        for row in load_jsonl_rows(path):
-            month_key = ""
-            for field in ["vencimento", "dataEmissao", "data_emissao", "competencia"]:
-                dt = parse_date(str(row.get(field) or "").strip())
-                if dt is not None and dt.year >= min_year:
-                    month_key = dt.strftime("%Y-%m")
-                    break
-            if not month_key:
-                continue
-            try:
-                value = float(row.get("valor") or 0.0)
-            except Exception:
-                value = 0.0
-            if value == 0:
-                continue
-            supplier_name = resolved_contact_name(row, company, contact_names)
-            contato = row.get("contato") or {}
-            contact_id = str(contato.get("id") or "").strip() if isinstance(contato, dict) else ""
-            doc_type = (
-                contact_doc_types.get((company, contact_id))
-                or contact_doc_types.get(("", contact_id))
-                or "unknown"
-            )
-            classified = classify_supplier(supplier_name, doc_type)
-            category = str(classified.get("categoria_mckinsey") or "").strip() or "A revisar - Governanca"
-            subcategory = str(classified.get("subcategoria_mckinsey") or "").strip() or "Classificacao ambigua"
-            category_monthly[(month_key, company, category)] += value
-            subcategory_monthly[(month_key, company, subcategory)] += value
+        raw_rows.extend(load_jsonl_rows(path))
+    for row in dedupe_exact_rows(raw_rows):
+        company = str(row.get("empresa") or "").strip().upper() or "CZ"
+        if company not in {"CZ", "CR"}:
+            company = "CZ"
+        month_key = ""
+        for field in ["vencimento", "dataEmissao", "data_emissao", "competencia"]:
+            dt = parse_date(str(row.get(field) or "").strip())
+            if dt is not None and dt.year >= min_year:
+                month_key = dt.strftime("%Y-%m")
+                break
+        if not month_key:
+            continue
+        try:
+            value = float(row.get("valor") or 0.0)
+        except Exception:
+            value = 0.0
+        if value == 0:
+            continue
+        supplier_name = resolved_contact_name(row, company, contact_names)
+        contato = row.get("contato") or {}
+        contact_id = str(contato.get("id") or "").strip() if isinstance(contato, dict) else ""
+        doc_type = (
+            contact_doc_types.get((company, contact_id))
+            or contact_doc_types.get(("", contact_id))
+            or "unknown"
+        )
+        classified = classify_supplier(supplier_name, doc_type)
+        category = str(classified.get("categoria_mckinsey") or "").strip() or "A revisar - Governanca"
+        subcategory = str(classified.get("subcategoria_mckinsey") or "").strip() or "Classificacao ambigua"
+        category_monthly[(month_key, company, category)] += value
+        subcategory_monthly[(month_key, company, subcategory)] += value
 
     category_rows = [
         {"mes": mes, "company": company, "label": label, "valor": round(valor, 2)}
@@ -528,6 +533,23 @@ def row_matches_min_year(row: dict[str, Any], min_year: int = 2023) -> bool:
     return False
 
 
+def dedupe_exact_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    seen: set[str] = set()
+    deduped: list[dict[str, Any]] = []
+    for row in rows:
+        row_key = json.dumps(
+            {k: v for k, v in row.items() if k != "id"},
+            sort_keys=True,
+            ensure_ascii=False,
+            default=str,
+        )
+        if row_key in seen:
+            continue
+        seen.add(row_key)
+        deduped.append(row)
+    return deduped
+
+
 def normalize_contas(paths: list[Path], tipo: str, *, open_only: bool = True, min_year: int = 2023) -> list[dict]:
     items: list[dict] = []
     today_dt = datetime.now()
@@ -601,7 +623,7 @@ def normalize_contas(paths: list[Path], tipo: str, *, open_only: bool = True, mi
                     "vencido": bool(dias_atraso > 0),
                 }
             )
-    return items
+    return dedupe_exact_rows(items)
 
 
 def _parse_month_key(row: dict[str, Any], today_dt: datetime, year: int | None = None) -> str | None:
