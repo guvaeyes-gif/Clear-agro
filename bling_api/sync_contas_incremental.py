@@ -20,6 +20,7 @@ if str(ROOT) not in sys.path:
 from sync_erp import _cache_path, _company_tag  # noqa: E402
 
 STATUS_DIR = ROOT.parent / "logs" / "integration" / "status"
+FORCE_FULL_HORIZON = "2035-12-31"
 
 
 def get_last_sync_date(company: str) -> str:
@@ -298,7 +299,12 @@ def main() -> int:
         date_from = get_last_sync_date(company)
         print(f"[INFO] Data da ultima sync: {date_from}")
     
-    date_to = args.date_to or datetime.now().strftime("%Y-%m-%d")
+    if args.date_to:
+        date_to = args.date_to
+    elif args.force_full:
+        date_to = FORCE_FULL_HORIZON
+    else:
+        date_to = datetime.now().strftime("%Y-%m-%d")
     
     print(f"[INFO] Empresa: {company}")
     print(f"[INFO] Período: {date_from} até {date_to}")
