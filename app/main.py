@@ -1175,6 +1175,10 @@ def resolve_realizado_sheet(sales_scope: str, use_bling_source: bool) -> tuple[p
 def resolve_metas_sheet() -> tuple[pd.DataFrame, str]:
     remote_metas = build_remote_metas_sheet(load_sales_targets_view())
     if remote_metas.empty:
+        fallback = list_metas()
+        if not fallback.empty:
+            fallback = canonicalize_targets_frame(fallback)
+            return upper_dashboard_text(fallback), "sales_targets_table"
         return pd.DataFrame(), ""
     return upper_dashboard_text(remote_metas), "vw_sales_targets_summary"
 
@@ -2439,6 +2443,8 @@ if PUBLIC_REVIEW and page == "Metas Comerciais":
 
 metas_source_all = sheets.get("metas", pd.DataFrame()).copy()
 realizado_source_all = sheets.get("realizado", pd.DataFrame()).copy()
+metas_vendor_col = "sales_rep_code" if "sales_rep_code" in metas_source_all.columns else "vendedor_id"
+metas_vendor_cols = ["sales_rep_code", "sales_rep_name", "vendedor_id", "vendedor"]
 
 # Apply vendor filter to metas/realizado
 if sel_company != "TODOS":
@@ -2459,10 +2465,6 @@ if sel_vendor != "TODOS":
             if column in sheets["realizado"].columns:
                 mask = mask | sheets["realizado"][column].map(_vendor_key).isin(selected_vendor_candidates)
         sheets["realizado"] = sheets["realizado"][mask]
-
-if sales_scope != "Vendas efetivas" and "metas" in sheets:
-    sheets["metas"] = sheets["metas"].iloc[0:0].copy()
-    metas_source_all = metas_source_all.iloc[0:0].copy()
 
 # Page A - Executive Cockpit
 if page == "Executive Cockpit":
@@ -3952,9 +3954,9 @@ if page == "Auditoria":
 if page == "Metas Comerciais":
     st.subheader("Metas Comerciais")
     tabs = st.tabs(["Executive Summary", "Metas", "Cadastro", "Importação", "Transferencia"])
-    targets_view_all = apply_acl_codes(metas_source_all, vendor_col="sales_rep_code")
+    targets_view_all = apply_acl_codes(metas_source_all, vendor_col=metas_vendor_col)
     targets_view_all = filter_vendor_scope(
-        targets_view_all, sel_vendor, ["sales_rep_code", "sales_rep_name"], selected_vendor_candidates
+        targets_view_all, sel_vendor, metas_vendor_cols, selected_vendor_candidates
     )
     periodo_tipo = "QUARTER" if selected_quarter is not None else "MONTH"
     uf = ""
@@ -3977,7 +3979,9 @@ if page == "Metas Comerciais":
                 quarter_num=quarter,
                 ytd=effective_ytd,
             )
-            uf_opts = [""] + sorted([v for v in all_targets_year.get("state", pd.Series(dtype=str)).dropna().astype(str).unique().tolist() if v])
+            uf_opts = [""] + sorted(
+                [v for v in all_targets_year.get("estado", pd.Series(dtype=str)).dropna().astype(str).unique().tolist() if v]
+            )
         else:
             filtros_metas_base = {"ano": year, "periodo_tipo": periodo_tipo, "mes": mes, "quarter": quarter}
             all_metas = list_metas(filtros_metas_base)

@@ -200,43 +200,55 @@ def _load_bling_nfe_rows(years: list[int] | None = None) -> pd.DataFrame:
 
 def _load_remote_bling_nfe_rows(years: list[int] | None = None) -> pd.DataFrame:
     years = years or [2026, 2025]
-    df = _fetch_crm_view("bling_nfe_documents", params={"select": "*", "limit": "5000"})
-    if df.empty:
-        return pd.DataFrame()
-    df = _normalize_columns(df)
     rows: list[dict[str, Any]] = []
     import json
-    for _, row in df.iterrows():
-        payload = row.get("payload")
-        if isinstance(payload, str):
-            try:
-                payload = json.loads(payload)
-            except Exception:
+    page = 0
+    page_size = 1000
+    while True:
+        params = {
+            "select": "*",
+            "limit": str(page_size),
+            "offset": str(page * page_size),
+            "order": "issue_datetime.asc",
+        }
+        df = _fetch_crm_view("bling_nfe_documents", params=params)
+        if df.empty:
+            break
+        df = _normalize_columns(df)
+        for _, row in df.iterrows():
+            payload = row.get("payload")
+            if isinstance(payload, str):
+                try:
+                    payload = json.loads(payload)
+                except Exception:
+                    payload = {}
+            if not isinstance(payload, dict):
                 payload = {}
-        if not isinstance(payload, dict):
-            payload = {}
-        issue_value = payload.get("dataEmissao") or row.get("issue_datetime")
-        issue_dt = pd.to_datetime(issue_value, errors="coerce")
-        if pd.isna(issue_dt) or int(issue_dt.year) not in years:
-            continue
-        obj = dict(payload)
-        obj.setdefault("id", row.get("bling_nfe_id"))
-        obj.setdefault("empresa", row.get("company"))
-        obj.setdefault("dataEmissao", str(issue_dt))
-        obj.setdefault("numero", row.get("invoice_number"))
-        obj.setdefault("chaveAcesso", row.get("access_key"))
-        obj.setdefault("serie", row.get("series"))
-        obj.setdefault("valorNota", row.get("total_amount"))
-        obj.setdefault("valorFrete", row.get("freight_amount"))
-        if not obj.get("contato"):
-            obj["contato"] = {
-                "nome": row.get("customer_name"),
-                "numeroDocumento": row.get("customer_tax_id"),
-                "endereco": {"uf": row.get("customer_state")},
-            }
-        if not obj.get("vendedor"):
-            obj["vendedor"] = {"id": row.get("salesperson_bling_id")}
-        rows.append(obj)
+            issue_value = payload.get("dataEmissao") or row.get("issue_datetime")
+            issue_dt = pd.to_datetime(issue_value, errors="coerce")
+            if pd.isna(issue_dt) or int(issue_dt.year) not in years:
+                continue
+            obj = dict(payload)
+            obj.setdefault("id", row.get("bling_nfe_id"))
+            obj.setdefault("empresa", row.get("company"))
+            obj.setdefault("dataEmissao", str(issue_dt))
+            obj.setdefault("numero", row.get("invoice_number"))
+            obj.setdefault("chaveAcesso", row.get("access_key"))
+            obj.setdefault("serie", row.get("series"))
+            obj.setdefault("valorNota", row.get("total_amount"))
+            obj.setdefault("valorFrete", row.get("freight_amount"))
+            if not obj.get("contato"):
+                obj["contato"] = {
+                    "nome": row.get("customer_name"),
+                    "numeroDocumento": row.get("customer_tax_id"),
+                    "endereco": {"uf": row.get("customer_state")},
+                }
+            if not obj.get("vendedor"):
+                obj["vendedor"] = {"id": row.get("salesperson_bling_id")}
+            rows.append(obj)
+        if len(df) < page_size:
+            break
+        page += 1
     if not rows:
         return pd.DataFrame()
     return pd.json_normalize(rows)
@@ -878,9 +890,17 @@ def _load_bling_nfe_detail_years(years: tuple[int, ...]) -> pd.DataFrame:
     years = tuple(sorted({int(year) for year in years if str(year).strip()}))
     if not years:
         years = (2026, 2025)
-    df = _load_bling_nfe_rows(list(years))
-    if df.empty:
-        df = _load_remote_bling_nfe_rows(list(years))
+    frames: list[pd.DataFrame] = []
+    for year in years:
+        df_year = _load_bling_nfe_rows([year])
+        if df_year.empty:
+            df_year = _load_remote_bling_nfe_rows([year])
+        if not df_year.empty:
+            frames.append(df_year)
+    if not frames:
+        return pd.DataFrame()
+
+    df = pd.concat(frames, ignore_index=True)
     if df.empty:
         return pd.DataFrame()
 
