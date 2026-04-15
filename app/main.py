@@ -2470,6 +2470,15 @@ metas_source_all = sheets.get("metas", pd.DataFrame()).copy()
 realizado_source_all = sheets.get("realizado", pd.DataFrame()).copy()
 metas_vendor_col = "sales_rep_code" if "sales_rep_code" in metas_source_all.columns else "vendedor_id"
 metas_vendor_cols = ["sales_rep_code", "sales_rep_name", "vendedor_id", "vendedor"]
+if metas_source_all.empty:
+    fallback_metas = list_metas({"ano": year})
+    if fallback_metas.empty:
+        fallback_metas = list_metas()
+    if not fallback_metas.empty:
+        metas_source_all = fallback_metas.copy()
+        sheets["metas"] = metas_source_all.copy()
+        metas_vendor_col = "sales_rep_code" if "sales_rep_code" in metas_source_all.columns else "vendedor_id"
+        metas_vendor_cols = ["sales_rep_code", "sales_rep_name", "vendedor_id", "vendedor"]
 
 # Apply vendor filter to metas/realizado
 if sel_company != "TODOS":
