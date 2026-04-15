@@ -1231,6 +1231,9 @@ def format_targets_listing(df: pd.DataFrame) -> pd.DataFrame:
     if df.empty:
         return df
     out = df.copy()
+    if out.columns.duplicated().any():
+        # Keep the first occurrence to avoid pandas returning a DataFrame for duplicate labels.
+        out = out.loc[:, ~out.columns.duplicated()].copy()
     if "meta_valor" in out.columns:
         out["meta_valor"] = pd.to_numeric(out["meta_valor"], errors="coerce").fillna(0)
     if "realizado_valor" in out.columns:
