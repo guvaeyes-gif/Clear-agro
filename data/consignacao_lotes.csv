@@ -1,0 +1,2 @@
+data_remessa,empresa,numero_nf,vendedor,cliente,produto_codigo,produto,lote,vencimento_lote,quantidade_remetida,quantidade_vendida,quantidade_devolvida,status,observacao
+2026-03-23,CZ,003086,CLEAR AGRO,WESLEY RODRIGUES CHIARAMONTE,PA-0178,CLEARZEB AD 5L,L001-2026,2026-09-30,4,0,0,EM PODER DO VENDEDOR,Exemplo inicial

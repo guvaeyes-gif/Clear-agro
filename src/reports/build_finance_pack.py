@@ -206,9 +206,17 @@ def load_cashflow_fact() -> pd.DataFrame:
     if df.empty:
         return pd.DataFrame(columns=["data", "valor", "descricao", "cash_class", "empresa"])
 
-    df["data"] = pd.to_datetime(df.get("data"), errors="coerce")
-    df["valor"] = _to_float(df.get("valor", pd.Series(dtype=float)))
-    df["descricao"] = df.get("descricao", "").astype(str)
+    raw_dates = df["data"] if "data" in df.columns else pd.Series(pd.NA, index=df.index, dtype="object")
+    raw_values = df["valor"] if "valor" in df.columns else df.get("saldo", pd.Series(0.0, index=df.index))
+    raw_description = (
+        df["descricao"]
+        if "descricao" in df.columns
+        else df.get("conta", df.get("banco", pd.Series("", index=df.index, dtype="object")))
+    )
+
+    df["data"] = pd.to_datetime(raw_dates, errors="coerce")
+    df["valor"] = _to_float(raw_values)
+    df["descricao"] = raw_description.fillna("").astype(str)
     df["cash_class"] = [classify_cashflow(d, v) for d, v in zip(df["descricao"], df["valor"])]
     df["empresa"] = "CLEAR"
     df["ano"] = df["data"].dt.year

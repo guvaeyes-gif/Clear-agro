@@ -1,0 +1,160 @@
+# Prompt Consignação
+
+Use esta versão focada em `ERP/CRM`.
+
+## Objetivo do Papel
+
+Quero que você atue como especialista em processos comerciais, consignação, estoque, rastreabilidade e implantação em ERP/CRM.
+
+Preciso desenhar um processo completo de vendas em consignação dentro de um ERP/CRM, garantindo controle operacional, estoque em poder de terceiros, emissão de notas e rastreabilidade por lote.
+
+## Contexto do Processo Atual
+
+- A empresa emite uma NF de remessa em consignação para o vendedor.
+- O vendedor fica com um estoque físico de produtos sob sua responsabilidade.
+- Quando o vendedor realiza a venda para o cliente final, ele envia o pedido ao setor administrativo.
+- O administrativo emite a NF de venda para o cliente final.
+- Preciso controlar toda a mercadoria enviada em consignação e acompanhar o que foi vendido, devolvido, vencido ou ainda está em posse do vendedor.
+
+## Objetivo da Entrega
+
+Estruturar um processo ideal para implantação em ERP/CRM, com regras claras, cadastros, movimentações, rastreabilidade e relatórios gerenciais.
+
+Quero que você entregue a resposta com foco prático de implantação, contemplando os seguintes pontos:
+
+## 1. Desenho do Processo Ponta a Ponta no ERP/CRM
+
+- Recebimento/entrada do produto no estoque
+- Cadastro de produto com controle de lote e vencimento
+- Remessa em consignação para vendedor
+- Controle de estoque em poder do vendedor
+- Registro da venda realizada pelo vendedor
+- Envio do pedido ao administrativo
+- Emissão da NF de venda para o cliente final
+- Baixa automática ou manual do estoque consignado
+- Devolução parcial ou total do estoque não vendido
+- Tratamento de perdas, avarias e vencimentos
+
+## 2. Estrutura de Cadastros Necessária no Sistema
+
+Defina os campos mínimos e recomendados para:
+
+- Produtos
+- Vendedores
+- Clientes
+- Lotes
+- Estoque
+- Movimentações de consignação
+- Pedidos de venda
+- Notas fiscais
+- Devoluções
+- Ocorrências de perda/avaria/vencimento
+
+## 3. Regras de Negócio no ERP/CRM
+
+Quero que você proponha regras como:
+
+- Não permitir venda acima do saldo em consignação do vendedor
+- Controlar estoque por vendedor + produto + lote
+- Controlar validade por lote
+- Alertar lotes próximos do vencimento
+- Permitir devolução parcial e total
+- Garantir rastreabilidade completa da remessa até a venda final
+- Registrar histórico de cada movimentação
+- Bloquear ou alertar venda de lote vencido
+- Conciliar saldo físico x saldo sistêmico
+- Registrar responsabilidade do vendedor sobre a mercadoria em posse
+
+## 4. Rastreabilidade Obrigatória
+
+Preciso conseguir responder no sistema:
+
+- Qual vendedor está com cada produto
+- Qual quantidade está com cada vendedor
+- Qual lote foi enviado para cada vendedor
+- Qual a validade de cada lote em consignação
+- Para qual cliente final cada lote foi vendido
+- Qual NF remeteu o produto ao vendedor
+- Qual NF vendeu o produto ao cliente final
+- Qual saldo ainda está em aberto por vendedor, produto e lote
+- Quais produtos foram devolvidos
+- Quais produtos venceram em poder do vendedor
+
+## 5. Fluxos e Status do Processo
+
+Quero que você proponha status operacionais para o ERP/CRM, por exemplo:
+
+- Remessa criada
+- Remessa faturada
+- Estoque em poder do vendedor
+- Pedido de venda recebido
+- Pedido validado
+- NF emitida ao cliente
+- Estoque baixado
+- Devolução pendente
+- Devolução concluída
+- Divergência identificada
+- Lote vencido
+- Avaria registrada
+
+## 6. Relatórios e Dashboards
+
+Defina quais relatórios e painéis devem existir no ERP/CRM:
+
+- Estoque em consignação por vendedor
+- Estoque em consignação por produto
+- Estoque em consignação por lote
+- Estoque por vencimento
+- Vendas por vendedor
+- Vendas por cliente
+- Saldo consignado x vendido x devolvido
+- Produtos próximos do vencimento
+- Lotes vencidos em posse de vendedor
+- Rastreabilidade completa por lote
+- Divergências de estoque
+- Performance de giro do estoque consignado
+
+## 7. Indicadores de Gestão
+
+Sugira KPIs como:
+
+- Giro do estoque consignado
+- Tempo médio entre remessa e venda
+- Percentual de devolução
+- Percentual de perdas/avarias
+- Percentual de produtos vencidos
+- Acuracidade do estoque consignado
+- Volume vendido por vendedor
+- Cobertura de estoque por vendedor
+
+## 8. Fluxo de Aprovação e Responsabilidades
+
+Defina quem faz o quê no processo:
+
+- Expedição / logística
+- Vendedor
+- Administrativo
+- Fiscal / faturamento
+- Estoque
+- Gestão comercial
+
+## 9. Saída Esperada
+
+Quero a resposta estruturada em formato executivo e prático, contendo:
+
+- Fluxo do processo passo a passo
+- Tabela com etapas, responsável, entrada, saída e controle
+- Tabela com cadastros obrigatórios
+- Tabela com regras de negócio
+- Tabela com relatórios e KPIs
+- Principais riscos operacionais
+- Recomendações para implantação em ERP/CRM
+
+## 10. Extras
+
+Se possível, inclua também:
+
+- Um exemplo completo de movimentação real
+- Um modelo de estrutura de banco de dados ou entidades
+- Um exemplo de tela ou módulos que o ERP/CRM deveria ter
+- Sugestões de automações e alertas

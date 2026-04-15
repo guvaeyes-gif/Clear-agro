@@ -6,6 +6,7 @@ param(
     [string]$RunId = (Get-Date -Format "yyyyMMdd_HHmmss"),
     [string]$SupabaseTokenPath = "$HOME\Documents\token supabase.txt",
     [switch]$SkipSync,
+    [switch]$SkipIngest,
     [switch]$SkipPush,
     [switch]$SkipRecon
 )
@@ -305,12 +306,17 @@ try {
         Write-Log "SYNC pulado por parametro -SkipSync."
     }
 
-    Invoke-Step "Finance ingest hub (bling)" {
-        if (-not (Test-Path $IngestConfig)) {
-            throw "Config de ingestao nao encontrada: $IngestConfig"
+    if ($SkipIngest) {
+        Write-Log "INGEST pulado por parametro -SkipIngest."
+    } elseif ((-not (Test-Path $IngestScript)) -or (-not (Test-Path $IngestConfig))) {
+        Write-Log "WARN: Finance ingest hub indisponivel. Pulando etapa de ingest."
+        Write-Log "IngestScript=$IngestScript"
+        Write-Log "IngestConfig=$IngestConfig"
+    } else {
+        Invoke-Step "Finance ingest hub (bling)" {
+            Set-Location $ClearRoot
+            python $IngestScript --config $IngestConfig --run-id ("bling_v1_{0}" -f $RunId)
         }
-        Set-Location $ClearRoot
-        python $IngestScript --config $IngestConfig --run-id ("bling_v1_{0}" -f $RunId)
     }
 
     Invoke-Step "Generate Bling -> Supabase migration" {
