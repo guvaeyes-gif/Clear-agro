@@ -1357,14 +1357,6 @@ def render_overview(
             ("Checks com Falha", integer(quality["quality_check_fail"])),
         ]
     )
-    freshness = snapshot.get("ap_ar_freshness") or {}
-    if freshness:
-        render_section_note(
-            "Bling AP/AR: CZ "
-            f"{freshness.get('cz_sync_finished_at') or 'N/D'}; CR {freshness.get('cr_sync_finished_at') or 'N/D'}; "
-            f"ultima data efetiva AP {freshness.get('ap_last_effective_date') or 'N/D'}; "
-            f"ultima data efetiva AR {freshness.get('ar_last_effective_date') or 'N/D'}."
-        )
 
     if proxy_period:
         commercial_sales_total = effective_sales_total(year, month)
@@ -2516,7 +2508,6 @@ def render_ap_governance(snapshot: dict[str, Any]) -> None:
 
 def render_quality(snapshot: dict[str, Any]) -> None:
     quality = snapshot["quality_reconciliation"]
-    freshness = snapshot.get("ap_ar_freshness") or {}
 
     st.header("Qualidade e Reconciliacao")
     metric_row(
@@ -2527,15 +2518,6 @@ def render_quality(snapshot: dict[str, Any]) -> None:
             ("Gate Atual", quality["gate_detail"] or "N/D"),
         ]
     )
-    if freshness:
-        metric_row(
-            [
-                ("Sync CZ", freshness.get("cz_sync_finished_at") or "N/D"),
-                ("Sync CR", freshness.get("cr_sync_finished_at") or "N/D"),
-                ("AP ate", freshness.get("ap_last_effective_date") or "N/D"),
-                ("AR ate", freshness.get("ar_last_effective_date") or "N/D"),
-            ]
-        )
 
     rows = []
     for label, item in [

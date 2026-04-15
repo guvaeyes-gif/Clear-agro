@@ -246,10 +246,8 @@ def main() -> None:
 
     cache_path = bling_dir / f"nfe_2026_cache{suffix}.jsonl"
     rows = normalize_rows(read_jsonl(cache_path), company)
-    timestamp = str(args.run_id).replace("_", "")
-    run_id = f"{timestamp}_{company.lower()}"
-    migration_name = f"{timestamp}_bling_sales_{company.lower()}_nfe_import_v1.sql"
-    migration_path = migrations_dir / migration_name
+    run_id = f"{args.run_id}_{company.lower()}"
+    migration_path = migrations_dir / f"{run_id}_bling_nfe_import_v1.sql"
     migration_path.write_text(build_sql(rows, args.batch_size, run_id), encoding="utf-8")
 
     status = {

@@ -38,12 +38,6 @@ def load_json(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def load_json_if_exists(path: Path) -> dict[str, Any]:
-    if not path.exists():
-        return {}
-    return load_json(path)
-
-
 def to_float(value: str | None) -> float:
     return float((value or "0").strip())
 
@@ -478,19 +472,6 @@ def parse_date(value: str) -> datetime | None:
         except ValueError:
             continue
     return None
-
-
-def max_date_from_rows(rows: list[dict[str, Any]], fields: list[str]) -> str:
-    latest: datetime | None = None
-    for row in rows:
-        for field in fields:
-            dt = parse_date(str(row.get(field) or "").strip())
-            if dt is None:
-                continue
-            if latest is None or dt > latest:
-                latest = dt
-            break
-    return latest.date().isoformat() if latest is not None else ""
 
 
 def normalize_text(value: Any) -> str:
@@ -1192,19 +1173,6 @@ def build_ap_ar_snapshot(clear_os_root: Path) -> dict:
         open_only=True,
         min_year=2023,
     )
-    bling_api_dir = clear_os_root / "bling_api"
-    cz_sync_report = load_json_if_exists(bling_api_dir / "bling_sync_report.json")
-    cr_sync_report = load_json_if_exists(bling_api_dir / "bling_sync_report_cr.json")
-    ap_ar_freshness = {
-        "cz_sync_started_at": cz_sync_report.get("started_at", ""),
-        "cz_sync_finished_at": cz_sync_report.get("finished_at", ""),
-        "cr_sync_started_at": cr_sync_report.get("started_at", ""),
-        "cr_sync_finished_at": cr_sync_report.get("finished_at", ""),
-        "ap_last_effective_date": max_date_from_rows(ap_rows_dre, ["data_emissao", "competencia", "vencimento"]),
-        "ar_last_effective_date": max_date_from_rows(ar_rows, ["data_emissao", "competencia", "vencimento"]),
-        "ap_open_rows": len(ap_rows),
-        "ar_open_rows": len(ar_rows),
-    }
     horizon = today_dt + timedelta(days=30)
     ap_aberto = round(sum(float(row["valor"]) for row in ap_rows), 2)
     ar_aberto = round(sum(float(row["valor"]) for row in ar_rows), 2)
@@ -1246,7 +1214,6 @@ def build_ap_ar_snapshot(clear_os_root: Path) -> dict:
         "ap_details": ap_rows,
         "ar_details": ar_rows,
         "ap_classification": ap_classification,
-        "ap_ar_freshness": ap_ar_freshness,
     }
 
 
@@ -1274,7 +1241,6 @@ def main() -> None:
             snapshot["ap_classification"] = ap_ar_payload["ap_classification"]
             snapshot["monthly_bling"] = ap_ar_payload["monthly_bling"]
             snapshot["dre_bling_info"] = ap_ar_payload["dre_bling_info"]
-            snapshot["ap_ar_freshness"] = ap_ar_payload["ap_ar_freshness"]
             snapshot["generated_at"] = datetime.now().isoformat()
             out_path.write_text(json.dumps(snapshot, ensure_ascii=False, indent=2), encoding="utf-8")
             print(str(out_path))
@@ -1296,7 +1262,6 @@ def main() -> None:
             snapshot["ap_classification"] = ap_ar_payload["ap_classification"]
             snapshot["monthly_bling"] = ap_ar_payload["monthly_bling"]
             snapshot["dre_bling_info"] = ap_ar_payload["dre_bling_info"]
-            snapshot["ap_ar_freshness"] = ap_ar_payload["ap_ar_freshness"]
             snapshot["generated_at"] = datetime.now().isoformat()
             out_path.write_text(json.dumps(snapshot, ensure_ascii=False, indent=2), encoding="utf-8")
             print(str(out_path))
@@ -1502,7 +1467,6 @@ def main() -> None:
         "bank_balances": load_bank_balance_snapshot(clear_os_root),
         "ap_details": ap_rows,
         "ar_details": ar_rows,
-        "ap_ar_freshness": ap_ar_freshness,
     }
 
     out_path.write_text(json.dumps(snapshot, ensure_ascii=False, indent=2), encoding="utf-8")

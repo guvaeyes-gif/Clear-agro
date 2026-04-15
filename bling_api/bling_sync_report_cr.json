@@ -2,50 +2,22 @@
   "company": "CR",
   "year": 2026,
   "modules": [
-    "contas_pagar",
-    "contas_receber",
-    "contatos"
+    "contas_financeiras"
   ],
-  "started_at": "2026-04-13 20:28:19",
+  "started_at": "2026-03-26 20:53:54",
   "results": [
     {
-      "module": "contatos",
-      "endpoint": "/contatos",
-      "cache_file": "C:\\Users\\admin\\Desktop\\Clear-agro\\bling_api\\contatos_cache_cr.jsonl",
-      "pages": 4,
-      "fetched": 308,
-      "new_records": 1,
-      "enriched_ok": 0,
+      "module": "contas_financeiras",
+      "endpoint": "/caixas",
+      "cache_file": "C:\\Users\\admin\\Desktop\\Clear-agro\\bling_api\\contas_financeiras_cache_cr.jsonl",
+      "pages": 1,
+      "fetched": 10,
+      "new_records": 3,
+      "enriched_ok": 3,
       "enriched_err": 0,
-      "elapsed_s": 6.38
-    },
-    {
-      "module": "contas_receber",
-      "endpoint": "/contas/receber",
-      "cache_file": "C:\\Users\\admin\\Desktop\\Clear-agro\\bling_api\\contas_receber_cache_cr.jsonl",
-      "pages": 2,
-      "fetched": 185,
-      "new_records": 185,
-      "enriched_ok": 184,
-      "enriched_err": 1,
-      "backfill_updated": 0,
-      "backfill_errors": 0,
-      "elapsed_s": 40804.52
-    },
-    {
-      "module": "contas_pagar",
-      "endpoint": "/contas/pagar",
-      "cache_file": "C:\\Users\\admin\\Desktop\\Clear-agro\\bling_api\\contas_pagar_cache_cr.jsonl",
-      "pages": 9,
-      "fetched": 894,
-      "new_records": 894,
-      "enriched_ok": 894,
-      "enriched_err": 0,
-      "backfill_updated": 0,
-      "backfill_errors": 0,
-      "elapsed_s": 834.69
+      "elapsed_s": 16.4
     }
   ],
   "errors": [],
-  "finished_at": "2026-04-14 08:02:25"
+  "finished_at": "2026-03-26 20:54:10"
 }

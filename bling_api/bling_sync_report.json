@@ -2,50 +2,22 @@
   "company": "CZ",
   "year": 2026,
   "modules": [
-    "contas_pagar",
-    "contas_receber",
-    "contatos"
+    "contas_financeiras"
   ],
-  "started_at": "2026-04-14 09:23:46",
+  "started_at": "2026-03-26 20:52:54",
   "results": [
     {
-      "module": "contatos",
-      "endpoint": "/contatos",
-      "cache_file": "C:\\Users\\admin\\Desktop\\Clear-agro\\bling_api\\contatos_cache.jsonl",
-      "pages": 19,
-      "fetched": 1804,
-      "new_records": 0,
-      "enriched_ok": 0,
+      "module": "contas_financeiras",
+      "endpoint": "/caixas",
+      "cache_file": "C:\\Users\\admin\\Desktop\\Clear-agro\\bling_api\\contas_financeiras_cache.jsonl",
+      "pages": 1,
+      "fetched": 130,
+      "new_records": 13,
+      "enriched_ok": 13,
       "enriched_err": 0,
-      "elapsed_s": 17.21
-    },
-    {
-      "module": "contas_receber",
-      "endpoint": "/contas/receber",
-      "cache_file": "C:\\Users\\admin\\Desktop\\Clear-agro\\bling_api\\contas_receber_cache.jsonl",
-      "pages": 6,
-      "fetched": 567,
-      "new_records": 567,
-      "enriched_ok": 567,
-      "enriched_err": 0,
-      "backfill_updated": 0,
-      "backfill_errors": 0,
-      "elapsed_s": 575.72
-    },
-    {
-      "module": "contas_pagar",
-      "endpoint": "/contas/pagar",
-      "cache_file": "C:\\Users\\admin\\Desktop\\Clear-agro\\bling_api\\contas_pagar_cache.jsonl",
-      "pages": 139,
-      "fetched": 13869,
-      "new_records": 13869,
-      "enriched_ok": 13869,
-      "enriched_err": 0,
-      "backfill_updated": 0,
-      "backfill_errors": 0,
-      "elapsed_s": 15114.88
+      "elapsed_s": 59.32
     }
   ],
   "errors": [],
-  "finished_at": "2026-04-14 13:45:34"
+  "finished_at": "2026-03-26 20:53:54"
 }

@@ -1,21 +1,21 @@
 # Finance Pack - Clear Agro (Draft)
 
 ## Executive Summary
-- Ultimo periodo com caixa: 2026-03
+- Ultimo periodo com caixa: 2025-01
 - Receita (DRE): 0.00
 - Despesa (DRE): 0.00
 - EBITDA proxy: 0.00
-- FCF proxy: 666920.50
+- FCF proxy: 0.00
 - AP realizado (Caixa): 0.00
 
-- Ultimo periodo com AP: 2034-10
-- AP total / AP realizado (Bling): 96660.07 / 0.00
+- Ultimo periodo com AP: 2025-01
+- AP total / AP realizado (Bling): 0.00 / 0.00
 - AR total: 0.00
-- Capital de giro proxy: -96660.07
+- Capital de giro proxy: 0.00
 - CCC proxy (dias): 0.00
 
 ## Reconciliation
-- Excecoes materiais: 71
+- Excecoes materiais: 0
 - Arquivo de excecoes: data/exports/finance_reconciliation_exceptions.csv
 
 ## Escopo de entidades
