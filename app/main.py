@@ -1312,7 +1312,7 @@ def filter_local_targets_scope(
     return out
 
 
-def collapse_targets_rows(df: pd.DataFrame) -> pd.DataFrame:
+def collapse_targets_rows(df: pd.DataFrame, *, include_state: bool = True) -> pd.DataFrame:
     if df.empty:
         return df
     out = df.copy()
@@ -1352,8 +1352,10 @@ def collapse_targets_rows(df: pd.DataFrame) -> pd.DataFrame:
 
     if "empresa" in out.columns:
         out["empresa"] = out["empresa"].fillna("").astype(str).str.strip().str.upper()
-    if "estado" in out.columns:
+    if include_state and "estado" in out.columns:
         out["estado"] = out["estado"].fillna("").astype(str).str.strip().str.upper()
+    elif not include_state and "estado" in out.columns:
+        out = out.drop(columns=["estado"])
     if "periodo_tipo" in out.columns:
         out["periodo_tipo"] = out["periodo_tipo"].fillna("").astype(str).str.strip().str.upper()
     if "vendedor_id" in out.columns:
@@ -1367,7 +1369,9 @@ def collapse_targets_rows(df: pd.DataFrame) -> pd.DataFrame:
     if "ano" in out.columns:
         out["ano"] = pd.to_numeric(out["ano"], errors="coerce")
 
-    key_cols = [c for c in ["ano", "periodo_tipo", "mes", "quarter", "estado", "empresa"] if c in out.columns]
+    key_cols = [c for c in ["ano", "periodo_tipo", "mes", "quarter", "empresa"] if c in out.columns]
+    if include_state and "estado" in out.columns:
+        key_cols.append("estado")
     key_cols.append("vendedor_label")
 
     if not key_cols:
@@ -3858,7 +3862,7 @@ if page == "Metas Comerciais":
                 month_num=mes,
                 quarter_num=quarter,
                 ytd=effective_ytd,
-                state=uf or None,
+                state=None,
                 statuses=status or None,
             )
             filtered_view = overlay_targets_actuals_from_realizado(
@@ -4061,29 +4065,22 @@ if page == "Metas Comerciais":
                 statuses=status or None,
             )
             if not df.empty:
+                df = collapse_targets_rows(df, include_state=False)
                 df = overlay_targets_actuals_from_realizado(
                     df,
                     metas_realizado_base,
-                    year_col="target_year",
-                    period_type_col="period_type",
-                    month_col="month_num",
-                    quarter_col="quarter_num",
-                    state_col="state",
-                    vendor_col="sales_rep_name",
+                    year_col="ano",
+                    period_type_col="periodo_tipo",
+                    month_col="mes",
+                    quarter_col="quarter",
+                    state_col=None,
+                    vendor_col="vendedor_id",
                     company_col="empresa",
                     actual_col="actual_value",
                     gap_col="gap_value",
                 )
-                df = collapse_targets_rows(df)
                 df = df.rename(
                     columns={
-                        "target_year": "ano",
-                        "period_type": "periodo_tipo",
-                        "month_num": "mes",
-                        "quarter_num": "quarter",
-                        "state": "estado",
-                        "sales_rep_code": "vendedor_id",
-                        "sales_rep_name": "vendedor",
                         "target_value": "meta_valor",
                         "actual_value": "realizado_valor",
                         "attainment_pct": "atingimento_pct",
@@ -4091,7 +4088,21 @@ if page == "Metas Comerciais":
                     }
                 )
                 df = format_targets_listing(df)
-                view_cols = [c for c in ["ano", "mes", "estado", "vendedor", "meta_valor", "realizado_valor", "atingimento_pct", "gap_valor", "status"] if c in df.columns]
+                view_cols = [
+                    c
+                    for c in [
+                        "ano",
+                        "mes",
+                        "empresa",
+                        "vendedor",
+                        "meta_valor",
+                        "realizado_valor",
+                        "atingimento_pct",
+                        "gap_valor",
+                        "status",
+                    ]
+                    if c in df.columns
+                ]
                 st.dataframe(
                     df[view_cols],
                     height=420,
@@ -4100,11 +4111,12 @@ if page == "Metas Comerciais":
             else:
                 st.info("Sem metas para o recorte selecionado.")
         else:
-            filtros_lista = {"ano": year, "periodo_tipo": periodo_tipo, "mes": mes, "quarter": quarter, "estado": uf or None, "status": status or None}
+            filtros_lista = {"ano": year, "periodo_tipo": periodo_tipo, "mes": mes, "quarter": quarter, "status": status or None}
             if sel_company != "TODOS":
                 filtros_lista["empresa"] = sel_company
             df = list_metas(filtros_lista)
             df = filter_local_targets_scope(df, sel_company, sel_vendor, selected_vendor_candidates)
+            df = collapse_targets_rows(df, include_state=False)
             df = overlay_targets_actuals_from_realizado(
                 df,
                 metas_realizado_base,
@@ -4112,13 +4124,12 @@ if page == "Metas Comerciais":
                 period_type_col="periodo_tipo",
                 month_col="mes",
                 quarter_col="quarter",
-                state_col="estado",
+                state_col=None,
                 vendor_col="vendedor_id",
                 company_col="empresa",
                 actual_col="realizado_valor",
                 gap_col="gap_valor",
             )
-            df = collapse_targets_rows(df)
             if PROFILE == "gestor" and not df.empty:
                 acl = load_acl().get("gestor", {})
                 allow = _clean_list(acl.get("allow_vendedores", []))
@@ -4129,7 +4140,21 @@ if page == "Metas Comerciais":
                     df = df[~df["vendedor_id"].isin(block)]
             if not df.empty:
                 df = format_targets_listing(df)
-                view_cols = [c for c in ["ano", "mes", "estado", "vendedor", "meta_valor", "realizado_valor", "atingimento_pct", "gap_valor", "status"] if c in df.columns]
+                view_cols = [
+                    c
+                    for c in [
+                        "ano",
+                        "mes",
+                        "empresa",
+                        "vendedor",
+                        "meta_valor",
+                        "realizado_valor",
+                        "atingimento_pct",
+                        "gap_valor",
+                        "status",
+                    ]
+                    if c in df.columns
+                ]
                 st.dataframe(
                     df[view_cols],
                     height=420,
