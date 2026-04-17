@@ -10,6 +10,8 @@ def _vendor_key(value: object) -> str:
     txt = str(value or "").strip().upper()
     if not txt:
         return ""
+    if txt.endswith(".0") and txt[:-2].isdigit():
+        txt = txt[:-2]
     txt = "".join(ch for ch in unicodedata.normalize("NFKD", txt) if not unicodedata.combining(ch))
     return " ".join(txt.split())
 
@@ -33,14 +35,14 @@ def _build_vendor_name_lookup(
 
     if vendor_alias_map:
         for vendor_id, vendor_name in vendor_alias_map.items():
-            vendor_id_txt = str(vendor_id or "").strip()
+            vendor_id_txt = _vendor_key(vendor_id)
             vendor_name_txt = str(vendor_name or "").strip()
             if vendor_id_txt and vendor_name_txt:
                 id_to_name.setdefault(vendor_id_txt, vendor_name_txt)
 
     if vendor_map is not None and not vendor_map.empty and {"vendedor_id", "vendedor"}.issubset(vendor_map.columns):
         vm = vendor_map.copy()
-        vm["vendedor_id"] = vm["vendedor_id"].fillna("").astype(str).str.strip()
+        vm["vendedor_id"] = vm["vendedor_id"].fillna("").astype(str).str.strip().map(_vendor_key)
         vm["vendedor"] = vm["vendedor"].fillna("").astype(str).str.strip()
         vm = vm[(vm["vendedor_id"] != "") & (vm["vendedor"] != "")]
         for _, row in vm.iterrows():
@@ -77,17 +79,22 @@ def canonical_vendor_name(
     id_to_name, _ = _build_vendor_name_lookup(vendor_map, vendor_alias_map)
     vendor_id = _extract_vendor_id_from_label(txt)
     if vendor_id:
-        return id_to_name.get(vendor_id, txt.rsplit("(", 1)[0].strip() or vendor_id)
-    if txt in id_to_name:
-        return id_to_name[txt]
-    if txt.isdigit():
-        return id_to_name.get(txt, txt)
+        mapped_name = id_to_name.get(_vendor_key(vendor_id), "")
+        if mapped_name:
+            return mapped_name
+        base_name = txt.rsplit("(", 1)[0].strip()
+        if base_name and not base_name.replace(".", "", 1).isdigit():
+            return base_name
+        return ""
+    mapped_name = id_to_name.get(_vendor_key(txt), "")
+    if mapped_name:
+        return mapped_name
 
     key = _vendor_key(txt)
     for candidate in id_to_name.values():
         if _vendor_key(candidate) == key:
             return candidate
-    return txt
+    return txt if vendor_map is None and vendor_alias_map is None else ""
 
 
 def build_vendor_selector_options(
@@ -166,7 +173,7 @@ def normalize_vendor_identity(
     id_to_name, name_to_id = _build_vendor_name_lookup(vendor_map, vendor_alias_map)
 
     if vendor_id_col in out.columns:
-        out[vendor_id_col] = out[vendor_id_col].fillna("").astype(str).str.strip()
+        out[vendor_id_col] = out[vendor_id_col].fillna("").astype(str).str.strip().map(_vendor_key)
     else:
         out[vendor_id_col] = ""
     if vendor_name_col in out.columns:
@@ -174,7 +181,7 @@ def normalize_vendor_identity(
     else:
         out[vendor_name_col] = ""
 
-    missing_name = out[vendor_name_col].eq("")
+    missing_name = out[vendor_name_col].eq("") | out[vendor_name_col].map(_vendor_key).eq(out[vendor_id_col])
     if missing_name.any():
         out.loc[missing_name, vendor_name_col] = out.loc[missing_name, vendor_id_col].map(id_to_name).fillna("")
 

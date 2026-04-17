@@ -49,7 +49,7 @@ from src.metas_db import (
     prepare_sales_targets_import,
 )
 from src.telegram import build_alerts_message, send_telegram_message, telegram_enabled
-from src.vendor_utils import build_vendor_selector_options, normalize_vendor_identity
+from src.vendor_utils import build_vendor_selector_options, canonical_vendor_name, normalize_vendor_identity
 
 PROFILE = os.getenv("CRM_PROFILE", "director").strip().lower()
 PUBLIC_REVIEW = os.getenv("CRM_PUBLIC_REVIEW", "").strip().lower() in {"1", "true", "yes", "on"}
@@ -543,6 +543,8 @@ def _vendor_key(value: object) -> str:
     txt = str(value or "").strip().upper()
     if not txt:
         return ""
+    if txt.endswith(".0") and txt[:-2].isdigit():
+        txt = txt[:-2]
     txt = "".join(ch for ch in unicodedata.normalize("NFKD", txt) if not unicodedata.combining(ch))
     return " ".join(txt.split())
 
@@ -564,7 +566,7 @@ def _build_vendor_alias_map(
     alias_map: dict[str, str] = {}
     if vendor_links is not None and not vendor_links.empty:
         links = vendor_links.copy()
-        links["vendedor_id"] = links["vendedor_id"].fillna("").astype(str).str.strip()
+        links["vendedor_id"] = links["vendedor_id"].fillna("").astype(str).str.strip().map(_vendor_key)
         links["nome_meta"] = links["nome_meta"].fillna("").astype(str).str.strip()
         links["nome_exibicao"] = links["nome_exibicao"].fillna("").astype(str).str.strip()
         links = links[links["vendedor_id"] != ""]
@@ -574,7 +576,7 @@ def _build_vendor_alias_map(
                 alias_map[row["vendedor_id"]] = preferred_name
     if not vendor_map.empty:
         vm = vendor_map.copy()
-        vm["vendedor_id"] = vm["vendedor_id"].fillna("").astype(str).str.strip()
+        vm["vendedor_id"] = vm["vendedor_id"].fillna("").astype(str).str.strip().map(_vendor_key)
         vm["vendedor"] = vm["vendedor"].fillna("").astype(str).str.strip()
         vm = vm[(vm["vendedor_id"] != "") & (vm["vendedor"] != "")]
         for _, row in vm.iterrows():
@@ -582,7 +584,7 @@ def _build_vendor_alias_map(
 
     if not realizado_df.empty and {"vendedor_id", "vendedor"}.issubset(realizado_df.columns):
         rr = realizado_df.copy()
-        rr["vendedor_id"] = rr["vendedor_id"].fillna("").astype(str).str.strip()
+        rr["vendedor_id"] = rr["vendedor_id"].fillna("").astype(str).str.strip().map(_vendor_key)
         rr["vendedor"] = rr["vendedor"].fillna("").astype(str).str.strip()
         rr = rr[
             (rr["vendedor_id"] != "")
@@ -633,10 +635,26 @@ def _vendor_candidates(
 
 def _vendor_display(name: object, vendor_id: object) -> str:
     name_txt = str(name or "").strip()
-    vendor_id_txt = str(vendor_id or "").strip()
-    if name_txt and vendor_id_txt and _vendor_key(name_txt) != _vendor_key(vendor_id_txt):
-        return f"{name_txt} ({vendor_id_txt})"
-    return name_txt or vendor_id_txt or "SEM_VENDEDOR"
+    return name_txt or "SEM_VENDEDOR"
+
+
+def _vendor_display_for_ui(
+    value: object,
+    vendor_map: pd.DataFrame | None = None,
+    vendor_alias_map: dict[str, str] | None = None,
+) -> str:
+    txt = str(value or "").strip()
+    if not txt:
+        return "SEM_VENDEDOR"
+    if txt.upper() == "SEM_VENDEDOR":
+        return "SEM_VENDEDOR"
+    if txt.endswith(".0") and txt[:-2].isdigit():
+        resolved = canonical_vendor_name(txt, vendor_map, vendor_alias_map)
+        return resolved or "SEM_VENDEDOR"
+    if txt.isdigit():
+        resolved = canonical_vendor_name(txt, vendor_map, vendor_alias_map)
+        return resolved or "SEM_VENDEDOR"
+    return txt
 
 
 def _vendor_display_label(option: str, option_counts: dict[str, int] | None = None) -> str:
@@ -648,9 +666,7 @@ def _vendor_display_label(option: str, option_counts: dict[str, int] | None = No
         base_name = txt.rsplit("(", 1)[0].strip()
         if base_name and (option_counts or {}).get(_vendor_key(base_name), 0) <= 1:
             return base_name
-        return f"{base_name} ({vendor_id})" if base_name else f"ID {vendor_id}"
-    if txt.isdigit():
-        return f"ID {txt}"
+        return base_name
     return txt
 
 
@@ -672,7 +688,7 @@ def _collect_vendor_metrics(
         out["vendedor_id"] = ""
     if "vendedor" not in out.columns:
         out["vendedor"] = ""
-    out["vendedor_id"] = out["vendedor_id"].fillna("").astype(str).str.strip()
+    out["vendedor_id"] = out["vendedor_id"].fillna("").astype(str).str.strip().map(_vendor_key)
     out["vendedor"] = out["vendedor"].fillna("").astype(str).str.strip()
     reverse_alias_map = {
         _vendor_key(vendor_name): vendor_id
@@ -683,12 +699,15 @@ def _collect_vendor_metrics(
         missing_ids = out["vendedor_id"].eq("") & out["vendedor"].map(_vendor_key).isin(reverse_alias_map.keys())
         out.loc[missing_ids, "vendedor_id"] = out.loc[missing_ids, "vendedor"].map(lambda v: reverse_alias_map.get(_vendor_key(v), ""))
     if not vendor_map.empty:
+        vm = vendor_map.copy()
+        vm["vendedor_id"] = vm["vendedor_id"].fillna("").astype(str).str.strip().map(_vendor_key)
+        vm["vendedor"] = vm["vendedor"].fillna("").astype(str).str.strip()
         out = out.merge(
-            vendor_map[["vendedor_id", "vendedor"]].rename(columns={"vendedor": "__vendor_name"}),
+            vm[["vendedor_id", "vendedor"]].rename(columns={"vendedor": "__vendor_name"}),
             on="vendedor_id",
             how="left",
         )
-        missing = out["vendedor"].eq("")
+        missing = out["vendedor"].eq("") | out["vendedor"].map(_vendor_key).eq(out["vendedor_id"])
         out.loc[missing, "vendedor"] = out.loc[missing, "__vendor_name"].fillna("")
         out = out.drop(columns=["__vendor_name"], errors="ignore")
     if vendor_alias_map:
@@ -1090,7 +1109,7 @@ def build_targets_realizado_summary(
     if "vendedor_id" in out.columns:
         out["vendedor_label"] = out["vendedor_label"].mask(
             out["vendedor_label"].eq(""),
-            out["vendedor_id"].fillna("").astype(str).str.strip(),
+            "SEM_VENDEDOR",
         )
     out["vendedor_label"] = out["vendedor_label"].replace("", "SEM_VENDEDOR")
 
@@ -1501,7 +1520,7 @@ def collapse_targets_rows(df: pd.DataFrame, *, include_state: bool = True) -> pd
     if "vendedor_id" in out.columns:
         out["vendedor_id"] = out["vendedor_id"].fillna("").astype(str).str.strip()
     if "vendedor" in out.columns:
-        out["vendedor"] = out["vendedor"].fillna("").astype(str).str.strip()
+        out["vendedor"] = out["vendedor"].fillna("").astype(str).str.strip().replace("", "SEM_VENDEDOR")
     if "mes" in out.columns:
         out["mes"] = pd.to_numeric(out["mes"], errors="coerce")
     if "quarter" in out.columns:
@@ -1566,6 +1585,9 @@ def build_local_targets_summary(
     if "vendedor" in out.columns:
         first_names = out.groupby("vendedor_label", dropna=False)["vendedor"].first().reset_index()
         vendedor = vendedor.merge(first_names, on="vendedor_label", how="left")
+    vendedor["vendedor_label"] = vendedor["vendedor_label"].replace("", "SEM_VENDEDOR")
+    if "vendedor" in vendedor.columns:
+        vendedor["vendedor"] = vendedor["vendedor"].fillna("").astype(str).str.strip().replace("", "SEM_VENDEDOR")
     meta_total = float(out["meta_valor"].sum())
     if realized_summary and not realized_summary.get("series", pd.DataFrame()).empty and not series.empty:
         actual_series = realized_summary["series"].copy()
@@ -1623,12 +1645,6 @@ def render_targets_executive_rankings(
                 vendor_rank["vendedor_label"] = vendor_rank[vendedor_name_col].fillna("").astype(str).str.strip()
             else:
                 vendor_rank["vendedor_label"] = ""
-            if vendedor_id_col in vendor_rank.columns:
-                fallback_ids = vendor_rank[vendedor_id_col].fillna("").astype(str).str.strip()
-                vendor_rank["vendedor_label"] = vendor_rank["vendedor_label"].mask(
-                    vendor_rank["vendedor_label"].eq(""),
-                    fallback_ids,
-                )
             vendor_rank["vendedor_label"] = vendor_rank["vendedor_label"].replace("", "SEM_VENDEDOR")
 
             top_gap = vendor_rank.sort_values("gap_valor").head(10).copy()
@@ -1656,12 +1672,6 @@ def render_targets_executive_rankings(
                 vendor_att["vendedor_label"] = vendor_att[vendedor_name_col].fillna("").astype(str).str.strip()
             else:
                 vendor_att["vendedor_label"] = ""
-            if vendedor_id_col in vendor_att.columns:
-                fallback_ids = vendor_att[vendedor_id_col].fillna("").astype(str).str.strip()
-                vendor_att["vendedor_label"] = vendor_att["vendedor_label"].mask(
-                    vendor_att["vendedor_label"].eq(""),
-                    fallback_ids,
-                )
             vendor_att["vendedor_label"] = vendor_att["vendedor_label"].replace("", "SEM_VENDEDOR")
 
             low_att = vendor_att.sort_values(["atingimento_pct", "meta_valor"], ascending=[True, False]).head(10).copy()
@@ -2651,6 +2661,8 @@ if page == "Executive Cockpit":
     else:
         st.info("Pendencia: faltam dados de metas ou realizado com data.")
 
+    perf = vendedor_performance_period(cockpit_sheets, year, selected_month, effective_ytd, selected_quarter)
+
     if sales_scope == "Vendas efetivas":
         top_clients = top_client_movement_table(
             cockpit_sheets.get("realizado", pd.DataFrame()),
@@ -2663,6 +2675,22 @@ if page == "Executive Cockpit":
         if not top_clients.empty:
             st.caption("Top 5 clientes por vendas efetivas")
             st.dataframe(top_clients, hide_index=True, width="stretch")
+
+        if not perf.empty:
+            top_vendedores_exec = (
+                perf.sort_values("receita", ascending=False)
+                .head(3)
+                .copy()
+            )
+            top_vendedores_exec["vendedor"] = top_vendedores_exec["vendedor"].fillna("").astype(str).str.strip()
+            top_vendedores_exec = top_vendedores_exec[top_vendedores_exec["vendedor"] != ""]
+            top_vendedores_exec["receita"] = top_vendedores_exec["receita"].map(fmt_brl_full)
+            st.caption("Top 3 vendedores por realizado")
+            st.dataframe(
+                top_vendedores_exec[["vendedor", "receita"]],
+                hide_index=True,
+                width="stretch",
+            )
     elif sales_scope in {"Devolucoes/Ajustes", "Nao vendas"}:
         top_clients = top_client_movement_table(
             cockpit_sheets.get("realizado", pd.DataFrame()),
@@ -2680,7 +2708,6 @@ if page == "Executive Cockpit":
     # So what
     st.subheader("So what?")
     bullets = []
-    perf = vendedor_performance_period(cockpit_sheets, year, selected_month, effective_ytd, selected_quarter)
     if not perf.empty:
         perf = perf.sort_values("gap", ascending=False)
         top_gap = perf.head(3)
@@ -3616,6 +3643,7 @@ if page == "Performance & Ritmo":
         perf = perf.sort_values("gap", ascending=False)
         perf["rank"] = range(1, len(perf) + 1)
         perf_disp = perf.copy()
+        perf_disp["vendedor"] = perf_disp["vendedor"].map(lambda value: _vendor_display_for_ui(value))
         perf_disp["meta"] = perf_disp["meta"].apply(fmt_brl_abbrev)
         perf_disp["receita"] = perf_disp["receita"].apply(fmt_brl_abbrev)
         perf_disp["gap"] = perf_disp["gap"].apply(fmt_brl_abbrev)
@@ -4368,7 +4396,18 @@ if page == "Metas Comerciais":
             empresa_default = sel_company if sel_company in {"CZ", "CR"} else "CZ"
             mf["empresa"] = st.selectbox("Empresa", ["CZ", "CR"], index=0 if empresa_default == "CZ" else 1, key="meta_empresa")
             mf["estado"] = st.text_input("UF (ex: PR, RS)", key="meta_uf")
-            mf["vendedor_id"] = st.text_input("Vendedor ID", key="meta_vendedor")
+            vendor_name_options = [""]
+            if not vendor_map.empty and {"vendedor_id", "vendedor"}.issubset(vendor_map.columns):
+                vendor_name_options.extend(
+                    sorted(
+                        {
+                            str(value).strip()
+                            for value in vendor_map["vendedor"].dropna().tolist()
+                            if str(value).strip()
+                        }
+                    )
+                )
+            mf["vendedor"] = st.selectbox("Vendedor", vendor_name_options, index=0, key="meta_vendedor")
             mf["canal"] = st.text_input("Canal (opcional)", key="meta_canal")
             mf["cultura"] = st.text_input("Cultura (opcional)", key="meta_cultura")
 
@@ -4388,16 +4427,33 @@ if page == "Metas Comerciais":
                     st.error("Quarter obrigatorio para QUARTER.")
                 elif not mf.get("estado") or len(mf.get("estado","")) != 2:
                     st.error("UF obrigatoria (2 letras).")
+                elif not mf.get("vendedor"):
+                    st.error("Vendedor obrigatorio.")
                 elif mf.get("meta_valor") is None:
                     st.error("Meta obrigatoria.")
                 else:
+                    vendor_id_lookup: dict[str, str] = {}
+                    if not vendor_map.empty and {"vendedor_id", "vendedor"}.issubset(vendor_map.columns):
+                        vm = vendor_map.copy()
+                        vm["vendedor_id"] = vm["vendedor_id"].fillna("").astype(str).str.strip()
+                        vm["vendedor"] = vm["vendedor"].fillna("").astype(str).str.strip()
+                        for _, row in vm.iterrows():
+                            vendor_key = _vendor_key(row["vendedor"])
+                            vendor_id_txt = str(row["vendedor_id"]).strip()
+                            if vendor_key and vendor_id_txt:
+                                vendor_id_lookup.setdefault(vendor_key, vendor_id_txt)
+                    selected_vendor_name = str(mf.get("vendedor") or "").strip()
+                    selected_vendor_id = vendor_id_lookup.get(_vendor_key(selected_vendor_name), "")
+                    if not selected_vendor_id:
+                        st.error("Vendedor selecionado nao esta vinculado a um ID do Bling.")
+                        st.stop()
                     create_meta({
                         "ano": year,
                         "periodo_tipo": mf.get("periodo_tipo"),
                         "mes": mf.get("mes"),
                         "quarter": mf.get("quarter"),
                         "estado": mf.get("estado"),
-                        "vendedor_id": mf.get("vendedor_id"),
+                        "vendedor_id": selected_vendor_id,
                         "empresa": mf.get("empresa"),
                         "canal": mf.get("canal"),
                         "cultura": mf.get("cultura"),

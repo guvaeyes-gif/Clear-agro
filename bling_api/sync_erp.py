@@ -566,12 +566,20 @@ def _sync_paginated_snapshot(
     }
 
 
-def _year_range(year: int) -> tuple[str, str]:
-    return f"{year}-01-01", f"{year}-12-31"
+def _date_window(year: int, date_from: str | None = None, date_to: str | None = None) -> tuple[str, str]:
+    start_date = date_from or f"{year}-01-01"
+    end_date = date_to or f"{year}-12-31"
+    return start_date, end_date
 
 
-def sync_vendas(client: BlingClient, year: int, max_pages: int | None) -> dict[str, Any]:
-    start_date, end_date = _year_range(year)
+def sync_vendas(
+    client: BlingClient,
+    year: int,
+    max_pages: int | None,
+    date_from: str | None = None,
+    date_to: str | None = None,
+) -> dict[str, Any]:
+    start_date, end_date = _date_window(year, date_from=date_from, date_to=date_to)
     cache = _cache_path(f"vendas_{year}_cache.jsonl", client.account)
     params = {"dataEmissaoInicial": start_date, "dataEmissaoFinal": end_date}
     result = _sync_paginated(
@@ -636,8 +644,14 @@ def backfill_vendas_vendedor(client: BlingClient, year: int, limit: int | None =
     }
 
 
-def sync_nfe(client: BlingClient, year: int, max_pages: int | None) -> dict[str, Any]:
-    start_date, end_date = _year_range(year)
+def sync_nfe(
+    client: BlingClient,
+    year: int,
+    max_pages: int | None,
+    date_from: str | None = None,
+    date_to: str | None = None,
+) -> dict[str, Any]:
+    start_date, end_date = _date_window(year, date_from=date_from, date_to=date_to)
     cache = _cache_path(f"nfe_{year}_cache.jsonl", client.account)
     params = {"dataEmissaoInicial": start_date, "dataEmissaoFinal": end_date}
     return _sync_paginated(
@@ -1131,6 +1145,16 @@ def parse_args() -> argparse.Namespace:
     )
     p.add_argument("--year", type=int, default=date.today().year)
     p.add_argument(
+        "--date-from",
+        default="",
+        help="Data inicial para vendas/NF-e (YYYY-MM-DD). Se omitida, usa o inicio do ano.",
+    )
+    p.add_argument(
+        "--date-to",
+        default="",
+        help="Data final para vendas/NF-e (YYYY-MM-DD). Se omitida, usa o fim do ano.",
+    )
+    p.add_argument(
         "--modules",
         default="vendas,nfe,contatos,produtos,contas_receber,contas_pagar,estoque",
         help="Lista separada por virgula: vendas,nfe,contatos,produtos,produtos_composicao,contas_receber,contas_pagar,estoque,contas_financeiras",
@@ -1179,6 +1203,8 @@ def main() -> int:
         for part in str(args.contas_years or "").split(",")
         if part.strip().isdigit()
     } or None
+    date_from = str(args.date_from or "").strip() or None
+    date_to = str(args.date_to or "").strip() or None
     client = BlingClient(account=company)
     report: dict[str, Any] = {
         "company": company,
@@ -1191,9 +1217,9 @@ def main() -> int:
 
     steps = []
     if "vendas" in selected:
-        steps.append(("vendas", lambda: sync_vendas(client, args.year, args.max_pages)))
+        steps.append(("vendas", lambda: sync_vendas(client, args.year, args.max_pages, date_from=date_from, date_to=date_to)))
     if "nfe" in selected:
-        steps.append(("nfe", lambda: sync_nfe(client, args.year, args.max_pages)))
+        steps.append(("nfe", lambda: sync_nfe(client, args.year, args.max_pages, date_from=date_from, date_to=date_to)))
     if "contatos" in selected:
         steps.append(("contatos", lambda: sync_contatos(client, args.max_pages)))
     if "produtos" in selected:
