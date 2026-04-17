@@ -128,8 +128,16 @@ def _coerce_datetime(df: pd.DataFrame, columns: list[str]) -> pd.DataFrame:
     out = df.copy()
     for column in columns:
         if column in out.columns:
-            out[column] = pd.to_datetime(out[column], errors="coerce")
+            out[column] = _parse_datetime_series(out[column])
     return out
+
+
+def _parse_datetime_series(series: pd.Series) -> pd.Series:
+    try:
+        return pd.to_datetime(series, errors="coerce", format="mixed")
+    except TypeError:
+        # Older pandas versions do not support format="mixed".
+        return pd.to_datetime(series, errors="coerce")
 
 
 def _fetch_crm_view(view_name: str, params: dict[str, Any] | None = None) -> pd.DataFrame:
@@ -195,7 +203,14 @@ def _load_bling_nfe_rows(years: list[int] | None = None) -> pd.DataFrame:
                 rows.append(obj)
     if not rows:
         return pd.DataFrame()
-    return pd.json_normalize(rows)
+    df = pd.json_normalize(rows)
+    if "id" in df.columns:
+        id_key = df["id"].fillna("").astype(str).str.strip()
+        df = df.loc[~id_key.eq("")].copy()
+        df["__id_key"] = id_key.loc[df.index]
+        dedupe_cols = ["empresa", "__id_key"] if "empresa" in df.columns else ["__id_key"]
+        df = df.drop_duplicates(subset=dedupe_cols, keep="first").drop(columns=["__id_key"], errors="ignore")
+    return df
 
 
 def _load_remote_bling_nfe_rows(years: list[int] | None = None) -> pd.DataFrame:
@@ -239,7 +254,14 @@ def _load_remote_bling_nfe_rows(years: list[int] | None = None) -> pd.DataFrame:
         rows.append(obj)
     if not rows:
         return pd.DataFrame()
-    return pd.json_normalize(rows)
+    df = pd.json_normalize(rows)
+    if "id" in df.columns:
+        id_key = df["id"].fillna("").astype(str).str.strip()
+        df = df.loc[~id_key.eq("")].copy()
+        df["__id_key"] = id_key.loc[df.index]
+        dedupe_cols = ["empresa", "__id_key"] if "empresa" in df.columns else ["__id_key"]
+        df = df.drop_duplicates(subset=dedupe_cols, keep="first").drop(columns=["__id_key"], errors="ignore")
+    return df
 
 
 def _map_vendedor_from_local_history(df: pd.DataFrame) -> pd.DataFrame:
@@ -484,23 +506,24 @@ def _apply_vendor_map(df: pd.DataFrame, vendor_id_col: str = "vendedor_id", vend
     if vmap.empty or "vendedor_id" not in vmap.columns:
         return df
     out = df.copy()
-    out[vendor_id_col] = out[vendor_id_col].fillna("").astype(str).str.strip()
+    out[vendor_id_col] = out[vendor_id_col].fillna("").astype(str).map(_normalize_vendor_id_text)
     if vendor_col not in out.columns:
         out[vendor_col] = pd.NA
     out[vendor_col] = out[vendor_col].fillna("").astype(str).str.strip()
+    vmap = vmap.copy()
+    vmap["vendedor_id_norm"] = vmap["vendedor_id"].map(_normalize_vendor_id_text)
     merged = out.merge(
-        vmap[["vendedor_id", "vendedor"]].rename(columns={"vendedor": "__vendedor_map"}),
+        vmap[["vendedor_id_norm", "vendedor"]].rename(
+            columns={"vendedor_id_norm": "__vendor_id_norm", "vendedor": "__vendedor_map"}
+        ),
         left_on=vendor_id_col,
-        right_on="vendedor_id",
+        right_on="__vendor_id_norm",
         how="left",
     )
     missing = merged[vendor_col].eq("")
     merged.loc[missing, vendor_col] = merged.loc[missing, "__vendedor_map"].fillna("")
     merged = merged.drop(columns=["__vendedor_map"], errors="ignore")
-    if f"{vendor_id_col}_y" in merged.columns:
-        merged = merged.drop(columns=[f"{vendor_id_col}_y"], errors="ignore")
-    if f"{vendor_id_col}_x" in merged.columns:
-        merged = merged.rename(columns={f"{vendor_id_col}_x": vendor_id_col})
+    merged = merged.drop(columns=["__vendor_id_norm"], errors="ignore")
     return merged
 
 
@@ -690,9 +713,9 @@ def load_bling_realizado() -> pd.DataFrame:
     if not nfe_df.empty:
         df = nfe_df.copy()
         if "dataEmissao" in df.columns:
-            df["data"] = pd.to_datetime(df["dataEmissao"], errors="coerce")
+            df["data"] = _parse_datetime_series(df["dataEmissao"])
         elif "dataOperacao" in df.columns:
-            df["data"] = pd.to_datetime(df["dataOperacao"], errors="coerce")
+            df["data"] = _parse_datetime_series(df["dataOperacao"])
         elif "data" not in df.columns:
             df["data"] = pd.NaT
         if "valorNota" in df.columns:
@@ -742,6 +765,7 @@ def load_bling_realizado() -> pd.DataFrame:
             if c in df.columns
         ]
         df = df[keep_cols].copy()
+        df = df.drop_duplicates(keep="first")
         return df.dropna(subset=["data", "receita"])
 
     caches: list[Path] = []
@@ -797,6 +821,7 @@ def load_bling_realizado() -> pd.DataFrame:
         except Exception:
             # Keep app running even if mapping file is malformed.
             pass
+    df = _fill_vendor_from_customer_name(df)
     if "vendedor" not in df.columns:
         df["vendedor"] = pd.NA
 
@@ -806,6 +831,7 @@ def load_bling_realizado() -> pd.DataFrame:
         df["vendedor"] = vendedor_txt.replace("", "SEM_VENDEDOR").fillna("SEM_VENDEDOR")
     keep_cols = [c for c in ["data", "receita", "cliente", "vendedor", "vendedor_id", "origem", "empresa"] if c in df.columns]
     df = df[keep_cols].copy()
+    df = df.drop_duplicates(keep="first")
     df = df.dropna(subset=["data", "receita"])
     return df
 
@@ -818,9 +844,9 @@ def load_bling_nfe(year: int) -> pd.DataFrame:
     if df.empty:
         return pd.DataFrame()
     if "dataEmissao" in df.columns:
-        df["data"] = pd.to_datetime(df["dataEmissao"], errors="coerce")
+        df["data"] = _parse_datetime_series(df["dataEmissao"])
     elif "dataOperacao" in df.columns:
-        df["data"] = pd.to_datetime(df["dataOperacao"], errors="coerce")
+        df["data"] = _parse_datetime_series(df["dataOperacao"])
     elif "data" not in df.columns:
         df["data"] = pd.NaT
     if "valorNota" in df.columns:
@@ -860,6 +886,7 @@ def load_bling_nfe(year: int) -> pd.DataFrame:
         df["vendedor"] = pd.NA
     if "vendedor_id" in df.columns:
         df = _apply_vendor_map(df)
+    df = _fill_vendor_from_customer_name(df)
     df = _map_vendedor_from_local_history(df)
     df = _append_nature_labels(df)
     keep_cols = [
@@ -890,9 +917,9 @@ def load_bling_nfe_detail(year: int = 2026) -> pd.DataFrame:
         return pd.DataFrame()
 
     if "dataEmissao" in df.columns:
-        df["data"] = pd.to_datetime(df["dataEmissao"], errors="coerce")
+        df["data"] = _parse_datetime_series(df["dataEmissao"])
     elif "dataOperacao" in df.columns:
-        df["data"] = pd.to_datetime(df["dataOperacao"], errors="coerce")
+        df["data"] = _parse_datetime_series(df["dataOperacao"])
     else:
         df["data"] = pd.NaT
 
@@ -940,6 +967,7 @@ def load_bling_nfe_detail(year: int = 2026) -> pd.DataFrame:
 
     if "vendedor_id" in df.columns:
         df = _apply_vendor_map(df)
+    df = _fill_vendor_from_customer_name(df)
     if "vendedor" in df.columns:
         vendedor_txt = df["vendedor"].fillna("").astype(str).str.strip()
         vendedor_txt = vendedor_txt.mask(vendedor_txt.map(_looks_like_vendor_id_text), "")
@@ -1053,6 +1081,22 @@ def _pick_first_value(payload: dict[str, Any], options: list[str]) -> Any:
     return None
 
 
+def _extract_nested_identity(value: object) -> tuple[str, str]:
+    if isinstance(value, dict):
+        raw_id = value.get("id")
+        raw_name = value.get("nome") or value.get("name")
+        return (
+            _normalize_vendor_id_text(raw_id),
+            str(raw_name or "").strip(),
+        )
+    txt = str(value or "").strip()
+    if not txt:
+        return "", ""
+    if txt.startswith("{") and txt.endswith("}"):
+        return "", ""
+    return "", txt
+
+
 def _looks_like_vendor_id_text(value: object) -> bool:
     txt = str(value or "").strip()
     if not txt:
@@ -1060,6 +1104,62 @@ def _looks_like_vendor_id_text(value: object) -> bool:
     if txt.endswith(".0"):
         txt = txt[:-2]
     return txt.isdigit()
+
+
+def _normalize_vendor_id_text(value: object) -> str:
+    txt = str(value or "").strip()
+    if not txt:
+        return ""
+    if txt.endswith(".0"):
+        txt = txt[:-2]
+    if txt.isdigit():
+        return str(int(txt))
+    return txt
+
+
+def _fill_vendor_from_customer_name(
+    df: pd.DataFrame,
+    *,
+    customer_col: str = "cliente",
+    vendor_col: str = "vendedor",
+    vendor_id_col: str = "vendedor_id",
+) -> pd.DataFrame:
+    if df.empty or customer_col not in df.columns or vendor_col not in df.columns:
+        return df
+    vmap = load_bling_vendor_map()
+    if vmap.empty or "vendedor" not in vmap.columns:
+        return df
+
+    known_names = {
+        _normalize_text(name)
+        for name in vmap["vendedor"].fillna("").astype(str).str.strip().tolist()
+        if str(name).strip()
+    }
+    if not known_names:
+        return df
+
+    name_to_id = {}
+    if "vendedor_id" in vmap.columns:
+        for _, row in vmap.iterrows():
+            name = _normalize_text(row.get("vendedor"))
+            vid = _normalize_vendor_id_text(row.get("vendedor_id"))
+            if name and vid and name not in name_to_id:
+                name_to_id[name] = vid
+
+    out = df.copy()
+    customer_txt = out[customer_col].fillna("").astype(str).str.strip()
+    customer_key = customer_txt.map(_normalize_text)
+    vendor_txt = out[vendor_col].fillna("").astype(str).str.strip()
+    missing_vendor = vendor_txt.eq("") | vendor_txt.eq("SEM_VENDEDOR") | vendor_txt.map(_looks_like_vendor_id_text)
+    fill_mask = missing_vendor & customer_key.isin(known_names)
+    if fill_mask.any():
+        out.loc[fill_mask, vendor_col] = customer_txt.loc[fill_mask]
+        if vendor_id_col in out.columns:
+            filled_ids = customer_key.loc[fill_mask].map(name_to_id).fillna("")
+            id_mask = filled_ids.ne("")
+            if id_mask.any():
+                out.loc[filled_ids.index[id_mask], vendor_id_col] = filled_ids[id_mask]
+    return out
 
 
 @st.cache_data(show_spinner=False)
@@ -1192,6 +1292,13 @@ def load_bling_sales_detail(year: int = 2026) -> pd.DataFrame:
                         "representante.id",
                     ],
                 )
+                seller_id_txt, seller_name_txt = _extract_nested_identity(seller)
+                if seller_id_txt and not seller_id:
+                    seller_id = seller_id_txt
+                if seller_name_txt:
+                    seller = seller_name_txt
+                elif seller_id_txt and not seller:
+                    seller = seller_id_txt
                 customer = _pick_first_value(
                     order,
                     ["contato.nome", "cliente.nome", "contato", "cliente", "nomeContato"],
@@ -1292,8 +1399,10 @@ def load_bling_sales_detail(year: int = 2026) -> pd.DataFrame:
         vmap = load_bling_vendor_map()
         if not vmap.empty:
             df = _apply_vendor_map(df)
+        df = _fill_vendor_from_customer_name(df)
         vendedor_txt = df["vendedor"].fillna("").astype(str).str.strip()
         vendedor_txt = vendedor_txt.mask(vendedor_txt.map(_looks_like_vendor_id_text), "")
+        vendedor_txt = vendedor_txt.mask(vendedor_txt.str.startswith("{") & vendedor_txt.str.endswith("}"), "")
         df["vendedor"] = vendedor_txt.replace("", "SEM_VENDEDOR").fillna("SEM_VENDEDOR").astype(str)
     if "natureza" in df.columns:
         df["natureza"] = df["natureza"].fillna("").astype(str).str.strip()
@@ -1321,6 +1430,26 @@ def load_bling_sales_detail(year: int = 2026) -> pd.DataFrame:
         df = merged.drop(columns=["tipo_produto_catalogo"], errors="ignore")
     else:
         df["tipo_produto"] = df["tipo_produto"].replace({"": "N/D"}).fillna("N/D")
+
+    dedupe_cols = [
+        "empresa",
+        "pedido_id",
+        "cliente",
+        "vendedor_id",
+        "vendedor",
+        "natureza",
+        "cfop",
+        "produto_id",
+        "produto_codigo",
+        "produto",
+        "tipo_produto",
+        "quantidade",
+        "valor_unitario",
+        "valor_total",
+    ]
+    dedupe_cols = [col for col in dedupe_cols if col in df.columns]
+    if dedupe_cols:
+        df = df.drop_duplicates(subset=dedupe_cols, keep="first")
 
     df = df.dropna(subset=["data", "valor_total"])
     return df[
@@ -1363,4 +1492,9 @@ def load_sheets(cache_buster: float | None = None) -> Dict[str, pd.DataFrame]:
         else:
             df = _normalize_columns(df)
         sheets[s] = df
+    if "metas_atual" in sheets:
+        sheets["metas_atual"] = _standardize_metas(sheets["metas_atual"])
+        sheets["metas"] = sheets["metas_atual"].copy()
+    elif "metas" in sheets:
+        sheets["metas_atual"] = sheets["metas"].copy()
     return sheets

@@ -1,23 +1,41 @@
 {
   "company": "CR",
-  "year": 2026,
+  "year": 2025,
   "modules": [
-    "contas_financeiras"
+    "nfe",
+    "vendas"
   ],
-  "started_at": "2026-03-26 20:53:54",
+  "started_at": "2026-04-17 12:17:07",
   "results": [
     {
-      "module": "contas_financeiras",
-      "endpoint": "/caixas",
-      "cache_file": "C:\\Users\\admin\\Desktop\\Clear-agro\\bling_api\\contas_financeiras_cache_cr.jsonl",
-      "pages": 1,
-      "fetched": 10,
-      "new_records": 3,
-      "enriched_ok": 3,
+      "module": "vendas",
+      "endpoint": "/pedidos/vendas",
+      "cache_file": "C:\\Users\\admin\\Desktop\\Clear-agro\\bling_api\\vendas_2025_cache_cr.jsonl",
+      "pages": 7,
+      "fetched": 650,
+      "new_records": 0,
+      "enriched_ok": 0,
       "enriched_err": 0,
-      "elapsed_s": 16.4
+      "elapsed_s": 6.67,
+      "vendor_map_file": "C:\\Users\\admin\\Desktop\\Clear-agro\\bling_api\\vendedores_map_cr.csv",
+      "vendor_map_rows": 0,
+      "date_from": "2026-04-16",
+      "date_to": "2026-04-17"
+    },
+    {
+      "module": "nfe",
+      "endpoint": "/nfe",
+      "cache_file": "C:\\Users\\admin\\Desktop\\Clear-agro\\bling_api\\nfe_2025_cache_cr.jsonl",
+      "pages": 2,
+      "fetched": 55,
+      "new_records": 55,
+      "enriched_ok": 55,
+      "enriched_err": 0,
+      "elapsed_s": 38.51,
+      "date_from": "2026-01-01",
+      "date_to": "2026-04-17"
     }
   ],
   "errors": [],
-  "finished_at": "2026-03-26 20:54:10"
+  "finished_at": "2026-04-17 12:17:52"
 }

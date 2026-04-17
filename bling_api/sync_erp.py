@@ -109,6 +109,16 @@ def _normalize_text(value: Any) -> str:
     return " ".join(txt.split())
 
 
+def _iter_nested_dicts(value: Any):
+    if isinstance(value, dict):
+        yield value
+        for item in value.values():
+            yield from _iter_nested_dicts(item)
+    elif isinstance(value, list):
+        for item in value:
+            yield from _iter_nested_dicts(item)
+
+
 def _extract_vendedor_info(obj: dict[str, Any]) -> tuple[str | None, str | None]:
     candidates = [
         obj.get("vendedor"),
@@ -122,6 +132,8 @@ def _extract_vendedor_info(obj: dict[str, Any]) -> tuple[str | None, str | None]
             vname = item.get("nome") or item.get("name")
             if vid is not None or vname:
                 return (str(vid) if vid is not None else None, str(vname) if vname else None)
+        elif isinstance(item, str) and item.strip():
+            return None, item.strip()
     for id_key in ["vendedor_id", "vendedor.id", "vendedorResponsavel.id", "responsavel.id", "representante.id"]:
         if obj.get(id_key) is not None:
             vid = str(obj.get(id_key))
@@ -132,6 +144,17 @@ def _extract_vendedor_info(obj: dict[str, Any]) -> tuple[str | None, str | None]
         val = obj.get(name_key)
         if isinstance(val, str) and val.strip():
             return vid, val.strip()
+    for nested in _iter_nested_dicts(obj):
+        nested_keys = {str(key).lower(): value for key, value in nested.items()}
+        possible_name = ""
+        possible_id = ""
+        for key, value in nested_keys.items():
+            if possible_name == "" and ("nome" in key or "name" in key) and isinstance(value, str) and value.strip():
+                possible_name = value.strip()
+            if possible_id == "" and ("id" == key or key.endswith(".id") or "vendedor_id" in key) and value not in (None, ""):
+                possible_id = str(value)
+        if possible_name or possible_id:
+            return (possible_id or vid, possible_name or None)
     return vid, None
 
 
@@ -581,6 +604,37 @@ def _year_range(year: int) -> tuple[str, str]:
     return f"{year}-01-01", f"{year}-12-31"
 
 
+def _iter_date_windows(start_date: str, end_date: str, window_days: int = 60) -> list[tuple[str, str]]:
+    start = datetime.fromisoformat(start_date).date()
+    end = datetime.fromisoformat(end_date).date()
+    windows: list[tuple[str, str]] = []
+    current = start
+    while current <= end:
+        window_end = min(current + timedelta(days=window_days - 1), end)
+        windows.append((current.isoformat(), window_end.isoformat()))
+        current = window_end + timedelta(days=1)
+    return windows
+
+
+def _cache_date_bounds(cache: Path) -> tuple[str | None, str | None]:
+    rows = _read_jsonl(cache)
+    if not rows:
+        return None, None
+    dates: list[date] = []
+    for row in rows:
+        raw = row.get("data") or row.get("dataEmissao") or row.get("dataOperacao")
+        if not raw:
+            continue
+        try:
+            dt = datetime.fromisoformat(str(raw).split()[0]).date()
+        except Exception:
+            continue
+        dates.append(dt)
+    if not dates:
+        return None, None
+    return min(dates).isoformat(), max(dates).isoformat()
+
+
 def _date_window_params(start_date: str | None, end_date: str | None) -> dict[str, str]:
     params: dict[str, str] = {}
     if start_date:
@@ -590,9 +644,25 @@ def _date_window_params(start_date: str | None, end_date: str | None) -> dict[st
     return params
 
 
-def sync_vendas(client: BlingClient, year: int, max_pages: int | None) -> dict[str, Any]:
-    start_date, end_date = _year_range(year)
+def sync_vendas(
+    client: BlingClient,
+    year: int,
+    max_pages: int | None,
+    start_date: str | None = None,
+    end_date: str | None = None,
+    missing_only: bool = False,
+) -> dict[str, Any]:
     cache = _cache_path(f"vendas_{year}_cache.jsonl", client.account)
+    if missing_only:
+        _, cache_max = _cache_date_bounds(cache)
+        if cache_max:
+            start_date = (datetime.fromisoformat(cache_max) + timedelta(days=1)).date().isoformat()
+        elif not start_date:
+            start_date, _ = _year_range(year)
+        if not end_date:
+            end_date = date.today().isoformat()
+    if not start_date or not end_date:
+        start_date, end_date = _year_range(year)
     params = {"dataEmissaoInicial": start_date, "dataEmissaoFinal": end_date}
     result = _sync_paginated(
         client,
@@ -608,6 +678,8 @@ def sync_vendas(client: BlingClient, year: int, max_pages: int | None) -> dict[s
     _write_vendedores_map(vendor_map, vendor_rows)
     result["vendor_map_file"] = str(vendor_map)
     result["vendor_map_rows"] = len(vendor_rows)
+    result["date_from"] = start_date
+    result["date_to"] = end_date
     return result
 
 
@@ -656,19 +728,60 @@ def backfill_vendas_vendedor(client: BlingClient, year: int, limit: int | None =
     }
 
 
-def sync_nfe(client: BlingClient, year: int, max_pages: int | None) -> dict[str, Any]:
-    start_date, end_date = _year_range(year)
+def sync_nfe(
+    client: BlingClient,
+    year: int,
+    max_pages: int | None,
+    start_date: str | None = None,
+    end_date: str | None = None,
+    missing_only: bool = False,
+) -> dict[str, Any]:
     cache = _cache_path(f"nfe_{year}_cache.jsonl", client.account)
-    params = {"dataEmissaoInicial": start_date, "dataEmissaoFinal": end_date}
-    return _sync_paginated(
-        client,
-        "/nfe",
-        cache,
-        company=client.account,
-        params=params,
-        enrich_row=lambda r: _enrich_nfe_with_detail(client, r),
-        max_pages=max_pages,
-    )
+    if missing_only:
+        _, cache_max = _cache_date_bounds(cache)
+        if cache_max:
+            start_date = (datetime.fromisoformat(cache_max) + timedelta(days=1)).date().isoformat()
+        elif not start_date:
+            start_date, _ = _year_range(year)
+        if not end_date:
+            end_date = date.today().isoformat()
+    if not start_date or not end_date:
+        start_date, end_date = _year_range(year)
+    windows = _iter_date_windows(start_date, end_date, window_days=60)
+    total_pages = 0
+    total_fetched = 0
+    total_new = 0
+    total_ok = 0
+    total_err = 0
+    started = time.time()
+    for chunk_start, chunk_end in windows:
+        params = {"dataEmissaoInicial": chunk_start, "dataEmissaoFinal": chunk_end}
+        result = _sync_paginated(
+            client,
+            "/nfe",
+            cache,
+            company=client.account,
+            params=params,
+            enrich_row=lambda r: _enrich_nfe_with_detail(client, r),
+            max_pages=max_pages,
+        )
+        total_pages += int(result.get("pages", 0) or 0)
+        total_fetched += int(result.get("fetched", 0) or 0)
+        total_new += int(result.get("new_records", 0) or 0)
+        total_ok += int(result.get("enriched_ok", 0) or 0)
+        total_err += int(result.get("enriched_err", 0) or 0)
+    return {
+        "endpoint": "/nfe",
+        "cache_file": str(cache),
+        "pages": total_pages,
+        "fetched": total_fetched,
+        "new_records": total_new,
+        "enriched_ok": total_ok,
+        "enriched_err": total_err,
+        "elapsed_s": round(time.time() - started, 2),
+        "date_from": start_date,
+        "date_to": end_date,
+    }
 
 
 def backfill_nfe_detail(client: BlingClient, year: int, limit: int | None = None) -> dict[str, Any]:
@@ -1157,6 +1270,21 @@ def parse_args() -> argparse.Namespace:
     )
     p.add_argument("--year", type=int, default=date.today().year)
     p.add_argument(
+        "--date-from",
+        default="",
+        help="Data inicial para vendas/NF-e, formato YYYY-MM-DD.",
+    )
+    p.add_argument(
+        "--date-to",
+        default="",
+        help="Data final para vendas/NF-e, formato YYYY-MM-DD.",
+    )
+    p.add_argument(
+        "--missing-only",
+        action="store_true",
+        help="Sincroniza apenas a janela faltante a partir da ultima data gravada ate hoje.",
+    )
+    p.add_argument(
         "--modules",
         default="vendas,nfe,contatos,produtos,contas_receber,contas_pagar,estoque",
         help="Lista separada por virgula: vendas,nfe,contatos,produtos,produtos_composicao,contas_receber,contas_pagar,estoque,contas_financeiras",
@@ -1217,6 +1345,8 @@ def main() -> int:
     } or None
     contas_date_start = str(args.contas_date_start or "").strip() or None
     contas_date_end = str(args.contas_date_end or "").strip() or None
+    sales_date_start = str(args.date_from or "").strip() or None
+    sales_date_end = str(args.date_to or "").strip() or None
     client = BlingClient(account=company)
     report: dict[str, Any] = {
         "company": company,
@@ -1229,9 +1359,33 @@ def main() -> int:
 
     steps = []
     if "vendas" in selected:
-        steps.append(("vendas", lambda: sync_vendas(client, args.year, args.max_pages)))
+        steps.append(
+            (
+                "vendas",
+                lambda: sync_vendas(
+                    client,
+                    args.year,
+                    args.max_pages,
+                    start_date=sales_date_start,
+                    end_date=sales_date_end,
+                    missing_only=args.missing_only,
+                ),
+            )
+        )
     if "nfe" in selected:
-        steps.append(("nfe", lambda: sync_nfe(client, args.year, args.max_pages)))
+        steps.append(
+            (
+                "nfe",
+                lambda: sync_nfe(
+                    client,
+                    args.year,
+                    args.max_pages,
+                    start_date=sales_date_start,
+                    end_date=sales_date_end,
+                    missing_only=args.missing_only,
+                ),
+            )
+        )
     if "contatos" in selected:
         steps.append(("contatos", lambda: sync_contatos(client, args.max_pages)))
     if "produtos" in selected:

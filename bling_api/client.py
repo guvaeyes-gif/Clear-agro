@@ -12,7 +12,8 @@ from requests.exceptions import RequestException
 
 ROOT = Path(__file__).resolve().parent
 TOKEN_FILE = ROOT / "bling_tokens.json"
-SECRETS_FILE = Path(os.getenv("BLING_SECRETS_FILE", r"C:\Users\cesar.zarovski\Documents\bling id.txt"))
+DEFAULT_SECRETS_FILE = ROOT / "bling_secrets_local.txt"
+SECRETS_FILE = Path(os.getenv("BLING_SECRETS_FILE", str(DEFAULT_SECRETS_FILE)))
 OAUTH_URL = "https://www.bling.com.br/Api/v3/oauth/token"
 API_BASE = "https://api.bling.com.br/Api/v3"
 PLACEHOLDER_VALUES = {

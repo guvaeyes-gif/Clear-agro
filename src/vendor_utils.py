@@ -121,7 +121,7 @@ def build_vendor_selector_options(
 
     for label, score in vendor_scores.items():
         name = canonical_vendor_name(label, vendor_map, vendor_alias_map)
-        if not name or name == "TODOS":
+        if not name or name in {"TODOS", "SEM_VENDEDOR"}:
             continue
         key = _vendor_key(name)
         if not key:
@@ -131,7 +131,7 @@ def build_vendor_selector_options(
     all_names: dict[str, str] = {}
     for label in all_vendor_labels:
         name = canonical_vendor_name(label, vendor_map, vendor_alias_map)
-        if not name or name == "TODOS":
+        if not name or name in {"TODOS", "SEM_VENDEDOR"}:
             continue
         key = _vendor_key(name)
         if not key:

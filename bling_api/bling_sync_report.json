@@ -1,23 +1,33 @@
 {
   "company": "CZ",
-  "year": 2026,
+  "year": 2025,
   "modules": [
-    "contas_financeiras"
+    "nfe",
+    "vendas"
   ],
-  "started_at": "2026-03-26 20:52:54",
+  "started_at": "2026-04-17 11:10:47",
   "results": [
     {
-      "module": "contas_financeiras",
-      "endpoint": "/caixas",
-      "cache_file": "C:\\Users\\admin\\Desktop\\Clear-agro\\bling_api\\contas_financeiras_cache.jsonl",
-      "pages": 1,
-      "fetched": 130,
-      "new_records": 13,
-      "enriched_ok": 13,
+      "module": "vendas",
+      "endpoint": "/pedidos/vendas",
+      "cache_file": "C:\\Users\\admin\\Desktop\\Clear-agro\\bling_api\\vendas_2025_cache.jsonl",
+      "pages": 32,
+      "fetched": 3181,
+      "new_records": 3181,
+      "enriched_ok": 3181,
       "enriched_err": 0,
-      "elapsed_s": 59.32
+      "elapsed_s": 2267.61,
+      "vendor_map_file": "C:\\Users\\admin\\Desktop\\Clear-agro\\bling_api\\vendedores_map.csv",
+      "vendor_map_rows": 64,
+      "date_from": "2025-01-01",
+      "date_to": "2026-04-17"
     }
   ],
-  "errors": [],
-  "finished_at": "2026-03-26 20:53:54"
+  "errors": [
+    {
+      "module": "nfe",
+      "error": "GET /nfe failed: 400 {\"error\":{\"type\":\"VALIDATION_ERROR\",\"message\":\"N\\u00e3o foi poss\\u00edvel buscar as Notas Fiscais\",\"description\":\"Per\\u00edodo do filtro \\u00e9 maior que o permitido.\"}}"
+    }
+  ],
+  "finished_at": "2026-04-17 11:48:35"
 }
