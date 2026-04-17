@@ -47,6 +47,7 @@ from src.metas_db import (
     seed_demo,
     prepare_sales_targets_import,
 )
+from src import metas_db_sqlite_legacy as metas_db_legacy
 from src.telegram import build_alerts_message, send_telegram_message, telegram_enabled
 from src.vendor_utils import build_vendor_selector_options, normalize_vendor_identity
 
@@ -632,10 +633,7 @@ def _vendor_candidates(
 
 def _vendor_display(name: object, vendor_id: object) -> str:
     name_txt = str(name or "").strip()
-    vendor_id_txt = str(vendor_id or "").strip()
-    if name_txt and vendor_id_txt and _vendor_key(name_txt) != _vendor_key(vendor_id_txt):
-        return f"{name_txt} ({vendor_id_txt})"
-    return name_txt or vendor_id_txt or "SEM_VENDEDOR"
+    return name_txt or "SEM_VENDEDOR"
 
 
 def _vendor_display_label(option: str, option_counts: dict[str, int] | None = None) -> str:
@@ -647,9 +645,7 @@ def _vendor_display_label(option: str, option_counts: dict[str, int] | None = No
         base_name = txt.rsplit("(", 1)[0].strip()
         if base_name and (option_counts or {}).get(_vendor_key(base_name), 0) <= 1:
             return base_name
-        return f"{base_name} ({vendor_id})" if base_name else f"ID {vendor_id}"
-    if txt.isdigit():
-        return f"ID {txt}"
+        return base_name
     return txt
 
 
@@ -890,28 +886,138 @@ def build_remote_realizado_sheet(view_df: pd.DataFrame) -> pd.DataFrame:
     return out
 
 
+def canonicalize_targets_frame(df: pd.DataFrame) -> pd.DataFrame:
+    if df.empty:
+        return df
+    out = df.copy()
+    def _fill_alias(target: str, source: str) -> None:
+        if source not in out.columns:
+            return
+        source_series = out[source]
+        if target not in out.columns:
+            out[target] = source_series
+            return
+        target_series = out[target]
+        if pd.api.types.is_numeric_dtype(target_series):
+            target_missing = target_series.isna()
+        else:
+            target_missing = target_series.fillna("").astype(str).str.strip().eq("")
+        if target_missing.any():
+            out.loc[target_missing, target] = source_series.loc[target_missing]
+
+    rename_map = {}
+    for source, target in [
+        ("target_year", "ano"),
+        ("period_type", "periodo_tipo"),
+        ("month_num", "mes"),
+        ("quarter_num", "quarter"),
+        ("state", "estado"),
+        ("company", "empresa"),
+        ("company_code", "empresa"),
+        ("sales_rep_code", "vendedor_id"),
+        ("sales_rep_id", "vendedor_id"),
+        ("sales_rep_name", "vendedor"),
+        ("target_value", "meta_valor"),
+        ("actual_value", "realizado_valor"),
+        ("target_volume", "meta_volume"),
+        ("actual_volume", "realizado_volume"),
+        ("gap_value", "gap_valor"),
+        ("attainment_pct", "atingimento_pct"),
+        ("notes", "observacoes"),
+    ]:
+        if source in out.columns and target not in out.columns:
+            rename_map[source] = target
+    if rename_map:
+        out = out.rename(columns=rename_map)
+
+    for source, target in [
+        ("target_year", "ano"),
+        ("period_type", "periodo_tipo"),
+        ("month_num", "mes"),
+        ("quarter_num", "quarter"),
+        ("state", "estado"),
+        ("company", "empresa"),
+        ("company_code", "empresa"),
+        ("sales_rep_code", "vendedor_id"),
+        ("sales_rep_id", "vendedor_id"),
+        ("sales_rep_name", "vendedor"),
+        ("target_value", "meta_valor"),
+        ("actual_value", "realizado_valor"),
+        ("target_volume", "meta_volume"),
+        ("actual_volume", "realizado_volume"),
+        ("gap_value", "gap_valor"),
+        ("attainment_pct", "atingimento_pct"),
+        ("notes", "observacoes"),
+    ]:
+        _fill_alias(target, source)
+
+    defaults = {
+        "ano": pd.NA,
+        "periodo_tipo": "",
+        "mes": pd.NA,
+        "quarter": pd.NA,
+        "estado": "",
+        "empresa": "",
+        "vendedor_id": "",
+        "vendedor": "",
+        "meta_valor": 0.0,
+        "realizado_valor": 0.0,
+        "meta_volume": pd.NA,
+        "realizado_volume": pd.NA,
+        "gap_valor": 0.0,
+        "atingimento_pct": 0.0,
+        "status": "",
+        "observacoes": "",
+    }
+    for column, default in defaults.items():
+        if column not in out.columns:
+            out[column] = default
+
+    for column in ["ano", "mes", "quarter", "meta_valor", "realizado_valor", "gap_valor", "atingimento_pct"]:
+        out[column] = pd.to_numeric(out[column], errors="coerce")
+    for column in ["periodo_tipo", "estado", "empresa", "vendedor_id", "vendedor", "status", "observacoes"]:
+        out[column] = out[column].fillna("").astype(str).str.strip()
+    out["periodo_tipo"] = out["periodo_tipo"].str.upper()
+    out["estado"] = out["estado"].str.upper()
+    out["empresa"] = out["empresa"].str.upper()
+    return out
+
+
 def build_remote_metas_sheet(view_df: pd.DataFrame) -> pd.DataFrame:
     if view_df.empty:
         return pd.DataFrame()
-    out = view_df.copy()
-    if "period_type" not in out.columns:
+    out = canonicalize_targets_frame(view_df)
+    if "periodo_tipo" not in out.columns:
         return pd.DataFrame()
-    out = out[out["period_type"].astype(str).str.lower() == "month"].copy()
+    out["ano"] = pd.to_numeric(out.get("ano"), errors="coerce")
+    out["mes"] = pd.to_numeric(out.get("mes"), errors="coerce")
+    out["quarter"] = pd.to_numeric(out.get("quarter"), errors="coerce")
+    period_type = out["periodo_tipo"].astype(str).str.upper()
+    month_mask = period_type == "MONTH"
+    quarter_mask = period_type == "QUARTER"
+    out = out[(month_mask & out["ano"].notna() & out["mes"].notna()) | (quarter_mask & out["ano"].notna() & out["quarter"].notna())].copy()
     if out.empty:
         return pd.DataFrame(columns=["data", "vendedor", "vendedor_id", "meta", "realizado"])
-    out["target_year"] = pd.to_numeric(out.get("target_year"), errors="coerce")
-    out["month_num"] = pd.to_numeric(out.get("month_num"), errors="coerce")
-    out = out[out["target_year"].notna() & out["month_num"].notna()].copy()
-    if out.empty:
-        return pd.DataFrame(columns=["data", "vendedor", "vendedor_id", "meta", "realizado"])
-    out["data"] = pd.to_datetime(
-        dict(year=out["target_year"].astype(int), month=out["month_num"].astype(int), day=1),
-        errors="coerce",
-    )
-    out["meta"] = pd.to_numeric(out.get("target_value"), errors="coerce").fillna(0)
-    out["realizado"] = pd.to_numeric(out.get("actual_value"), errors="coerce").fillna(0)
-    out["vendedor"] = out.get("sales_rep_name", pd.Series("", index=out.index)).fillna("").astype(str).str.strip()
-    out["vendedor_id"] = out.get("sales_rep_code", pd.Series("", index=out.index)).fillna("").astype(str).str.strip()
+    out["data"] = pd.NaT
+    if month_mask.any():
+        month_rows = out.index[month_mask.loc[out.index] if hasattr(month_mask, "loc") else month_mask]
+        if len(month_rows):
+            out.loc[month_rows, "data"] = pd.to_datetime(
+                dict(year=out.loc[month_rows, "ano"].astype(int), month=out.loc[month_rows, "mes"].astype(int), day=1),
+                errors="coerce",
+            )
+    if quarter_mask.any():
+        quarter_rows = out.index[quarter_mask.loc[out.index] if hasattr(quarter_mask, "loc") else quarter_mask]
+        if len(quarter_rows):
+            quarter_start_month = ((out.loc[quarter_rows, "quarter"].astype(int) - 1) * 3) + 1
+            out.loc[quarter_rows, "data"] = pd.to_datetime(
+                dict(year=out.loc[quarter_rows, "ano"].astype(int), month=quarter_start_month.astype(int), day=1),
+                errors="coerce",
+            )
+    out["meta"] = pd.to_numeric(out.get("meta_valor"), errors="coerce").fillna(0)
+    out["realizado"] = pd.to_numeric(out.get("realizado_valor"), errors="coerce").fillna(0)
+    out["vendedor"] = out.get("vendedor", pd.Series("", index=out.index)).fillna("").astype(str).str.strip()
+    out["vendedor_id"] = out.get("vendedor_id", pd.Series("", index=out.index)).fillna("").astype(str).str.strip()
     return out[["data", "vendedor", "vendedor_id", "meta", "realizado"]]
 
 
@@ -963,9 +1069,12 @@ def build_targets_realizado_summary(
     if "vendedor_id" in out.columns:
         out["vendedor_label"] = out["vendedor_label"].mask(
             out["vendedor_label"].eq(""),
-            out["vendedor_id"].fillna("").astype(str).str.strip(),
+            "SEM_VENDEDOR",
         )
     out["vendedor_label"] = out["vendedor_label"].replace("", "SEM_VENDEDOR")
+    out = out[out["vendedor_label"].ne("SEM_VENDEDOR")].copy()
+    out = out[out["vendedor_label"].fillna("").astype(str).str.strip() != ""].copy()
+    out = out[~out["vendedor_label"].fillna("").astype(str).str.strip().str.replace(".0", "", regex=False).str.isdigit()].copy()
 
     if selected_company != "TODOS":
         out = filter_company_scope(out, selected_company)
@@ -1033,10 +1142,6 @@ def resolve_realizado_sheet(sales_scope: str, use_bling_source: bool) -> tuple[p
         remote_bling = build_remote_realizado_sheet(load_bling_sales_realized_view())
         if not remote_bling.empty:
             return upper_dashboard_text(filter_sales_nature_scope(remote_bling, sales_scope)), "vw_bling_sales_realized"
-
-        remote_finance = build_remote_realizado_sheet(load_sales_realized_view())
-        if not remote_finance.empty:
-            return upper_dashboard_text(filter_sales_nature_scope(remote_finance, sales_scope)), "vw_sales_realized_summary"
 
         local_bling = load_bling_realizado()
         if not local_bling.empty:
@@ -1106,14 +1211,33 @@ def overlay_targets_actuals_from_realizado(
     if targets_df.empty or realized_df.empty:
         return targets_df
 
+    out = canonicalize_targets_frame(targets_df)
+    alias_map = {
+        "target_year": "ano",
+        "period_type": "periodo_tipo",
+        "month_num": "mes",
+        "quarter_num": "quarter",
+        "state": "estado",
+        "sales_rep_code": "vendedor_id",
+        "sales_rep_name": "vendedor",
+        "company": "empresa",
+    }
+    year_col = alias_map.get(year_col, year_col)
+    period_type_col = alias_map.get(period_type_col, period_type_col)
+    month_col = alias_map.get(month_col, month_col) if month_col else None
+    quarter_col = alias_map.get(quarter_col, quarter_col) if quarter_col else None
+    state_col = alias_map.get(state_col, state_col) if state_col else None
+    vendor_col = alias_map.get(vendor_col, vendor_col) if vendor_col else None
+    company_col = alias_map.get(company_col, company_col) if company_col else None
+
     sales = realized_df.copy()
     if "data" not in sales.columns or "receita" not in sales.columns:
-        return targets_df
+        return out
     sales["data"] = pd.to_datetime(sales["data"], errors="coerce")
     sales["receita"] = pd.to_numeric(sales["receita"], errors="coerce").fillna(0)
     sales = sales[sales["data"].notna()].copy()
     if sales.empty:
-        return targets_df
+        return out
 
     sales["ano"] = sales["data"].dt.year.astype(int)
     sales["mes"] = sales["data"].dt.month.astype(int)
@@ -1153,13 +1277,14 @@ def overlay_targets_actuals_from_realizado(
             return 0.0
         return float(match["receita"].sum())
 
-    out = targets_df.copy()
     out[actual_col] = out.apply(_row_realizado, axis=1)
-    if gap_col and gap_col in out.columns:
-        target_candidates = ["target_value", "meta_valor"]
+    if gap_col:
+        target_candidates = ["meta_valor", "target_value"]
         target_col = next((column for column in target_candidates if column in out.columns), None)
         if target_col:
-            out[gap_col] = pd.to_numeric(out[actual_col], errors="coerce").fillna(0) - pd.to_numeric(out[target_col], errors="coerce").fillna(0)
+            out[gap_col] = pd.to_numeric(out[actual_col], errors="coerce").fillna(0) - pd.to_numeric(
+                out[target_col], errors="coerce"
+            ).fillna(0)
     return out
 
 
@@ -1205,23 +1330,23 @@ def filter_targets_view(
 ) -> pd.DataFrame:
     if view_df.empty:
         return view_df
-    df = view_df.copy()
-    if "target_year" in df.columns:
-        df = df[pd.to_numeric(df["target_year"], errors="coerce").eq(int(target_year))]
-    if "period_type" in df.columns:
-        df = df[df["period_type"].astype(str).str.upper() == str(period_type).upper()]
-    if month_num is not None and "month_num" in df.columns:
-        df = df[pd.to_numeric(df["month_num"], errors="coerce").eq(int(month_num))]
-    if quarter_num is not None and "quarter_num" in df.columns:
-        df = df[pd.to_numeric(df["quarter_num"], errors="coerce").eq(int(quarter_num))]
-    if ytd and month_num is None and quarter_num is None and str(period_type).upper() == "MONTH" and "month_num" in df.columns:
+    df = canonicalize_targets_frame(view_df)
+    if "ano" in df.columns:
+        df = df[pd.to_numeric(df["ano"], errors="coerce").eq(int(target_year))]
+    if "periodo_tipo" in df.columns:
+        df = df[df["periodo_tipo"].astype(str).str.upper() == str(period_type).upper()]
+    if month_num is not None and "mes" in df.columns:
+        df = df[pd.to_numeric(df["mes"], errors="coerce").eq(int(month_num))]
+    if quarter_num is not None and "quarter" in df.columns:
+        df = df[pd.to_numeric(df["quarter"], errors="coerce").eq(int(quarter_num))]
+    if ytd and month_num is None and quarter_num is None and str(period_type).upper() == "MONTH" and "mes" in df.columns:
         ref_today = pd.Timestamp.today()
         max_month = ref_today.month if int(target_year) == ref_today.year else 12
-        df = df[pd.to_numeric(df["month_num"], errors="coerce").between(1, max_month)]
-    if state and "state" in df.columns:
-        df = df[df["state"].astype(str).str.upper() == str(state).upper()]
-    if sales_rep_code and "sales_rep_code" in df.columns:
-        df = df[df["sales_rep_code"].map(_vendor_key) == _vendor_key(sales_rep_code)]
+        df = df[pd.to_numeric(df["mes"], errors="coerce").between(1, max_month)]
+    if state and "estado" in df.columns:
+        df = df[df["estado"].astype(str).str.upper() == str(state).upper()]
+    if sales_rep_code and "vendedor_id" in df.columns:
+        df = df[df["vendedor_id"].map(_vendor_key) == _vendor_key(sales_rep_code)]
     if statuses and "status" in df.columns:
         df = df[df["status"].astype(str).str.upper().isin([str(item).upper() for item in statuses])]
     return df
@@ -1230,7 +1355,7 @@ def filter_targets_view(
 def format_targets_listing(df: pd.DataFrame) -> pd.DataFrame:
     if df.empty:
         return df
-    out = df.copy()
+    out = canonicalize_targets_frame(df)
     if "meta_valor" in out.columns:
         out["meta_valor"] = pd.to_numeric(out["meta_valor"], errors="coerce").fillna(0)
     if "realizado_valor" in out.columns:
@@ -1315,28 +1440,7 @@ def filter_local_targets_scope(
 def collapse_targets_rows(df: pd.DataFrame) -> pd.DataFrame:
     if df.empty:
         return df
-    out = df.copy()
-    rename_map = {}
-    for source, target in [
-        ("target_year", "ano"),
-        ("period_type", "periodo_tipo"),
-        ("month_num", "mes"),
-        ("quarter_num", "quarter"),
-        ("state", "estado"),
-        ("sales_rep_code", "vendedor_id"),
-        ("sales_rep_name", "vendedor"),
-        ("company", "empresa"),
-        ("target_value", "meta_valor"),
-        ("target_volume", "meta_volume"),
-        ("actual_value", "realizado_valor"),
-        ("actual_volume", "realizado_volume"),
-        ("notes", "observacoes"),
-    ]:
-        if source in out.columns and target not in out.columns:
-            rename_map[source] = target
-    if rename_map:
-        out = out.rename(columns=rename_map)
-
+    out = canonicalize_targets_frame(df)
     out = normalize_vendor_identity(
         out,
         load_bling_vendor_map(),
@@ -1346,7 +1450,7 @@ def collapse_targets_rows(df: pd.DataFrame) -> pd.DataFrame:
     if "vendedor_id" in out.columns:
         out["vendedor_label"] = out["vendedor_label"].mask(
             out["vendedor_label"].eq(""),
-            out["vendedor_id"].fillna("").astype(str).str.strip(),
+            "SEM_VENDEDOR",
         )
     out["vendedor_label"] = out["vendedor_label"].replace("", "SEM_VENDEDOR")
 
@@ -1359,7 +1463,7 @@ def collapse_targets_rows(df: pd.DataFrame) -> pd.DataFrame:
     if "vendedor_id" in out.columns:
         out["vendedor_id"] = out["vendedor_id"].fillna("").astype(str).str.strip()
     if "vendedor" in out.columns:
-        out["vendedor"] = out["vendedor"].fillna("").astype(str).str.strip()
+        out["vendedor"] = out["vendedor"].fillna("").astype(str).str.strip().replace("", "SEM_VENDEDOR")
     if "mes" in out.columns:
         out["mes"] = pd.to_numeric(out["mes"], errors="coerce")
     if "quarter" in out.columns:
@@ -1422,6 +1526,9 @@ def build_local_targets_summary(
     if "vendedor" in out.columns:
         first_names = out.groupby("vendedor_label", dropna=False)["vendedor"].first().reset_index()
         vendedor = vendedor.merge(first_names, on="vendedor_label", how="left")
+    vendedor["vendedor_label"] = vendedor["vendedor_label"].replace("", "SEM_VENDEDOR")
+    if "vendedor" in vendedor.columns:
+        vendedor["vendedor"] = vendedor["vendedor"].fillna("").astype(str).str.strip().replace("", "SEM_VENDEDOR")
     meta_total = float(out["meta_valor"].sum())
     if realized_summary and not realized_summary.get("series", pd.DataFrame()).empty and not series.empty:
         actual_series = realized_summary["series"].copy()
@@ -1479,12 +1586,6 @@ def render_targets_executive_rankings(
                 vendor_rank["vendedor_label"] = vendor_rank[vendedor_name_col].fillna("").astype(str).str.strip()
             else:
                 vendor_rank["vendedor_label"] = ""
-            if vendedor_id_col in vendor_rank.columns:
-                fallback_ids = vendor_rank[vendedor_id_col].fillna("").astype(str).str.strip()
-                vendor_rank["vendedor_label"] = vendor_rank["vendedor_label"].mask(
-                    vendor_rank["vendedor_label"].eq(""),
-                    fallback_ids,
-                )
             vendor_rank["vendedor_label"] = vendor_rank["vendedor_label"].replace("", "SEM_VENDEDOR")
 
             top_gap = vendor_rank.sort_values("gap_valor").head(10).copy()
@@ -1512,12 +1613,6 @@ def render_targets_executive_rankings(
                 vendor_att["vendedor_label"] = vendor_att[vendedor_name_col].fillna("").astype(str).str.strip()
             else:
                 vendor_att["vendedor_label"] = ""
-            if vendedor_id_col in vendor_att.columns:
-                fallback_ids = vendor_att[vendedor_id_col].fillna("").astype(str).str.strip()
-                vendor_att["vendedor_label"] = vendor_att["vendedor_label"].mask(
-                    vendor_att["vendedor_label"].eq(""),
-                    fallback_ids,
-                )
             vendor_att["vendedor_label"] = vendor_att["vendedor_label"].replace("", "SEM_VENDEDOR")
 
             low_att = vendor_att.sort_values(["atingimento_pct", "meta_valor"], ascending=[True, False]).head(10).copy()
@@ -1851,8 +1946,51 @@ def filter_queue_period(
 
 def warn_crm_backend(view_name: str, label: str) -> None:
     error = get_crm_view_error(view_name)
+    if not error:
+        return
+    quiet_markers = (
+        "desativada por configuracao",
+        "backend nao suportado",
+        "backend indisponivel",
+    )
+    if any(marker in error.lower() for marker in quiet_markers):
+        return
     if error:
         st.warning(f"Falha ao ler {label} no CRM/Supabase: {error}")
+
+
+def load_targets_with_fallback(filters: dict[str, object]) -> tuple[pd.DataFrame, str]:
+    """
+    Try the remote CRM view first and fall back to the local SQLite cache.
+    This keeps the Metas Comerciais page usable when Supabase/API access is down.
+    """
+    try:
+        remote = apply_acl_codes(load_sales_targets_view(), vendor_col="sales_rep_code")
+    except Exception:
+        remote = pd.DataFrame()
+    if not remote.empty:
+        return remote, "remote"
+
+    local = metas_db_legacy.list_metas(filters)
+    return local, "local"
+
+
+def _apply_target_scope(
+    df: pd.DataFrame,
+    selected_company: str,
+    selected_vendor: str,
+    selected_vendor_candidates: set[str],
+) -> pd.DataFrame:
+    if df.empty:
+        return df
+    out = filter_targets_company_scope(df, selected_company)
+    out = filter_vendor_scope(
+        out,
+        selected_vendor,
+        ["sales_rep_code", "sales_rep_name", "vendedor_id", "vendedor"],
+        selected_vendor_candidates,
+    )
+    return out
 
 
 def build_targets_summary(
@@ -2220,7 +2358,7 @@ realizado_override, realizado_source = resolve_realizado_sheet(sales_scope, use_
 if not realizado_override.empty:
     sheets["realizado"] = realizado_override
     if use_bling and realizado_source == "bling_cache_local":
-        st.sidebar.warning("Fonte remota indisponivel. Realizado em fallback pelo cache local do Bling.")
+        st.sidebar.caption("Realizado carregado do cache local do Bling.")
 
 metas_override, metas_source = resolve_metas_sheet()
 if not metas_override.empty:
@@ -2482,6 +2620,19 @@ if page == "Executive Cockpit":
         if not top_clients.empty:
             st.caption("Top 5 clientes por vendas efetivas")
             st.dataframe(top_clients, hide_index=True, width="stretch")
+
+        top_vendedores_exec = vendedor_performance_period(
+            cockpit_sheets, year, selected_month, effective_ytd, selected_quarter
+        )
+        if not top_vendedores_exec.empty:
+            top_vendedores_exec = top_vendedores_exec.sort_values("receita", ascending=False).head(3).copy()
+            top_vendedores_exec["vendedor"] = top_vendedores_exec["vendedor"].fillna("").astype(str).str.strip()
+            top_vendedores_exec = top_vendedores_exec[top_vendedores_exec["vendedor"] != ""]
+            if not top_vendedores_exec.empty:
+                top_vendedores_exec["receita"] = top_vendedores_exec["receita"].apply(fmt_brl_abbrev)
+                top_vendedores_exec = top_vendedores_exec[["vendedor", "receita"]]
+                st.caption("Top 3 vendedores por realizado")
+                st.dataframe(top_vendedores_exec, hide_index=True, width="stretch")
     elif sales_scope in {"Devolucoes/Ajustes", "Nao vendas"}:
         top_clients = top_client_movement_table(
             cockpit_sheets.get("realizado", pd.DataFrame()),
@@ -3800,17 +3951,24 @@ if page == "Auditoria":
 if page == "Metas Comerciais":
     st.subheader("Metas Comerciais")
     tabs = st.tabs(["Executive Summary", "Metas", "Cadastro", "Importação", "Transferencia"])
-    targets_view_all = apply_acl_codes(load_sales_targets_view(), vendor_col="sales_rep_code")
-    targets_view_all = filter_targets_company_scope(targets_view_all, sel_company)
-    targets_view_all = filter_vendor_scope(
-        targets_view_all, sel_vendor, ["sales_rep_code", "sales_rep_name"], selected_vendor_candidates
-    )
     periodo_tipo = "QUARTER" if selected_quarter is not None else "MONTH"
     uf = ""
     status = []
     mes = selected_month if selected_month is not None and not effective_ytd and selected_quarter is None else None
     quarter = selected_quarter
     metas_realizado_base = sheets.get("realizado", pd.DataFrame()).copy()
+    filtros_metas_base = {"ano": year, "periodo_tipo": periodo_tipo, "mes": mes, "quarter": quarter}
+    if sel_company != "TODOS":
+        filtros_metas_base["empresa"] = sel_company
+    targets_view_all, targets_source = load_targets_with_fallback(filtros_metas_base)
+    targets_view_all = _apply_target_scope(
+        targets_view_all,
+        sel_company,
+        sel_vendor,
+        selected_vendor_candidates,
+    )
+    if targets_source == "local":
+        warn_crm_backend("vw_sales_targets_summary", "metas comerciais")
 
     with tabs[0]:
         st.write("Resumo executivo das metas no recorte atual do sidebar.")
@@ -3826,13 +3984,18 @@ if page == "Metas Comerciais":
                 quarter_num=quarter,
                 ytd=effective_ytd,
             )
-            uf_opts = [""] + sorted([v for v in all_targets_year.get("state", pd.Series(dtype=str)).dropna().astype(str).unique().tolist() if v])
+            uf_opts = [""] + sorted([v for v in all_targets_year.get("estado", pd.Series(dtype=str)).dropna().astype(str).unique().tolist() if v])
         else:
             filtros_metas_base = {"ano": year, "periodo_tipo": periodo_tipo, "mes": mes, "quarter": quarter}
             if sel_company != "TODOS":
                 filtros_metas_base["empresa"] = sel_company
             all_metas = list_metas(filtros_metas_base)
-            all_metas = filter_local_targets_scope(all_metas, sel_company, sel_vendor, selected_vendor_candidates)
+            all_metas = _apply_target_scope(
+                all_metas,
+                sel_company,
+                sel_vendor,
+                selected_vendor_candidates,
+            )
             if PROFILE == "gestor" and not all_metas.empty:
                 acl = load_acl().get("gestor", {})
                 allow = _clean_list(acl.get("allow_vendedores", []))
@@ -3861,6 +4024,8 @@ if page == "Metas Comerciais":
                 state=uf or None,
                 statuses=status or None,
             )
+            if targets_source == "local":
+                st.info("Fonte remota do CRM indisponivel; exibindo dados da base local metas.db.")
             filtered_view = overlay_targets_actuals_from_realizado(
                 filtered_view,
                 metas_realizado_base,
@@ -3966,7 +4131,12 @@ if page == "Metas Comerciais":
                 elif block and not all_metas.empty:
                     filtros["vendedor_id"] = [v for v in all_metas["vendedor_id"].dropna().tolist() if v not in block]
             dfm = list_metas(filtros)
-            dfm = filter_local_targets_scope(dfm, sel_company, sel_vendor, selected_vendor_candidates)
+            dfm = _apply_target_scope(
+                dfm,
+                sel_company,
+                sel_vendor,
+                selected_vendor_candidates,
+            )
             dfm = overlay_targets_actuals_from_realizado(
                 dfm,
                 metas_realizado_base,

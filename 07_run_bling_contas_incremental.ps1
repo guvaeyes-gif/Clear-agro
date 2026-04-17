@@ -4,6 +4,7 @@
     [string]$RunId = (Get-Date -Format "yyyyMMdd_HHmmss"),
     [string]$BlingSecretsPath = "$HOME\Documents\bling id.txt",
     [string]$FromDate,
+    [switch]$ForceFull,
     [switch]$DryRun,
     [switch]$SkipSync,
     [switch]$SkipSnapshot
@@ -12,7 +13,7 @@
 $ErrorActionPreference = "Stop"
 
 $PipelineDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$ClearRoot = (Resolve-Path (Join-Path $PipelineDir "..")).Path
+$ClearRoot = (Resolve-Path $PipelineDir).Path
 $BlingDir = Join-Path $ClearRoot "bling_api"
 $StatusDir = Join-Path $ClearRoot "logs\integration\status"
 $LogDir = Join-Path $ClearRoot "logs\integration\runs"
@@ -74,10 +75,14 @@ foreach ($CompanyTag in $companies) {
     Write-Log "=== EMPRESA: $CompanyTag ==="
     
     $lastSyncDate = Get-LastSyncDate -CompanyTag $CompanyTag
-    $syncFrom = if ($FromDate) { $FromDate } else { $lastSyncDate }
+    $syncFrom = if ($ForceFull) { "2024-01-01" } elseif ($FromDate) { $FromDate } else { $lastSyncDate }
+    $syncTo = if ($ForceFull) { "2035-12-31" } else { $null }
     
     Write-Log "Data da ultima sync: $lastSyncDate"
     Write-Log "Sincronizando a partir de: $syncFrom"
+    if ($ForceFull) {
+        Write-Log "Forcando carga completa ate 2035-12-31"
+    }
     
     if ($DryRun) {
         Write-Log "[DRY RUN] Simulando sync a partir de $syncFrom"
@@ -88,8 +93,17 @@ foreach ($CompanyTag in $companies) {
         Set-Location $BlingDir
         
         Write-Log "Iniciando sync_contas_incremental.py para $CompanyTag..."
-        
-        python sync_contas_incremental.py --company $CompanyTag --module ambos --date-from $syncFrom --secrets-file $BlingSecretsPath
+        $pythonArgs = @(
+            "sync_contas_incremental.py",
+            "--company", $CompanyTag,
+            "--module", "ambos",
+            "--date-from", $syncFrom,
+            "--secrets-file", $BlingSecretsPath
+        )
+        if ($syncTo) {
+            $pythonArgs += @("--date-to", $syncTo, "--force-full")
+        }
+        python @pythonArgs
         
         if ($LASTEXITCODE -ne 0) {
             Write-Log "ERRO: sync_contas_incremental.py falhou para $CompanyTag"

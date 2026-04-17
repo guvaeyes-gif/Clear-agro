@@ -2,17 +2,19 @@ import argparse
 import os
 import secrets
 import urllib.parse
+from pathlib import Path
 
-SECRETS_FILE = os.getenv("BLING_SECRETS_FILE", r"C:\Users\cesar.zarovski\Documents\bling id.txt")
+DEFAULT_SECRETS_FILE = Path(__file__).resolve().parent / "bling_secrets_local.txt"
 SCOPES = os.getenv("BLING_SCOPES", "")  # optional
 ACCOUNT_ALIASES = {"cz": "CZ", "cr": "CR"}
 
 
 def _load_secrets() -> dict[str, str]:
-    if not os.path.exists(SECRETS_FILE):
+    secrets_file = Path(os.getenv("BLING_SECRETS_FILE", str(DEFAULT_SECRETS_FILE)))
+    if not secrets_file.exists():
         return {}
     out: dict[str, str] = {}
-    with open(SECRETS_FILE, "r", encoding="utf-8") as f:
+    with secrets_file.open("r", encoding="utf-8") as f:
         for line in f:
             line = line.strip()
             if not line or "=" not in line:

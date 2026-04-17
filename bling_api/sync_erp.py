@@ -581,6 +581,15 @@ def _year_range(year: int) -> tuple[str, str]:
     return f"{year}-01-01", f"{year}-12-31"
 
 
+def _date_window_params(start_date: str | None, end_date: str | None) -> dict[str, str]:
+    params: dict[str, str] = {}
+    if start_date:
+        params["dataEmissaoInicial"] = start_date
+    if end_date:
+        params["dataEmissaoFinal"] = end_date
+    return params
+
+
 def sync_vendas(client: BlingClient, year: int, max_pages: int | None) -> dict[str, Any]:
     start_date, end_date = _year_range(year)
     cache = _cache_path(f"vendas_{year}_cache.jsonl", client.account)
@@ -977,6 +986,8 @@ def sync_contas_receber(
     client: BlingClient,
     max_pages: int | None,
     *,
+    start_date: str | None = None,
+    end_date: str | None = None,
     backfill_only: bool = False,
     backfill_open_only: bool = False,
     backfill_years: set[int] | None = None,
@@ -987,12 +998,13 @@ def sync_contas_receber(
         fetched = 0
         new_records = 0
     else:
+        params = _date_window_params(start_date, end_date)
         result = _sync_paginated_snapshot(
             client,
             "/contas/receber",
             cache,
             company=client.account,
-            params={},
+            params=params,
             enrich_row=lambda r: _enrich_conta_receber_with_detail(client, r),
             max_pages=max_pages,
             sleep_s=0.4,
@@ -1025,6 +1037,8 @@ def sync_contas_pagar(
     client: BlingClient,
     max_pages: int | None,
     *,
+    start_date: str | None = None,
+    end_date: str | None = None,
     backfill_only: bool = False,
     backfill_open_only: bool = False,
     backfill_years: set[int] | None = None,
@@ -1035,12 +1049,13 @@ def sync_contas_pagar(
         fetched = 0
         new_records = 0
     else:
+        params = _date_window_params(start_date, end_date)
         result = _sync_paginated_snapshot(
             client,
             "/contas/pagar",
             cache,
             company=client.account,
-            params={},
+            params=params,
             enrich_row=lambda r: _enrich_conta_pagar_with_detail(client, r),
             max_pages=max_pages,
             sleep_s=0.4,
@@ -1178,6 +1193,16 @@ def parse_args() -> argparse.Namespace:
         default="",
         help="Lista separada por virgula dos anos para o backfill de contas, ex.: 2025,2026",
     )
+    p.add_argument(
+        "--contas-date-start",
+        default="",
+        help="Data inicial para sync de contas, formato YYYY-MM-DD.",
+    )
+    p.add_argument(
+        "--contas-date-end",
+        default="",
+        help="Data final para sync de contas, formato YYYY-MM-DD.",
+    )
     return p.parse_args()
 
 
@@ -1190,6 +1215,8 @@ def main() -> int:
         for part in str(args.contas_years or "").split(",")
         if part.strip().isdigit()
     } or None
+    contas_date_start = str(args.contas_date_start or "").strip() or None
+    contas_date_end = str(args.contas_date_end or "").strip() or None
     client = BlingClient(account=company)
     report: dict[str, Any] = {
         "company": company,
@@ -1218,6 +1245,8 @@ def main() -> int:
                 lambda: sync_contas_receber(
                     client,
                     args.max_pages,
+                    start_date=contas_date_start,
+                    end_date=contas_date_end,
                     backfill_only=args.contas_backfill_only,
                     backfill_open_only=args.contas_open_only,
                     backfill_years=conta_years,
@@ -1232,6 +1261,8 @@ def main() -> int:
                 lambda: sync_contas_pagar(
                     client,
                     args.max_pages,
+                    start_date=contas_date_start,
+                    end_date=contas_date_end,
                     backfill_only=args.contas_backfill_only,
                     backfill_open_only=args.contas_open_only,
                     backfill_years=conta_years,
