@@ -730,9 +730,12 @@ def load_bling_realizado() -> pd.DataFrame:
         if vendor_name_col:
             df["vendedor"] = df[vendor_name_col].astype(str)
         df = _apply_vendor_map(df)
+        if "vendedor" in df.columns:
+            vendedor_txt = df["vendedor"].fillna("").astype(str).str.strip()
+            vendedor_txt = vendedor_txt.mask(vendedor_txt.map(_looks_like_vendor_id_text), "")
+            df["vendedor"] = vendedor_txt.replace("", "SEM_VENDEDOR").fillna("SEM_VENDEDOR")
         df = _append_nature_labels(df)
         df["origem"] = "bling_nfe"
-        df = _map_vendedor_from_local_history(df)
         keep_cols = [
             c
             for c in ["data", "receita", "cliente", "vendedor", "vendedor_id", "origem", "empresa", "numero_documento", "natureza", "natureza_label"]
@@ -797,7 +800,10 @@ def load_bling_realizado() -> pd.DataFrame:
     if "vendedor" not in df.columns:
         df["vendedor"] = pd.NA
 
-    df = _map_vendedor_from_local_history(df)
+    if "vendedor" in df.columns:
+        vendedor_txt = df["vendedor"].fillna("").astype(str).str.strip()
+        vendedor_txt = vendedor_txt.mask(vendedor_txt.map(_looks_like_vendor_id_text), "")
+        df["vendedor"] = vendedor_txt.replace("", "SEM_VENDEDOR").fillna("SEM_VENDEDOR")
     keep_cols = [c for c in ["data", "receita", "cliente", "vendedor", "vendedor_id", "origem", "empresa"] if c in df.columns]
     df = df[keep_cols].copy()
     df = df.dropna(subset=["data", "receita"])
@@ -934,7 +940,10 @@ def load_bling_nfe_detail(year: int = 2026) -> pd.DataFrame:
 
     if "vendedor_id" in df.columns:
         df = _apply_vendor_map(df)
-    df = _map_vendedor_from_local_history(df)
+    if "vendedor" in df.columns:
+        vendedor_txt = df["vendedor"].fillna("").astype(str).str.strip()
+        vendedor_txt = vendedor_txt.mask(vendedor_txt.map(_looks_like_vendor_id_text), "")
+        df["vendedor"] = vendedor_txt.replace("", "SEM_VENDEDOR").fillna("SEM_VENDEDOR")
     df = _append_nature_labels(df)
 
     rows: list[dict[str, Any]] = []
@@ -1042,6 +1051,15 @@ def _pick_first_value(payload: dict[str, Any], options: list[str]) -> Any:
         if key in payload and payload.get(key) not in (None, ""):
             return payload.get(key)
     return None
+
+
+def _looks_like_vendor_id_text(value: object) -> bool:
+    txt = str(value or "").strip()
+    if not txt:
+        return False
+    if txt.endswith(".0"):
+        txt = txt[:-2]
+    return txt.isdigit()
 
 
 @st.cache_data(show_spinner=False)
@@ -1271,10 +1289,12 @@ def load_bling_sales_detail(year: int = 2026) -> pd.DataFrame:
     if "vendedor_id" in df.columns:
         df["vendedor_id"] = df["vendedor_id"].fillna("").astype(str).str.strip()
     if "vendedor_id" in df.columns:
-        vendedor_id_txt = df["vendedor_id"].fillna("").astype(str).str.strip()
+        vmap = load_bling_vendor_map()
+        if not vmap.empty:
+            df = _apply_vendor_map(df)
         vendedor_txt = df["vendedor"].fillna("").astype(str).str.strip()
-        df["vendedor"] = vendedor_txt.mask(vendedor_txt.eq(""), vendedor_id_txt)
-    df["vendedor"] = df["vendedor"].replace("", "SEM_VENDEDOR").fillna("SEM_VENDEDOR").astype(str)
+        vendedor_txt = vendedor_txt.mask(vendedor_txt.map(_looks_like_vendor_id_text), "")
+        df["vendedor"] = vendedor_txt.replace("", "SEM_VENDEDOR").fillna("SEM_VENDEDOR").astype(str)
     if "natureza" in df.columns:
         df["natureza"] = df["natureza"].fillna("").astype(str).str.strip()
     if "cfop" in df.columns:

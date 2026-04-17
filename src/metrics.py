@@ -6,6 +6,9 @@ from typing import Dict, Optional
 import pandas as pd
 import unicodedata
 
+from src.data import load_bling_vendor_map
+from src.vendor_utils import normalize_vendor_identity
+
 
 @dataclass
 class KPIs:
@@ -119,12 +122,28 @@ def vendedor_performance_period(
     ytd: bool,
     quarter: Optional[int] = None,
 ) -> pd.DataFrame:
+    vendor_map = load_bling_vendor_map()
+
     def _vendor_key(value: object) -> str:
-        txt = str(value or "").strip().upper()
+        txt = str(value or "").strip()
         if not txt:
             return ""
+        if txt.endswith(".0"):
+            try:
+                txt = str(int(float(txt)))
+            except Exception:
+                txt = txt[:-2]
+        txt = txt.upper()
         txt = "".join(ch for ch in unicodedata.normalize("NFKD", txt) if not unicodedata.combining(ch))
         return " ".join(txt.split())
+
+    def _looks_like_vendor_id(value: object) -> bool:
+        txt = str(value or "").strip()
+        if not txt:
+            return False
+        if txt.endswith(".0"):
+            txt = txt[:-2]
+        return txt.isdigit()
 
     metas = sheets.get("metas", pd.DataFrame())
     real = sheets.get("realizado", pd.DataFrame())
@@ -132,34 +151,48 @@ def vendedor_performance_period(
     metas_sum = pd.DataFrame(columns=["vendedor_key", "vendedor", "meta"])
     if not metas.empty and "vendedor" in metas.columns:
         metas = metas.copy()
+        metas = normalize_vendor_identity(metas, vendor_map)
         if "data" in metas.columns:
             metas["data"] = pd.to_datetime(metas["data"], errors="coerce")
             metas = metas[_period_mask(metas, year, month, ytd, quarter)]
         if "meta" not in metas.columns:
             metas["meta"] = 0.0
         metas["meta"] = pd.to_numeric(metas["meta"], errors="coerce").fillna(0)
-        metas["vendedor_key"] = metas["vendedor"].map(_vendor_key)
+        metas["vendedor_label"] = metas.get("vendedor", pd.Series("", index=metas.index)).fillna("").astype(str).str.strip()
+        if "vendedor_id" in metas.columns:
+            metas["vendedor_label"] = metas["vendedor_label"].mask(
+                metas["vendedor_label"].eq(""),
+                metas["vendedor_id"].fillna("").astype(str).str.strip(),
+            )
+        metas["vendedor_key"] = metas["vendedor_label"].map(_vendor_key)
         metas = metas[metas["vendedor_key"] != ""]
         metas_sum = (
             metas.groupby("vendedor_key", dropna=False)
-            .agg(meta=("meta", "sum"), vendedor=("vendedor", "first"))
+            .agg(meta=("meta", "sum"), vendedor=("vendedor_label", "first"))
             .reset_index()
         )
 
     real_sum = pd.DataFrame(columns=["vendedor_key", "vendedor", "receita"])
     if not real.empty and "vendedor" in real.columns:
         real = real.copy()
+        real = normalize_vendor_identity(real, vendor_map)
         if "data" in real.columns:
             real["data"] = pd.to_datetime(real["data"], errors="coerce")
             real = real[_period_mask(real, year, month, ytd, quarter)]
         if "receita" not in real.columns:
             real["receita"] = 0.0
         real["receita"] = pd.to_numeric(real["receita"], errors="coerce").fillna(0)
-        real["vendedor_key"] = real["vendedor"].map(_vendor_key)
+        real["vendedor_label"] = real.get("vendedor", pd.Series("", index=real.index)).fillna("").astype(str).str.strip()
+        if "vendedor_id" in real.columns:
+            real["vendedor_label"] = real["vendedor_label"].mask(
+                real["vendedor_label"].eq(""),
+                real["vendedor_id"].fillna("").astype(str).str.strip(),
+            )
+        real["vendedor_key"] = real["vendedor_label"].map(_vendor_key)
         real = real[real["vendedor_key"] != ""]
         real_sum = (
             real.groupby("vendedor_key", dropna=False)
-            .agg(receita=("receita", "sum"), vendedor=("vendedor", "first"))
+            .agg(receita=("receita", "sum"), vendedor=("vendedor_label", "first"))
             .reset_index()
         )
 
@@ -179,6 +212,9 @@ def vendedor_performance_period(
     df["meta"] = pd.to_numeric(df.get("meta", 0), errors="coerce").fillna(0)
     df["receita"] = pd.to_numeric(df.get("receita", 0), errors="coerce").fillna(0)
     df["vendedor"] = df["vendedor"].astype(str).fillna("").replace({"": "SEM_VENDEDOR"})
+    df = df[df["vendedor"].ne("SEM_VENDEDOR")].copy()
+    df = df[df["vendedor"].fillna("").astype(str).str.strip() != ""].copy()
+    df = df[~df["vendedor"].map(_looks_like_vendor_id)].copy()
     df["atingimento_pct"] = df.apply(lambda r: (r["receita"] / r["meta"] * 100) if r["meta"] else 0.0, axis=1)
     df["gap"] = df["meta"] - df["receita"]
     return df[["vendedor", "meta", "receita", "atingimento_pct", "gap"]]

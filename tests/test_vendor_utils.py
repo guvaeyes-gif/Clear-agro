@@ -15,6 +15,12 @@ def test_canonical_vendor_name_prefers_id_mapping():
     assert canonical_vendor_name("456", vendor_map) == "Bruno"
 
 
+def test_canonical_vendor_name_keeps_unmapped_numeric_label():
+    vendor_map = pd.DataFrame([{"vendedor_id": "123", "vendedor": "Ana"}])
+
+    assert canonical_vendor_name("789", vendor_map) == ""
+
+
 def test_build_vendor_selector_options_dedupes_by_name():
     vendor_map = pd.DataFrame(
         [
@@ -35,6 +41,12 @@ def test_build_vendor_selector_options_dedupes_by_name():
     )
 
     assert options == ["TODOS", "Ana", "Bruno"]
+
+
+def test_build_vendor_selector_options_keeps_unmapped_numeric_labels():
+    options = build_vendor_selector_options({}, {"789"}, pd.DataFrame())
+
+    assert options == ["TODOS"]
 
 
 def test_normalize_vendor_identity_fills_name_and_missing_id():

@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+import warnings
 from functools import lru_cache
 from pathlib import Path
 from typing import Any, Dict, Iterable
@@ -149,13 +150,20 @@ def _token_path() -> Path:
     return Path(_env('SUPABASE_TOKEN_PATH') or DEFAULT_TOKEN_PATH)
 
 
+def _is_valid_supabase_access_token(token: str) -> bool:
+    token = (token or '').strip()
+    return token.startswith('sbp_')
+
+
 def _supabase_access_token() -> str:
     env_token = _env('SUPABASE_ACCESS_TOKEN')
-    if env_token:
+    if _is_valid_supabase_access_token(env_token):
         return env_token
     token_path = _token_path()
     if token_path.exists():
-        return token_path.read_text(encoding='utf-8').strip()
+        file_token = token_path.read_text(encoding='utf-8').strip()
+        if _is_valid_supabase_access_token(file_token):
+            return file_token
     return ''
 
 
@@ -733,12 +741,22 @@ def _list_metas_rest(filters: Dict[str, Any] | None = None) -> pd.DataFrame:
 def init_db() -> None:
     mode = _backend_mode()
     if mode == 'postgres':
-        with _connect_pg() as conn:
-            with conn.cursor() as cur:
-                cur.execute('select 1 from public.sales_targets limit 1')
+        try:
+            with _connect_pg() as conn:
+                with conn.cursor() as cur:
+                    cur.execute('select 1 from public.sales_targets limit 1')
+            return
+        except Exception as exc:
+            warnings.warn(f"Remote metas backend unavailable, falling back to sqlite: {exc}")
+            sqlite_legacy.init_db()
         return
     if mode == 'supabase-rest':
-        _rest_request('GET', 'sales_targets', params={'select': 'id', 'limit': '1'})
+        try:
+            _rest_request('GET', 'sales_targets', params={'select': 'id', 'limit': '1'})
+            return
+        except Exception as exc:
+            warnings.warn(f"Supabase REST unavailable, falling back to sqlite: {exc}")
+            sqlite_legacy.init_db()
         return
     sqlite_legacy.init_db()
 
