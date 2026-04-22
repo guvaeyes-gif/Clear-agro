@@ -1,16 +1,16 @@
 {
-  "generated_at": "15/04/2026 18:50",
-  "plan_type": "plus",
+  "generated_at": "17/04/2026 16:16",
+  "plan_type": "prolite",
   "estimated_window_tokens": 1000,
   "current": {
-    "primary_used_percent": 20.0,
-    "primary_remaining_percent": 80.0,
+    "primary_used_percent": 3.0,
+    "primary_remaining_percent": 97.0,
     "primary_window_minutes": 300,
-    "primary_resets_at": "15/04 22:28",
-    "secondary_used_percent": 3.0,
-    "secondary_remaining_percent": 97.0,
+    "primary_resets_at": "17/04 18:16",
+    "secondary_used_percent": 2.0,
+    "secondary_remaining_percent": 98.0,
     "secondary_window_minutes": 10080,
-    "secondary_resets_at": "22/04 17:28"
+    "secondary_resets_at": "23/04 14:47"
   },
   "daily_usage": {
     "2026-03": [
@@ -55,6 +55,14 @@
       {
         "day": "15",
         "value": 100.0
+      },
+      {
+        "day": "16",
+        "value": 85.0
+      },
+      {
+        "day": "17",
+        "value": 5.0
       }
     ]
   }
